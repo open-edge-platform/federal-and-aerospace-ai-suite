@@ -123,7 +123,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
@@ -140,7 +140,7 @@ jobs:
 
       - id: filter
         if: github.event_name != 'workflow_dispatch'
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
         with:
           filters: |
             handheld-multi-modal:
@@ -165,7 +165,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
       - name: Build
@@ -178,7 +178,7 @@ jobs:
             unset VIPPET_REF
             make -C federal-and-aerospace-ai-suite handheld-multi-modal
           fi
-      - uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: handheld-multi-modal
           path: federal-and-aerospace-ai-suite/dist/handheld-multi-modal.zip
@@ -192,11 +192,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
       - run: make -C federal-and-aerospace-ai-suite deterministic-threat-detection
-      - uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: deterministic-threat-detection
           path: federal-and-aerospace-ai-suite/dist/deterministic-threat-detection.zip
@@ -210,11 +210,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
       - run: make -C federal-and-aerospace-ai-suite uav-mission-apps
-      - uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: uav-mission-apps
           path: federal-and-aerospace-ai-suite/dist/uav-mission-apps.zip
@@ -243,21 +243,21 @@ jobs:
       # built this run — mirrors the same gating used by the build jobs.
       - name: Download handheld-multi-modal artifact
         if: needs.changes.outputs.handheld-multi-modal == 'true'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: handheld-multi-modal
           path: assets
 
       - name: Download deterministic-threat-detection artifact
         if: needs.changes.outputs.deterministic-threat-detection == 'true'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: deterministic-threat-detection
           path: assets
 
       - name: Download UAV artifact
         if: needs.changes.outputs.uav-mission-apps == 'true'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: uav-mission-apps
           path: assets
@@ -296,7 +296,7 @@ jobs:
       # contents: write is required to create the release and tag.
       contents: write
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
@@ -322,19 +322,19 @@ jobs:
       # Pull all artifacts. We force all builds when publishing
       # a versioned release, so all of them are guaranteed to exist here.
       - name: Download handheld-multi-modal artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: handheld-multi-modal
           path: assets
 
       - name: Download deterministic-threat-detection artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: deterministic-threat-detection
           path: assets
 
       - name: Download UAV artifact
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: uav-mission-apps
           path: assets

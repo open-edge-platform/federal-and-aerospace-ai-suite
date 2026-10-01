@@ -38,12 +38,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
       - name: Run Trivy Filesystem Scan
-        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@a416220a0f87725196093a638e0186286ac4a953
+        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@aecadde81d72ac3e3ef5a52277539600621d3cb8
         id: trivy-fs
         with:
           scan_type: "fs"
@@ -54,7 +54,7 @@ jobs:
           report_suffix: "-fs-federal-and-aerospace-ai-suite-trivy"
 
       - name: Run trivy Scan - fedaero-suite (SPDX SBOM)
-        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@a416220a0f87725196093a638e0186286ac4a953
+        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@aecadde81d72ac3e3ef5a52277539600621d3cb8
         id: fedaero-spdx
         with:
           scan_type: "fs"
@@ -67,7 +67,7 @@ jobs:
           generate_sbom: "true"
 
       - name: Upload Report
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: trivy-report-federal-and-aerospace-ai-suite
           path: security-results/trivy*
@@ -78,7 +78,7 @@ jobs:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
@@ -95,7 +95,7 @@ jobs:
           cp shellcheck_report.txt ${{ github.workspace }}
 
       - name: Upload ShellCheck report
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: shellcheck-report-federal-and-aerospace-ai-suite
           path: shellcheck_report.txt
@@ -105,12 +105,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
       - name: Run Bandit Scan
-        uses: open-edge-platform/orch-ci/.github/actions/security/bandit@27276444a9bcf247a27369406686b689933bd1ff
+        uses: open-edge-platform/orch-ci/.github/actions/security/bandit@aecadde81d72ac3e3ef5a52277539600621d3cb8
         id: bandit
         with:
           scan-scope: "all"
@@ -120,7 +120,7 @@ jobs:
           report_suffix: "-bandit-federal-and-aerospace-ai-suite"
 
       - name: Upload Report
-        uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: bandit-federal-and-aerospace-ai-suite
           path: bandit-report-*.txt
