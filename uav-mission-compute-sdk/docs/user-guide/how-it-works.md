@@ -438,5 +438,5 @@ docker logs camera-bridge | grep -i error
 
 ## See Also
 
-- [CLAUDE.md](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/CLAUDE.md) - Quick reference guide
+- [CLAUDE.md](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/CLAUDE.md) - Quick reference guide
 - [ports.md](./ports.md) - Port mappings

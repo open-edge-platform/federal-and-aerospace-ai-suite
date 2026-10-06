@@ -703,7 +703,7 @@ Start here: Which camera source?
 
 ### Add a New Camera (Sim Mode)
 
-1. **Add to Gazebo world** ([infra/px4-sim/worlds/baylands_multicam.sdf](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/infra/px4-sim/worlds/baylands_multicam.sdf)):
+1. **Add to Gazebo world** ([infra/px4-sim/worlds/baylands_multicam.sdf](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/infra/px4-sim/worlds/baylands_multicam.sdf)):
    ```xml
    <model name="left">
      <pose>0 0.5 0.3 0 45 0</pose>
@@ -852,7 +852,7 @@ aravis-tool -l
 
 ### Docker Image Extension
 
-To use industrial cameras in the `usb-camera-bridge` container, extend [../../infra/bridges/usb-camera/Dockerfile](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/infra/bridges/usb-camera/Dockerfile):
+To use industrial cameras in the `usb-camera-bridge` container, extend [../../infra/bridges/usb-camera/Dockerfile](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/infra/bridges/usb-camera/Dockerfile):
 
 ```dockerfile
 # Add to existing Dockerfile

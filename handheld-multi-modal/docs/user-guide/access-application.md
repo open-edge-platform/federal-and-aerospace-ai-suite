@@ -22,7 +22,7 @@ To add a certificate to the trust pool, open a browser of your choice and naviga
 | Grafana dashboard | <https://localhost:7443> | Pre-provisioned dashboards (via NGINX reverse proxy) |
 
 <!--
-Source: [Endpoints](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/handheld-multi-modal/README.md#endpoints)
+Source: [Endpoints](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/handheld-multi-modal/README.md#endpoints)
 -->
 
 ## ViPPET

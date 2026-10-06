@@ -63,7 +63,7 @@ This startup flow brings up:
 
 The initial image build typically takes 10-15 minutes. After startup completes, the full stack is running from the `uav-mission-compute-sdk` directory.
 
-For details on deployment options and restart procedures, see the [UAV Mission Compute SDK Get Started guide](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/docs/user-guide/get-started.md).
+For details on deployment options and restart procedures, see the [UAV Mission Compute SDK Get Started guide](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/docs/user-guide/get-started.md).
 
 ## Step 3: Validate the Running Stack
 
@@ -144,9 +144,9 @@ make down
 
 ## Next Steps
 
-- Review the upstream [UAV Mission Compute SDK Get Started](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/docs/user-guide/get-started.md) for USB camera setup and advanced configuration.
+- Review the upstream [UAV Mission Compute SDK Get Started](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/docs/user-guide/get-started.md) for USB camera setup and advanced configuration.
 
-- Review the [UAV Mission Compute SDK Benchmarking Guide](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/docs/user-guide/benchmarking.md) for telemetry and bridge performance benchmarking.
+- Review the [UAV Mission Compute SDK Benchmarking Guide](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/docs/user-guide/benchmarking.md) for telemetry and bridge performance benchmarking.
 
 - Refer to [Get Started — UAV Mission Compute SDK Mode](./get-started-uavsdk.md) for application deployment and running the vision analytics stack against the live UAV SDK services.
 
