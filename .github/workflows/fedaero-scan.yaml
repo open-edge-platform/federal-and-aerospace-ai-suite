@@ -38,12 +38,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
       - name: Run Trivy Filesystem Scan
-        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@a416220a0f87725196093a638e0186286ac4a953
+        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@ccda485c43504937be8c1680c643c0ee2858c568
         id: trivy-fs
         with:
           scan_type: "fs"
@@ -54,7 +54,7 @@ jobs:
           report_suffix: "-fs-federal-and-aerospace-ai-suite-trivy"
 
       - name: Run trivy Scan - fedaero-suite (SPDX SBOM)
-        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@a416220a0f87725196093a638e0186286ac4a953
+        uses: open-edge-platform/orch-ci/.github/actions/security/trivy@ccda485c43504937be8c1680c643c0ee2858c568
         id: fedaero-spdx
         with:
           scan_type: "fs"
@@ -78,7 +78,7 @@ jobs:
       contents: read
     steps:
       - name: Check out repository
-        uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
@@ -103,12 +103,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@8edcb1bdb4e267140fa742c62e395cd74f332709
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
       - name: Run Bandit Scan
-        uses: open-edge-platform/orch-ci/.github/actions/security/bandit@27276444a9bcf247a27369406686b689933bd1ff
+        uses: open-edge-platform/orch-ci/.github/actions/security/bandit@ccda485c43504937be8c1680c643c0ee2858c568
         id: bandit
         with:
           scan-scope: "all"
