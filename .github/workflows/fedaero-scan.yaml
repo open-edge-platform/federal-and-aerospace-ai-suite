@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # CI security scanning workflow for the Federal Aerospace AI Suite.
-# Triggered on pull requests that modify files under federal-and-aerospace-ai-suite/.
+# Triggered on pull requests that modify files in this repository.
 #
 # Jobs:
 #   trivy-scan   - Runs a filesystem vulnerability scan and generates an SPDX SBOM
-#                  for the federal-and-aerospace-ai-suite/ directory using Trivy.
-#   shellcheck   - Scans all shell scripts (.sh) under federal-and-aerospace-ai-suite/ for
+#                  for the repository root using Trivy.
+#   shellcheck   - Scans all shell scripts (.sh) in the repository for
 #                  syntax and style issues using ShellCheck.
-#   bandit-scan  - Runs static analysis on Python code under federal-and-aerospace-ai-suite/
+#   bandit-scan  - Runs static analysis on Python code in the repository
 #                  using Bandit to detect common security issues.
 #
 # All job reports are uploaded as GitHub Actions artifacts.
@@ -29,7 +29,7 @@ on:
     branches:
       - main
     paths:
-      - 'federal-and-aerospace-ai-suite/**'
+      - '**'
 
 jobs:
 
@@ -50,7 +50,7 @@ jobs:
           scan-scope: "all"
           severity: "HIGH,CRITICAL"
           format: "json"
-          scan_target: "federal-and-aerospace-ai-suite/"
+          scan_target: "."
           report_suffix: "-fs-federal-and-aerospace-ai-suite-trivy"
 
       - name: Run trivy Scan - fedaero-suite (SPDX SBOM)
@@ -59,7 +59,7 @@ jobs:
         with:
           scan_type: "fs"
           scan-scope: "all"
-          scan_target: "federal-and-aerospace-ai-suite/"
+          scan_target: "."
           severity: "HIGH,CRITICAL"
           format: "spdx-json"
           scanners: "vuln"
@@ -87,12 +87,10 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          cd federal-and-aerospace-ai-suite/
           echo "Scanning for .sh files and running ShellCheck..."
           find . -type f -name "*.sh" | tee shell_files.txt | xargs -r shellcheck -f gcc > shellcheck_report.txt || true
           echo "### ShellCheck Results" >> $GITHUB_STEP_SUMMARY
           echo "Please find ShellCheck report in shellcheck_report.txt" >> $GITHUB_STEP_SUMMARY
-          cp shellcheck_report.txt ${{ github.workspace }}
 
       - name: Upload ShellCheck report
         uses: actions/upload-artifact@de65e23aa2b7e23d713bb51fbfcb6d502f8667d8
@@ -116,7 +114,7 @@ jobs:
           scan-scope: "all"
           output-format: "txt"
           fail-on-findings: "false"
-          paths: "federal-and-aerospace-ai-suite"
+          paths: "."
           report_suffix: "-bandit-federal-and-aerospace-ai-suite"
 
       - name: Upload Report
