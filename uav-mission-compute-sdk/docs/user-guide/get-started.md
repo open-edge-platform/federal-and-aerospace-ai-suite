@@ -240,7 +240,7 @@ See [camera-modes.md](camera-modes.md) → "Switching Between Modes" for step-by
 
 **First-time setup**:
 ```bash
-cd ~/edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
+cd ~/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
 make init           # Detect GPU, create .env
 make up-sim-camera             # Start with simulated cameras
 ```

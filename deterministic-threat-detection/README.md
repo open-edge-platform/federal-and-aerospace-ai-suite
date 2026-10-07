@@ -36,8 +36,8 @@ Basler GigE cameras hardware-timestamp each frame with IEEE 1588v2 Precision Tim
 Clone the full repository and navigate to the application directory:
 
 ```bash
-git clone https://github.com/open-edge-platform/edge-ai-suites.git
-cd edge-ai-suites/federal-and-aerospace-ai-suite/deterministic-threat-detection
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git
+cd deterministic-threat-detection
 ```
 
 ### Option 2 — Download ZIP Archive
@@ -45,13 +45,13 @@ cd edge-ai-suites/federal-and-aerospace-ai-suite/deterministic-threat-detection
 Download and extract the standalone application package:
 
 ```bash
-curl -OjL https://github.com/open-edge-platform/edge-ai-suites/releases/download/fedaero-latest/deterministic-threat-detection.zip
+curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/deterministic-threat-detection.zip
 unzip deterministic-threat-detection.zip
 cd deterministic-threat-detection
 ```
 
 > [!NOTE]
-> The documentation assumes paths relative to the `edge-ai-suites/federal-and-aerospace-ai-suite/deterministic-threat-detection` directory. If you used the ZIP archive, replace `edge-ai-suites/federal-and-aerospace-ai-suite/deterministic-threat-detection` with the path to your extracted `deterministic-threat-detection` folder wherever it appears in the guides.
+> The documentation assumes paths relative to the `deterministic-threat-detection` directory. If you used the ZIP archive, add the path to your extracted `deterministic-threat-detection` folder wherever it appears in the guides.
 
 ---
 

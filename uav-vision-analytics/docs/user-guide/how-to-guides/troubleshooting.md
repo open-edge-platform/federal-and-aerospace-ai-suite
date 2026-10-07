@@ -182,7 +182,7 @@ cannot reach loopback-bound ports on the host.
 `HOST_IP=0.0.0.0` in `.env` **before** starting the stack:
 
 ```bash
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
+cd uav-mission-compute-sdk
 sed -i 's|^HOST_IP=.*|HOST_IP=0.0.0.0|' .env
 make down && make up-sim-camera
 ```

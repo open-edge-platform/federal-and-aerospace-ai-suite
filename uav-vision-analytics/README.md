@@ -45,7 +45,7 @@ All services share the `app_network` Docker network and are defined in [`docker-
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy — the only service that publishes ports to the host |
 
 Defined in [`docker-compose-uavsdk.yml`](docker-compose-uavsdk.yml). Requires the
-`edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk` stack to be running first. Only `nginx` publishes ports to the host; `dlstreamer-pipeline-server` is reachable exclusively through it.
+`uav-mission-compute-sdk` stack to be running first. Only `nginx` publishes ports to the host; `dlstreamer-pipeline-server` is reachable exclusively through it.
 
 ## Prerequisites
 
