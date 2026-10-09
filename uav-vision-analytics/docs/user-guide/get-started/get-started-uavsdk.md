@@ -75,7 +75,7 @@ There are two options available to get the application source:
 Download the compressed file and get into the directory:
 
 ```bash
-curl -OjL https://github.com/open-edge-platform/edge-ai-suites/releases/download/fedaero-latest/uav-mission-apps.zip
+curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/uav-mission-apps.zip
 ```
 
 Decompress the downloaded file:
@@ -90,8 +90,8 @@ cd  uav-mission-compute-sdk/
 Clone the repo, get into the directory and start the SDK's core infrastructure (PX4, MQTT broker, MediaMTX RTSP server).
 
 ```bash
-git clone https://github.com/open-edge-platform/edge-ai-suites.git --branch main
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
+cd uav-mission-compute-sdk
 ```
 
 Then, for either option, initialize the environment:
@@ -120,7 +120,7 @@ cd ../uav-vision-analytics/
 Or, If Cloned whole repo then Get into the directory with:
 
 ```bash
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
+cd uav-vision-analytics
 ```
 
 Then, for either option, initialize the environment:
@@ -152,7 +152,7 @@ make model
 The SDK's core infrastructure (step 1) must already be running.
 
 ```bash
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
+cd uav-vision-analytics
 make uavsdk-up
 ```
 
@@ -312,7 +312,7 @@ make uavsdk-down
 Then stop the SDK's core infrastructure:
 
 ```bash
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
+cd uav-mission-compute-sdk
 make down
 ```
 
