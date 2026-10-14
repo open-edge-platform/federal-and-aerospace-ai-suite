@@ -46,7 +46,7 @@ sudo apt install python3.12-venv
 From the app root directory:
 
 ```bash
-cd uav-vision-analytics
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
 
 make model
 ```

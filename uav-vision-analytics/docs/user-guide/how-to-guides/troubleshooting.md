@@ -5,9 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 # Troubleshooting
 
-If you face a problem while working with UAV Vision Analytics that is not covered by the
-following guide, check the [Issues section](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/issues).
-The currently known common issues and troubleshooting steps are
+If you face a problem while working with UAV Vision Analytics, you can reach out to its
+maintainers in the [Discussions section](https://github.com/open-edge-platform/edge-ai-suites/discussions),
+but first, see if the following list of tips answers your questions. They are
 grouped into the following categories:
 
 **Table of contents:**
@@ -182,7 +182,7 @@ cannot reach loopback-bound ports on the host.
 `HOST_IP=0.0.0.0` in `.env` **before** starting the stack:
 
 ```bash
-cd uav-mission-compute-sdk
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
 sed -i 's|^HOST_IP=.*|HOST_IP=0.0.0.0|' .env
 make down && make up-sim-camera
 ```

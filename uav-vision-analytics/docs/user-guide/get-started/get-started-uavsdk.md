@@ -75,7 +75,7 @@ There are two options available to get the application source:
 Download the compressed file and get into the directory:
 
 ```bash
-curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/uav-mission-apps.zip
+curl -OjL https://github.com/open-edge-platform/edge-ai-suites/releases/download/fedaero-latest/uav-mission-apps.zip
 ```
 
 Decompress the downloaded file:
@@ -90,8 +90,8 @@ cd  uav-mission-compute-sdk/
 Clone the repo, get into the directory and start the SDK's core infrastructure (PX4, MQTT broker, MediaMTX RTSP server).
 
 ```bash
-git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
-cd uav-mission-compute-sdk
+git clone https://github.com/open-edge-platform/edge-ai-suites.git --branch main
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
 ```
 
 Then, for either option, initialize the environment:
@@ -100,7 +100,7 @@ Then, for either option, initialize the environment:
 make init                # create .env, detect GPU
 ```
 
-> Follow only **Step 0** (configure credentials) and **Step 1+2** (`make up-sim-camera`) from the [get-started guide](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/docs/user-guide/get-started.md) / [SDK README](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/README.md). Do **not** run `make apps` (SDK Step 3) — that starts the SDK's own AI vision-processor and dashboard, which is not needed here since `uav-vision-analytics` runs its own inference via DL Streamer Pipeline Server.
+> Follow only **Step 0** (configure credentials) and **Step 1+2** (`make up-sim-camera`) from the [get-started guide](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/docs/user-guide/get-started.md) / [SDK README](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/README.md). Do **not** run `make apps` (SDK Step 3) — that starts the SDK's own AI vision-processor and dashboard, which is not needed here since `uav-vision-analytics` runs its own inference via DL Streamer Pipeline Server.
 
 The SDK's `.env` defaults to `HOST_IP=127.0.0.1`, which binds MQTT, RTSP, and all other published ports to loopback only. Since `uav-vision-analytics` runs in a separate Docker container/network, it cannot reach loopback-bound ports. Set the SDK's `.env` to bind on all interfaces before starting it:
 
@@ -120,7 +120,7 @@ cd ../uav-vision-analytics/
 Or, If Cloned whole repo then Get into the directory with:
 
 ```bash
-cd uav-vision-analytics
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
 ```
 
 Then, for either option, initialize the environment:
@@ -152,7 +152,7 @@ make model
 The SDK's core infrastructure (step 1) must already be running.
 
 ```bash
-cd uav-vision-analytics
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
 make uavsdk-up
 ```
 
@@ -312,7 +312,7 @@ make uavsdk-down
 Then stop the SDK's core infrastructure:
 
 ```bash
-cd uav-mission-compute-sdk
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
 make down
 ```
 

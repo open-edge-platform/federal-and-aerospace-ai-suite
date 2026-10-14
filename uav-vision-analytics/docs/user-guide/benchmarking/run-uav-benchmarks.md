@@ -63,7 +63,7 @@ The DL Streamer Pipeline Server (`dlstreamer-pipeline-server`) and
 `metrics-manager` must be running. Use the pymavlink stack:
 
 ```bash
-cd uav-vision-analytics
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
 make pymav-up
 ```
 
@@ -234,7 +234,7 @@ jq -r '.[].pipeline' benchmark/benchmark_app_payload.json
 All examples assume you run from the app root directory:
 
 ```bash
-cd uav-vision-analytics
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
 ```
 
 ### Mode 1 — Single-Pipeline Stream Density

@@ -30,6 +30,18 @@ MODEL_PATH          = (
 )
 # Passed via make start-rtsp DEVICE=cpu|gpu|npu|all; default is gpu.
 PIPELINE_DEVICE = os.getenv("PIPELINE_DEVICE", "gpu").lower()
+# Passed via make start-rtsp CAPTION=true|false; default is false. When true,
+# the RTSP sink uses the *_caption pipeline variants (detection+telemetry RTSP
+# branch, unchanged, plus an independent VLM captioning branch over MQTT).
+CAPTION_ENABLED = os.getenv("CAPTION", "false").strip().lower() in ("1", "true", "yes")
+
+# Passed via make start-rtsp BBOX_THICKNESS=<1-10>; default 6 (gvawatermark's
+# own default). Applied as overlay-properties on the RTSP/WebRTC destinations
+# -- the pipeline server auto-inserts 'gvawatermark displ-cfg=thickness=N'
+# ahead of the encoder for each destination, so this needs no pipeline.json
+# or dlstreamer-pipeline-server image change, just a REST request field.
+BBOX_THICKNESS = os.getenv("BBOX_THICKNESS", "6").strip()
+BBOX_OVERLAY_PROPERTIES = {"thickness": BBOX_THICKNESS}
 
 # ── Pipeline definitions ──────────────────────────────────────────────────────
 
@@ -37,6 +49,17 @@ RTSP_PIPELINES = [
     {"name": "uav_object_detection_cpu", "frame_path": "uav-mavlink-cpu", "device": "CPU"},
     {"name": "uav_object_detection_gpu", "frame_path": "uav-mavlink-gpu", "device": "GPU"},
     {"name": "uav_object_detection_npu", "frame_path": "uav-mavlink-npu", "device": "NPU"},
+]
+
+# Caption variants: same RTSP/telemetry output as RTSP_PIPELINES — including
+# the exact same frame_path per device, so the RTSP URL a viewer connects to
+# never changes whether CAPTION is on or off — plus a second branch that runs
+# VLM scene captioning and publishes results over MQTT (topic:
+# uav/caption/<device>). Requires 'make vlm-model' first.
+RTSP_CAPTION_PIPELINES = [
+    {"name": "uav_object_detection_cpu_caption", "frame_path": "uav-mavlink-cpu", "device": "CPU"},
+    {"name": "uav_object_detection_gpu_caption", "frame_path": "uav-mavlink-gpu", "device": "GPU"},
+    {"name": "uav_object_detection_npu_caption", "frame_path": "uav-mavlink-npu", "device": "NPU"},
 ]
 
 UDP_PIPELINES = [
@@ -60,6 +83,7 @@ def _build_rtsp_payload(pipeline: dict) -> dict:
             "frame": {
                 "type": "rtsp",
                 "path": pipeline["frame_path"],
+                "overlay-properties": BBOX_OVERLAY_PROPERTIES,
             },
         },
         "parameters": {
@@ -67,6 +91,44 @@ def _build_rtsp_payload(pipeline: dict) -> dict:
                 "model": MODEL_PATH,
                 "device": pipeline["device"],
             }
+        },
+    }
+
+
+def _build_rtsp_caption_payload(pipeline: dict) -> dict:
+    # NOTE: unlike _build_rtsp_payload(), this intentionally omits
+    # 'detection-properties' (gvadetect model/device are hardcoded inline in
+    # the *_caption pipeline strings) and 'destination.metadata' (would
+    # auto-attach a duplicate MQTT/file publisher onto every gvametaconvert
+    # element in the pipeline, including the caption branch's own explicit
+    # mqtt_publisher — both are known to deadlock the pipeline; see
+    # configs/config-pymavlink.json comments and docs/ for details).
+    #
+    # 'destination.frame' is a list here (not a single dict) so the pipeline
+    # server attaches both an RTSP AppDestination and a WebRTC AppDestination
+    # to the same appsink -- i.e. one running pipeline serves both transports
+    # from the same raw frames, no extra GPU/CPU encode cost per viewer.
+    # Detection-box overlay is NOT drawn in-pipeline (only a gvapython
+    # telemetry-text overlay runs before gvametaconvert/gvametapublish) --
+    # it's rendered per-destination by the pipeline server's own
+    # AppDestination (gvawatermark auto-inserted ahead of each destination's
+    # encoder), so 'overlay' must be left at its default (on) here too,
+    # matching the RTSP destination, or the WebRTC viewer shows no bounding
+    # boxes. 'overlay-properties' (thickness) is applied identically on both.
+    return {
+        "destination": {
+            "frame": [
+                {
+                    "type": "rtsp",
+                    "path": pipeline["frame_path"],
+                    "overlay-properties": BBOX_OVERLAY_PROPERTIES,
+                },
+                {
+                    "type": "webrtc",
+                    "peer-id": pipeline["frame_path"],
+                    "overlay-properties": BBOX_OVERLAY_PROPERTIES,
+                },
+            ],
         },
     }
 
@@ -145,6 +207,9 @@ def _print_stream_urls(pipelines: list[dict], sink: str) -> None:
     if sink == "rtsp":
         urls = "\n".join(f"  rtsp://{host_ip}:8555/{p['frame_path']}" for p in active)
         print(f"RTSP streams available at:\n{urls}")
+        if CAPTION_ENABLED:
+            webrtc_urls = "\n".join(f"  https://{host_ip}/webrtc/{p['frame_path']}" for p in active)
+            print(f"WebRTC (WHEP) viewers available at:\n{webrtc_urls}")
     else:
         urls = "\n".join(f"  {p['device']}: udp://0.0.0.0:{p['port']}" for p in active)
         print(f"UDP streams available at:\n{urls}")
@@ -170,12 +235,20 @@ def stop_pipelines() -> None:
 # ── Main monitor loop ─────────────────────────────────────────────────────────
 
 def monitor_and_control(sink: str) -> None:
-    pipelines     = RTSP_PIPELINES if sink == "rtsp" else UDP_PIPELINES
-    pipelines     = _filter_by_device(pipelines, PIPELINE_DEVICE)
-    build_payload = _build_rtsp_payload if sink == "rtsp" else _build_udp_payload
+    if sink == "rtsp" and CAPTION_ENABLED:
+        pipelines     = RTSP_CAPTION_PIPELINES
+        build_payload = _build_rtsp_caption_payload
+    elif sink == "rtsp":
+        pipelines     = RTSP_PIPELINES
+        build_payload = _build_rtsp_payload
+    else:
+        pipelines     = UDP_PIPELINES
+        build_payload = _build_udp_payload
+    pipelines = _filter_by_device(pipelines, PIPELINE_DEVICE)
 
     print(f"[config] Sink mode : {sink.upper()}")
     print(f"[config] Device    : {PIPELINE_DEVICE.upper()}")
+    print(f"[config] Captioning: {'ENABLED' if CAPTION_ENABLED else 'disabled'}")
     print(f"[config] Pipelines : {[p['name'] for p in pipelines]}")
     print(f"Connecting to {CONNECTION_STRING}...")
 
