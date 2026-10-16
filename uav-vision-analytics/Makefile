@@ -17,7 +17,7 @@ CAPTION        ?= false
 SSL_DIR        := configs/nginx/ssl
 VLM_MODEL_PATH := $(CURDIR)/resources
 VLM_MODEL_ID   ?= OpenGVLab/InternVL2-1B
-VLM_DEVICE     ?= CPU,GPU,NPU
+VLM_DEVICE     ?= CPU,GPU
 VLM_WEIGHT_FORMAT ?= int8
 
 # Canonical download_models.sh lives in the LVC app (metro-ai-suite); fetched on
