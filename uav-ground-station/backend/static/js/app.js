@@ -287,8 +287,8 @@
 
   // --- Video modes -----------------------------------------------------
   // "H.264 Relay" is the only video mode: whenever the running remote
-  // pipeline's RTSP destination is already H.264 (--h264, see
-  // "rtsp_encoding"), the local viz-backend configures a mediamtx sidecar
+  // pipeline's RTSP destination is already H.264 (the uav-vision-analytics
+  // default, see "rtsp_encoding"), the local viz-backend configures a mediamtx sidecar
   // (docker-compose-mediamtx.yml, always brought up alongside this service
   // -- see `make up`) to pull that RTSP stream on demand and re-serve it as
   // WebRTC -- pure remux, no transcoding -- then this iframes mediamtx's
@@ -334,7 +334,7 @@
     card.videoContainer.innerHTML = "";
     const placeholder = document.createElement("div");
     placeholder.className = "device-video-placeholder";
-    placeholder.textContent = "No video stream — start this device with --caption or --h264.";
+    placeholder.textContent = "No video stream — start this device's pipeline on the remote host.";
     card.videoContainer.appendChild(placeholder);
   }
 
@@ -368,7 +368,7 @@
   // active and still correct (avoids tearing down a working WebRTC session
   // on every 5s pipeline-info poll). Picks H.264 Relay (local mediamtx
   // remux, only when the remote RTSP is already H.264) or a placeholder
-  // (default MJPEG RTSP, nothing we can show without a transcode).
+  // (RTSP that is not H.264, nothing we can show without a transcode).
   function syncVideoMode(host, card, h264Available) {
     const mode = h264Available ? "relay" : "none";
     if (card.activeVideoMode === mode && card.relayHost === host) return;

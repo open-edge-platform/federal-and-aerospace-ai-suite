@@ -5,7 +5,7 @@
 # Sidecar enabling "H.264 Relay" video mode (see backend/main.py's module
 # docstring) -- always brought up alongside the base stack (see `make up`).
 # Usable whenever the remote uav-vision-analytics host's pipelines are
-# started with --h264.
+# publishing H.264.
 #
 # mediamtx here pulls the remote host's already-H.264 RTSP stream on demand
 # (see viz-backend's /api/relay-path) and re-serves it to the browser as

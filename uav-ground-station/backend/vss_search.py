@@ -21,7 +21,7 @@ route below except ``/api/search/status`` returns 404:
     object from VSS's object store (MinIO), so <video> can seek.
   * ``GET  /api/search-frame``  -- best-matching frame as JPEG via
     Pipeline Manager's ``GET /frames``; used as the result thumbnail and as the fallback
-    when the browser can't decode the clip (e.g. MJPEG live-stream segments).
+    when the browser can't decode the clip (e.g. some stored live-stream segments).
 """
 
 import logging

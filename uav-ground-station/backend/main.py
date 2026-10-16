@@ -20,8 +20,8 @@ service:
     over SSE.
   * "H.264 Relay" video -- the only video mode: whenever the running remote
     pipeline's RTSP destination uses "encoding": "h264" (see
-    pipeline_info's "rtsp_encoding" and uav-vision-analytics's --h264
-    flag), the local viz-backend configures a mediamtx sidecar
+    pipeline_info's "rtsp_encoding"; uav-vision-analytics encodes H.264
+    by default), the local viz-backend configures a mediamtx sidecar
     (docker-compose-mediamtx.yml, always brought up alongside this
     service -- see `make up`) to pull that already-H.264 RTSP stream on
     demand and re-serve it as WebRTC -- pure remux, no transcoding: see
@@ -32,9 +32,9 @@ service:
     and relayed locally instead, so this stack's own compute/network
     footprint is visible and consistent regardless of how the remote
     pipeline was started.
-  * Otherwise (default MJPEG RTSP) the dashboard shows a placeholder
-    message instead of video -- start the remote pipeline with --h264 to
-    enable relay video.
+  * Otherwise (RTSP that is not H.264) the dashboard shows a placeholder
+    message instead of video -- the remote pipeline must publish H.264
+    (uav-vision-analytics's default) to enable relay video.
   * Natural-language video search via a separately deployed Video Search
     and Summarization (VSS) stack -- see vss_search.py.
 
@@ -207,7 +207,7 @@ async def pipeline_info(host: str = Query(...), device: str = Query(..., pattern
         "frame_rate": None,
         "source_of_truth": None,
         # The RTSP destination's encoding, as set by uav-vision-analytics's
-        # --h264 flag ("h264" or "mjpeg", see configs/config-pymavlink.json)
+        # "encoding" field (uav-vision-analytics sets h264)
         # -- "h264" means "H.264 Relay" mode is usable; anything else leaves
         # the dashboard showing a placeholder instead of video.
         "rtsp_encoding": None,
@@ -247,7 +247,7 @@ async def pipeline_info(host: str = Query(...), device: str = Query(..., pattern
                     if frame_dest is None:
                         continue
 
-                    info["rtsp_encoding"] = frame_dest.get("encoding", "mjpeg")
+                    info["rtsp_encoding"] = frame_dest.get("encoding", "unknown")
 
                     pipeline = request.get("pipeline") or {}
                     params = request.get("parameters") or {}

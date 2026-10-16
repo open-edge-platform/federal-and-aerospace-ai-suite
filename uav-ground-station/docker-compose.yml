@@ -11,8 +11,8 @@
 # mediamtx.yml is brought up alongside this file (see `make up`), and the
 # local mediamtx sidecar pulls the remote host's RTSP stream on demand and
 # re-serves it to the browser as WebRTC (WHEP) -- pure remux, no
-# transcoding. Requires the remote pipeline to be started with --h264;
-# otherwise the dashboard shows a placeholder instead of video.
+# transcoding. Requires the remote pipeline's RTSP output to be H.264 (as
+# uav-vision-analytics publishes); otherwise the dashboard shows a placeholder instead of video.
 #
 # Add docker-compose-vss.yml to also run the VSS search containers and show
 # the "Live Natural Language Search" option in the dashboard (make up-vss).

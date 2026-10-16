@@ -36,7 +36,7 @@ init: ## Create .env from template if missing, and auto-detect GPU/NPU device pa
 		fi; \
 	fi
 
-up: init ## Build and start the ground-station viewer + mediamtx relay sidecar (H.264 Relay mode; requires remote pipelines started with --h264)
+up: init ## Build and start the ground-station viewer + mediamtx relay sidecar (H.264 Relay mode)
 	docker compose -f docker-compose.yml -f docker-compose-mediamtx.yml up -d --build
 
 down: ## Stop and remove the ground-station viewer + mediamtx relay sidecar

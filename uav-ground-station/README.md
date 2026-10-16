@@ -18,9 +18,9 @@ that host until you enter its IP in the dashboard and press **Connect**.
   brought up alongside the base stack -- see `make up`) to pull the remote
   UAV host's already-H.264 RTSP stream on demand and re-serve it to the
   browser as WebRTC (WHEP) -- pure remux, no transcoding. Requires the
-  remote pipeline to be started with `--h264`; otherwise the dashboard
-  shows a placeholder message ("No video stream — start this device with
-  --h264.").
+  remote pipeline's RTSP output to be H.264, as uav-vision-analytics publishes;
+  if the remote stream is not H.264, the dashboard shows a placeholder message ("No video
+  stream — start this device's pipeline on the remote host.").
   Each card's expand button (or the player's own full-screen control)
   shows that feed full screen; Esc or "Exit full screen" returns.
 - Scene captions (`uav/caption/<device>` over MQTT, bridged to the browser via
@@ -144,8 +144,8 @@ curl -s -X POST http://${VIZ_HOST_IP:-127.0.0.1}:${VIZ_PORT:-8080}/api/search \
   -H 'Content-Type: application/json' -d '{"query": "a car on the road"}'
 ```
 
-Clips whose codec the browser can't decode (for example MJPEG live-stream
-segments from pipelines run without `--h264`) fall back to VSS's
+Clips whose codec the browser can't decode (for example some stored
+live-stream segments) fall back to VSS's
 server-decoded best-matching frame plus a download link. Live segments older
 than VSS's `LIVE_RETENTION_HOURS` may no longer be available.
 

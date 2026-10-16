@@ -83,7 +83,7 @@
       apis: ["GET /api/detect-pipelines, /api/pipeline-info", "GET /api/metrics-stream, /api/local-metrics-stream, /api/captions-stream (SSE)",
         "POST /api/relay-path", "POST /api/search, GET /api/search-video, /api/search-frame", "GET·POST·DELETE /api/search/live-sync"] },
     "gs-mtx": { p: "oss", x: 476, y: 440, w: 140, h: 80, icon: "relay", t: "mediamtx", s: ["H.264 relay", "make up-relay"],
-      kind: "Video relay (ground station, optional)", role: "For --h264 pipelines without native WebRTC: pulls the UAV RTSP on demand and re-serves it as WebRTC (pure remux, no transcoding).",
+      kind: "Video relay (ground station, optional)", role: "For H.264 RTSP pipelines (no native WebRTC): pulls the UAV RTSP on demand and re-serves it as WebRTC (pure remux, no transcoding).",
       image: "bluenviron/mediamtx:1.21.2", apis: ["RTSP pull from UAV :8555", "WHEP out :8889", "REST /v3 — paths configured by viz-backend"] },
     "gs-metrics": { p: "oep", x: 636, y: 440, w: 140, h: 80, icon: "gauge", t: "Metrics Mgr", s: ["this machine", "CPU · GPU · NPU"],
       kind: "Telemetry service", role: "Ground-station utilization shown in the \u201cUAV Ground Station Utilization\u201d chart.",
@@ -151,7 +151,7 @@
       "The dashboard embeds the UAV host's own WHEP viewer (https://<host>/webrtc/<path>/) — nothing on the ground station is in the video path.",
       "Coturn relays the media when a direct path isn't available."] },
     relay: { t: "Live video · H.264 relay", edges: ["c1", "r1", "r2", "h3", "w4"], steps: [
-      "Pipelines started with --h264 (no native WebRTC) only publish RTSP on :8555.",
+      "Pipelines publish H.264 RTSP on :8555 (no native WebRTC).",
       "viz-backend configures a path on the local mediamtx (REST /v3), which pulls the UAV RTSP on demand.",
       "mediamtx re-serves it to the browser as WebRTC (WHEP) — a pure remux, no transcoding.",
       "Needs make up-relay (docker-compose-mediamtx.yml)."] },

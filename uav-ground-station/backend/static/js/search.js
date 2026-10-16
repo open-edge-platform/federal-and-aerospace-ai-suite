@@ -169,7 +169,7 @@
         video.currentTime = Math.min(seekTo, video.duration || seekTo);
         if (autoplay) video.play().catch(() => {});
       }, { once: true });
-      // Browsers can't decode some stored codecs (e.g. MJPEG live segments).
+      // Browsers can't decode some stored codecs (e.g. some live segments).
       video.addEventListener("error", () => {
         renderFrameFallback(mediaBox, r, "This clip's codec can't be played in the browser — showing the best-matching frame.");
       }, { once: true });
