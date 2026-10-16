@@ -14,7 +14,7 @@ When ``VSS_ENABLED`` is not true, the dashboard hides the search UI and every
 route below except ``/api/search/status`` returns 404:
 
   * ``GET  /api/search/status`` -- whether search is configured, VSS
-    reachability and the VSS search feature flag.
+    reachability, the VSS search feature flag and playback-quality options.
   * ``POST /api/search``        -- natural-language query; results are
     flattened and joined with filenames from Pipeline Manager's ``GET /videos``.
   * ``GET  /api/search-video``  -- Range-aware stream of a result's video
@@ -82,6 +82,9 @@ VSS_SEARCH_RELATIVE_CUTOFF = float(os.environ.get("VSS_SEARCH_RELATIVE_CUTOFF", 
 # still returns the original. Set VSS_PREVIEW_ENABLED=false to always stream
 # originals.
 FFMPEG = shutil.which("ffmpeg")
+# Quality the player starts in: "sd" (the preview) or "hd" (the original).
+# Users can switch per clip, and the browser remembers their last choice.
+VSS_PLAYBACK_DEFAULT = "hd" if os.environ.get("VSS_PLAYBACK_DEFAULT", "sd").strip().lower() == "hd" else "sd"
 VSS_PREVIEW_ENABLED = os.environ.get("VSS_PREVIEW_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
 VSS_PREVIEW_HEIGHT = max(144, min(1080, int(os.environ.get("VSS_PREVIEW_HEIGHT", "360"))))
 VSS_PREVIEW_MAX_KBPS = max(100, min(8000, int(os.environ.get("VSS_PREVIEW_MAX_KBPS", "800"))))
@@ -236,6 +239,11 @@ async def search_status():
             ("ingest_embedding", "VSS_INGEST_EMBEDDING_DEVICE"),
             ("detection", "VSS_DETECTION_DEVICE"),
         ) if os.environ.get(env)
+    }
+    status["playback"] = {
+        "preview_available": _previews_available(),
+        "default": VSS_PLAYBACK_DEFAULT,
+        "preview_height": VSS_PREVIEW_HEIGHT,
     }
     try:
         async with _client(timeout=5.0) as client:

@@ -89,7 +89,8 @@ All configuration is via `.env` (see `.env.example`):
 | `VSS_SEARCH_TIMEOUT_SECONDS` | `60` | Timeout for one search request to VSS |
 | `VSS_SEARCH_MIN_PEAK_SCORE` | `0.25` | Hides hits whose best frame is less similar to the query than this; tuned for CLIP ViT-B/32, retune for other embedding models (`0` disables) |
 | `VSS_SEARCH_RELATIVE_CUTOFF` | `0.90` | Keeps hits whose peak frame similarity is at least this fraction of the best hit's (`0` disables) |
-| `VSS_PREVIEW_ENABLED` | `true` | Plays a cached low-bitrate preview of each result instead of the full-resolution clip; `false` streams originals |
+| `VSS_PREVIEW_ENABLED` | `true` | Offers a cached low-bitrate SD preview of each result alongside the full-resolution HD clip; `false` always streams originals |
+| `VSS_PLAYBACK_DEFAULT` | `sd` | Quality the player starts in (`sd` or `hd`); users switch with the SD/HD toggle and their choice is remembered per browser |
 | `VSS_PREVIEW_HEIGHT` | `360` | Preview height in pixels (never upscaled) |
 | `VSS_PREVIEW_MAX_KBPS` | `800` | Preview video bitrate cap |
 | `VSS_PREVIEW_CACHE_MB` | `1024` | Disk budget for cached previews in `viz-backend` |

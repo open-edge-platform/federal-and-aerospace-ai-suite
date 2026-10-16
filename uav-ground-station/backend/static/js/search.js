@@ -150,6 +150,25 @@
   // produce them.
   const THUMB_WIDTH = 320;
   const POSTER_WIDTH = 960;
+  const QUALITY_KEY = "uav-gs.vss-playback-quality";
+  const playback = { previewAvailable: false, defaultQuality: "sd", previewHeight: 360 };
+
+  function playbackQuality() {
+    if (!playback.previewAvailable) return "hd";
+    try {
+      const saved = localStorage.getItem(QUALITY_KEY);
+      if (saved === "sd" || saved === "hd") return saved;
+    } catch (_err) { /* storage blocked: use the default */ }
+    return playback.defaultQuality;
+  }
+
+  function rememberQuality(q) {
+    try { localStorage.setItem(QUALITY_KEY, q); } catch (_err) { /* not persisted */ }
+  }
+
+  function videoUrl(r, q) {
+    return q === "sd" ? withParam(r.video_proxy_url, "preview", "1") : r.video_proxy_url;
+  }
 
   function withParam(url, key, value) {
     return url ? `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}` : url;
@@ -177,6 +196,7 @@
     if (!playerEl) return;
     const mediaBox = el("div", "player-media-box");
 
+    let qualityBar = null;
     if (r.video_proxy_url) {
       const video = el("video", "player-media");
       video.controls = true;
@@ -185,22 +205,60 @@
       video.preload = "metadata";
       if (r.thumbnail_url) video.poster = withParam(r.thumbnail_url, "width", POSTER_WIDTH);
       const seekTo = r.seek_timestamp ?? r.segment_start ?? 0;
+      let quality = playbackQuality();
+      let pending = null;
+      const syncQualityBar = () => {
+        if (!qualityBar) return;
+        qualityBar.querySelectorAll(".segmented-btn").forEach((b) => {
+          const on = b.dataset.quality === quality;
+          b.classList.toggle("active", on);
+          b.setAttribute("aria-pressed", String(on));
+        });
+      };
+      // Switching quality reloads the source, so carry over position and play state.
+      const load = (q, at, play) => {
+        quality = q;
+        pending = { at, play };
+        video.src = videoUrl(r, q);
+        syncQualityBar();
+      };
       video.addEventListener("loadedmetadata", () => {
-        video.currentTime = Math.min(seekTo, video.duration || seekTo);
-        if (autoplay) video.play().catch(() => {});
-      }, { once: true });
+        if (!pending) return;
+        const { at, play } = pending;
+        pending = null;
+        video.currentTime = Math.min(at, video.duration || at);
+        if (play) video.play().catch(() => {});
+      });
       // If the preview fails, retry with the original clip; if that fails too
       // (browsers can't decode some stored codecs), show the best frame.
-      let triedOriginal = false;
       video.addEventListener("error", () => {
-        if (!triedOriginal) {
-          triedOriginal = true;
-          video.src = r.video_proxy_url;
+        if (quality === "sd") {
+          load("hd", pending ? pending.at : video.currentTime || seekTo, pending ? pending.play : !video.paused);
           return;
         }
+        if (qualityBar) qualityBar.remove();
         renderFrameFallback(mediaBox, r, "This clip's codec can't be played in the browser — showing the best-matching frame.");
       });
-      video.src = withParam(r.video_proxy_url, "preview", "1");
+
+      if (playback.previewAvailable) {
+        qualityBar = el("div", "segmented quality-toggle");
+        qualityBar.setAttribute("role", "group");
+        qualityBar.setAttribute("aria-label", "Playback quality");
+        [["sd", "SD", `Fast ${playback.previewHeight}p preview — best on slow connections`],
+         ["hd", "HD", "Original full-resolution clip"]].forEach(([q, label, hint]) => {
+          const b = el("button", "segmented-btn", label);
+          b.type = "button";
+          b.dataset.quality = q;
+          b.title = hint;
+          b.addEventListener("click", () => {
+            if (q === quality || !video.isConnected) return;
+            rememberQuality(q);
+            load(q, video.currentTime, !video.paused);
+          });
+          qualityBar.appendChild(b);
+        });
+      }
+      load(quality, seekTo, autoplay);
       mediaBox.appendChild(video);
     } else if (r.thumbnail_url) {
       renderFrameFallback(mediaBox, r, "Showing the best-matching frame.");
@@ -237,6 +295,7 @@
     info.appendChild(facts);
 
     const actions = el("div", "player-actions");
+    if (qualityBar) actions.appendChild(qualityBar);
     if (r.video_proxy_url && r.seek_timestamp != null) {
       const jump = el("button", "btn btn-ghost btn-sm", "Jump to best match");
       jump.type = "button";
@@ -488,7 +547,14 @@
   const availability = (async () => {
     try {
       const resp = await fetch("/api/search/status");
-      if (resp.ok) searchAvailable = (await resp.json()).enabled === true;
+      if (resp.ok) {
+        const data = await resp.json();
+        searchAvailable = data.enabled === true;
+        const pb = data.playback || {};
+        playback.previewAvailable = pb.preview_available === true;
+        playback.defaultQuality = pb.default === "hd" ? "hd" : "sd";
+        if (Number.isFinite(pb.preview_height)) playback.previewHeight = pb.preview_height;
+      }
     } catch (_err) {
       searchAvailable = false;
     }
