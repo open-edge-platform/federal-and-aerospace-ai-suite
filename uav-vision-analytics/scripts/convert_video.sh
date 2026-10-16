@@ -245,4 +245,4 @@ log "Verified: valid H.264/AVI, starts on a keyframe, decodes without errors."
 echo
 echo "Next: put the file in resources/videos/ (the pipelines read uav_sample_front.avi,"
 echo "uav_sample_back.avi, uav_sample_bottom.avi for CPU/GPU/NPU), then restart the pipelines:"
-echo "  ./scripts/uav_pipeline_control.sh stop all && ./scripts/uav_pipeline_control.sh start all --h264"
+echo "  ./scripts/uav_pipeline_control.sh stop all && ./scripts/uav_pipeline_control.sh start all"

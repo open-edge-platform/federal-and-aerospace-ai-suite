@@ -189,6 +189,8 @@ Drop `--caption` to control the base (non-captioning) pipeline instead. Each
 started pipeline's instance ID is cached in `.uav_pipeline_<device>[_caption]_instance_id`
 so `stop`/`status` can find it later.
 
+The RTSP output is H.264 encoded, which is what the `uav-ground-station` relay expects.
+
 ## Endpoints
 
 All HTTP(S) traffic is served through the nginx reverse proxy on port 443 (HTTPS,
@@ -198,7 +200,7 @@ and `metrics-manager` no longer publish ports directly to the host.
 | Service | URL / Path | Notes |
 |---------|-----------|-------|
 | DL Streamer Pipeline Server REST API | `https://<HOST_IP>/` | Pipeline control and status, proxied to `dlstreamer-pipeline-server:8081` |
-| RTSP annotated stream | `rtsp://<HOST_IP>:8555` | Detection + telemetry overlay output; TCP passthrough via nginx `stream {}` |
+| RTSP annotated stream | `rtsp://<HOST_IP>:8555` | Detection + telemetry overlay output (H.264); TCP passthrough via nginx `stream {}` |
 | MQTT scene captions (`CAPTION=true` only) | `mqtt://<HOST_IP>:1883`, topic `uav/caption/<device>` | VLM-generated natural-language scene description from the raw (non-overlaid) video; one topic per device (`cpu`/`gpu`/`npu`); TCP passthrough via nginx `stream {}` to the `broker` container (e.g. `mosquitto_sub -h <HOST_IP> -t uav/caption/cpu -v`) |
 | Metrics manager SSE stream (Standalone mode only) | `https://<HOST_IP>/metrics/stream` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |
 | Metrics manager REST snapshot (Standalone mode only) | `https://<HOST_IP>/api/v1/metrics/latest` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |

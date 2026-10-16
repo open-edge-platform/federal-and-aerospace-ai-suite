@@ -14,7 +14,7 @@
 # find it without the caller tracking it manually.
 #
 # Usage:
-#   ./scripts/uav_pipeline_control.sh start  [cpu|gpu|npu|all] [--caption] [--h264]
+#   ./scripts/uav_pipeline_control.sh start  [cpu|gpu|npu|all] [--caption]
 #   ./scripts/uav_pipeline_control.sh stop   [cpu|gpu|npu|all] [--caption]
 #   ./scripts/uav_pipeline_control.sh status [cpu|gpu|npu|all] [--caption]
 #
@@ -23,11 +23,9 @@
 # published over MQTT on 'uav/caption/<device>'). Requires 'make vlm-model'
 # to have been run first (see README.md).
 #
-# --h264 requests H.264 (instead of the pipeline server's default MJPEG)
-# encoding on the RTSP destination, via the opt-in "encoding": "h264" field
-# (see dlstreamer-pipeline-server's gstreamer_rtsp_destination.py). Only
-# affects the 'start' action's RTSP destination(s) -- ignored for
-# stop/status.
+# The RTSP destination is always H.264 encoded (the "encoding": "h264" field,
+# see dlstreamer-pipeline-server's gstreamer_rtsp_destination.py).
+# uav-ground-station's H.264 relay needs it.
 #
 # BBOX_THICKNESS (in .env, default "6") sets the detection bounding-box line
 # thickness (1-10, gvawatermark's own default is 2) via the RTSP
@@ -85,20 +83,17 @@ frame_path() {
 }
 
 rtsp_frame_json() {
-  # Builds the "frame" destination's RTSP object, opting into H.264 encoding
-  # (instead of the pipeline server's default MJPEG) when requested, and
+  # Builds the "frame" destination's RTSP object, selecting H.264 encoding and
   # setting the detection bounding-box line thickness via overlay-properties
   # from BBOX_THICKNESS in .env (pipeline server auto-inserts
   # 'gvawatermark displ-cfg=thickness=N' ahead of this destination's
   # encoder).
-  local path="$1" h264="$2"
-  local encoding_field=""
-  [[ "${h264}" == "true" ]] && encoding_field=', "encoding": "h264"'
-  echo "{\"type\": \"rtsp\", \"path\": \"${path}\", \"overlay-properties\": {\"thickness\": ${BBOX_THICKNESS}}${encoding_field}}"
+  local path="$1"
+  echo "{\"type\": \"rtsp\", \"path\": \"${path}\", \"encoding\": \"h264\", \"overlay-properties\": {\"thickness\": ${BBOX_THICKNESS}}}"
 }
 
 start_one() {
-  local device="$1" caption="$2" h264="$3"
+  local device="$1" caption="$2"
   local name path sfile payload response instance_id rtsp_frame
 
   if [[ "${device}" == "npu" && "${NPU_DEVICE}" == "/dev/null" ]]; then
@@ -143,7 +138,7 @@ start_one() {
     # gvametaconvert/gvametapublish) -- it is rendered by the pipeline
     # server's own RTSP AppDestination, so 'overlay' must be left at its
     # default (on).
-    rtsp_frame="$(rtsp_frame_json "${path}" "${h264}")"
+    rtsp_frame="$(rtsp_frame_json "${path}")"
     payload="$(cat <<EOF
 {
   "destination": {
@@ -153,7 +148,7 @@ start_one() {
 EOF
 )"
   else
-    rtsp_frame="$(rtsp_frame_json "${path}" "${h264}")"
+    rtsp_frame="$(rtsp_frame_json "${path}")"
     payload="$(cat <<EOF
 {
   "destination": {
@@ -183,7 +178,7 @@ EOF
 
   echo "${instance_id}" > "${sfile}"
   log "Started '${name}'. Instance ID: ${instance_id}"
-  log "RTSP output: rtsp://${HOST_IP}:8555/${path} ($([ "${h264}" == "true" ] && echo "H.264" || echo "MJPEG"))"
+  log "RTSP output: rtsp://${HOST_IP}:8555/${path} (H.264)"
   if [[ "${caption}" == "true" ]]; then
     log "MQTT captions: topic 'uav/caption/${device}' on broker:1883"
   fi
@@ -241,25 +236,22 @@ resolve_devices() {
 ACTION="${1:-}"
 DEVICE_ARG="${2:-gpu}"
 CAPTION="false"
-H264="false"
 for arg in "${@:3}"; do
   [[ "${arg}" == "--caption" ]] && CAPTION="true"
-  [[ "${arg}" == "--h264" ]] && H264="true"
 done
-# Allow --caption/--h264 as the 2nd positional too, e.g. 'start all --caption'.
+# Allow --caption as the 2nd positional too, e.g. 'start all --caption'.
 case "${DEVICE_ARG}" in
   --caption) CAPTION="true"; DEVICE_ARG="all" ;;
-  --h264) H264="true"; DEVICE_ARG="all" ;;
 esac
 
 case "${ACTION}" in
   start|stop|status)
     for device in $(resolve_devices "${DEVICE_ARG}"); do
-      "${ACTION}_one" "${device}" "${CAPTION}" "${H264}"
+      "${ACTION}_one" "${device}" "${CAPTION}"
     done
     ;;
   *)
-    echo "Usage: $0 {start|stop|status} [cpu|gpu|npu|all] [--caption] [--h264]" >&2
+    echo "Usage: $0 {start|stop|status} [cpu|gpu|npu|all] [--caption]" >&2
     exit 1
     ;;
 esac

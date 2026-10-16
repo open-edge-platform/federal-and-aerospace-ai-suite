@@ -76,6 +76,7 @@ def _build_rtsp_payload(pipeline: dict) -> dict:
             "frame": {
                 "type": "rtsp",
                 "path": pipeline["frame_path"],
+                "encoding": "h264",
                 "overlay-properties": BBOX_OVERLAY_PROPERTIES,
             },
         },
@@ -107,6 +108,7 @@ def _build_rtsp_caption_payload(pipeline: dict) -> dict:
             "frame": {
                 "type": "rtsp",
                 "path": pipeline["frame_path"],
+                "encoding": "h264",
                 "overlay-properties": BBOX_OVERLAY_PROPERTIES,
             },
         },

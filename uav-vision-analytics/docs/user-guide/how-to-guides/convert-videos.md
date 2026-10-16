@@ -51,7 +51,7 @@ runs ffmpeg from the DL Streamer Pipeline Server image named in `.env`, so no ex
 
    ```bash
    ./scripts/uav_pipeline_control.sh stop all
-   ./scripts/uav_pipeline_control.sh start all --h264
+   ./scripts/uav_pipeline_control.sh start all
    ```
 
 ## What the script produces
