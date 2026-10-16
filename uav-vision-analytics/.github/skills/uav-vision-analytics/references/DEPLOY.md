@@ -257,7 +257,7 @@ pymav-up:    ## Start pymavlink stack (docker-compose-pymavlink.yml)
 pymav-down:  ## Stop pymavlink stack
 uavsdk-up:   ## Start UAVSDK stack (requires uav-mission-compute-sdk running first)
 uavsdk-down: ## Stop UAVSDK stack
-start-rtsp:  ## Launch pipeline_manager.py --sink rtsp inside container
+start-rtsp:  ## Launch pipeline_manager.py inside container
 ```
 
 Full Makefile is in `uav-vision-analytics/Makefile`.

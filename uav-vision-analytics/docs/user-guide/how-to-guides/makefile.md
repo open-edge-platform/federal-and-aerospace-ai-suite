@@ -107,7 +107,7 @@ make uavsdk-up
 
 ### `make start-rtsp`
 
-Executes `pipeline_manager.py --sink rtsp` inside the running
+Executes `pipeline_manager.py` inside the running
 `dlstreamer-pipeline-server` container. This script monitors MAVLink ARMED/DISARMED
 state and automatically starts/stops inference pipeline(s) with
 **RTSP frame output** on port `8555`.

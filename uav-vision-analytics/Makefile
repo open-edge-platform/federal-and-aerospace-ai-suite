@@ -215,7 +215,7 @@ start-rtsp: ## Start RTSP pipelines. DEVICE=cpu|gpu|npu|all (default: gpu). CAPT
 	  -e PIPELINE_DEVICE=$(DEVICE) \
 	  -e CAPTION=$(CAPTION) \
 	  $(DLSPS) bash -c \
-	  "python3 /home/pipeline-server/scripts/pipeline_manager.py --sink rtsp"
+	  "python3 /home/pipeline-server/scripts/pipeline_manager.py"
 
 # ── Convenience alias ─────────────────────────────────────────────────────────
 

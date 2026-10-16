@@ -7,8 +7,7 @@ pipelines accordingly:
   - DISARMED -> DELETE each pipeline using its stored instance_id
 
 Usage:
-  python3 pipeline_manager.py --sink rtsp       # RTSP output (default)
-  python3 pipeline_manager.py --sink udp        # UDP sink output
+  python3 pipeline_manager.py
 """
 
 import argparse
@@ -60,12 +59,6 @@ RTSP_CAPTION_PIPELINES = [
     {"name": "uav_object_detection_cpu_caption", "frame_path": "uav-mavlink-cpu", "device": "CPU"},
     {"name": "uav_object_detection_gpu_caption", "frame_path": "uav-mavlink-gpu", "device": "GPU"},
     {"name": "uav_object_detection_npu_caption", "frame_path": "uav-mavlink-npu", "device": "NPU"},
-]
-
-UDP_PIPELINES = [
-    {"name": "uav_udpsink_cpu", "frame_path": "uav-mavlink-cpu", "device": "CPU", "port": 5600},
-    {"name": "uav_udpsink_gpu", "frame_path": "uav-mavlink-gpu", "device": "GPU", "port": 5601},
-    {"name": "uav_udpsink_npu", "frame_path": "uav-mavlink-npu", "device": "NPU", "port": 5602},
 ]
 
 # ── Payload builders ──────────────────────────────────────────────────────────
@@ -120,25 +113,6 @@ def _build_rtsp_caption_payload(pipeline: dict) -> dict:
     }
 
 
-def _build_udp_payload(pipeline: dict) -> dict:
-    return {
-        "destination": {
-            "metadata": {
-                "type": "file",
-                # Per-device log file so CPU/GPU/NPU detections never
-                # interleave into a single results.jsonl.
-                "path": f"/tmp/results_{pipeline['device'].lower()}.jsonl",
-                "format": "json-lines",
-            },
-        },
-        "parameters": {
-            "detection-properties": {
-                "model": MODEL_PATH,
-                "device": pipeline["device"],
-            }
-        },
-    }
-
 # ── Pipeline lifecycle ────────────────────────────────────────────────────────
 
 def _filter_by_device(pipelines: list[dict], device: str) -> list[dict]:
@@ -187,16 +161,12 @@ def start_pipelines(pipelines: list[dict], build_payload) -> None:
             print(f"[pipeline] Failed to start '{pipeline['name']}': {exc}")
 
 
-def _print_stream_urls(pipelines: list[dict], sink: str) -> None:
+def _print_stream_urls(pipelines: list[dict]) -> None:
     host_ip = os.getenv("HOST_IP", "127.0.0.1")
     npu_device = os.getenv("NPU_DEVICE", "/dev/null")
     active = [p for p in pipelines if p["device"] != "NPU" or npu_device != "/dev/null"]
-    if sink == "rtsp":
-        urls = "\n".join(f"  rtsp://{host_ip}:8555/{p['frame_path']}" for p in active)
-        print(f"RTSP streams available at:\n{urls}")
-    else:
-        urls = "\n".join(f"  {p['device']}: udp://0.0.0.0:{p['port']}" for p in active)
-        print(f"UDP streams available at:\n{urls}")
+    urls = "\n".join(f"  rtsp://{host_ip}:8555/{p['frame_path']}" for p in active)
+    print(f"RTSP streams available at:\n{urls}")
 
 
 def stop_pipelines() -> None:
@@ -218,19 +188,15 @@ def stop_pipelines() -> None:
 
 # ── Main monitor loop ─────────────────────────────────────────────────────────
 
-def monitor_and_control(sink: str) -> None:
-    if sink == "rtsp" and CAPTION_ENABLED:
+def monitor_and_control() -> None:
+    if CAPTION_ENABLED:
         pipelines     = RTSP_CAPTION_PIPELINES
         build_payload = _build_rtsp_caption_payload
-    elif sink == "rtsp":
+    else:
         pipelines     = RTSP_PIPELINES
         build_payload = _build_rtsp_payload
-    else:
-        pipelines     = UDP_PIPELINES
-        build_payload = _build_udp_payload
     pipelines = _filter_by_device(pipelines, PIPELINE_DEVICE)
 
-    print(f"[config] Sink mode : {sink.upper()}")
     print(f"[config] Device    : {PIPELINE_DEVICE.upper()}")
     print(f"[config] Captioning: {'ENABLED' if CAPTION_ENABLED else 'disabled'}")
     print(f"[config] Pipelines : {[p['name'] for p in pipelines]}")
@@ -258,7 +224,7 @@ def monitor_and_control(sink: str) -> None:
                 if is_armed:
                     print("Vehicle Status: ARMED → starting pipelines")
                     start_pipelines(pipelines, build_payload)
-                    _print_stream_urls(pipelines, sink)
+                    _print_stream_urls(pipelines)
                 else:
                     print("Vehicle Status: DISARMED → stopping pipelines")
                     stop_pipelines()
@@ -274,17 +240,10 @@ def monitor_and_control(sink: str) -> None:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="MAVLink-triggered DL Streamer pipeline manager"
-    )
-    parser.add_argument(
-        "--sink",
-        choices=["rtsp", "udp"],
-        default="rtsp",
-        help="Output sink type: 'rtsp' (default) or 'udp'",
-    )
-    args = parser.parse_args()
-    monitor_and_control(args.sink)
+    argparse.ArgumentParser(
+        description="MAVLink-triggered DL Streamer pipeline manager (RTSP output)"
+    ).parse_args()
+    monitor_and_control()
 
 
 if __name__ == "__main__":

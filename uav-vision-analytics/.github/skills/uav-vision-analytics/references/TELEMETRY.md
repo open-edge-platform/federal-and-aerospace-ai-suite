@@ -115,7 +115,7 @@ volumes:
 ### mavlink_pipeline_manager.py (pymavlink mode)
 
 Monitors the MAVLink HEARTBEAT `base_mode` flag for `MAV_MODE_FLAG_SAFETY_ARMED`.
-Only RTSP sink output is supported (`--sink rtsp`).
+Only RTSP output is supported (there is no `--sink` option).
 
 **RTSP pipelines defined:**
 ```python
@@ -134,7 +134,7 @@ PIPELINE_DELETE_URL = "http://localhost:8081/pipelines/{instance_id}"
 
 **Invocation inside container:**
 ```bash
-python3 /home/pipeline-server/scripts/pipeline_manager.py --sink rtsp
+python3 /home/pipeline-server/scripts/pipeline_manager.py
 ```
 
 **Makefile target:**
