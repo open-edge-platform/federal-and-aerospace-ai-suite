@@ -46,9 +46,9 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server` + pymavlink | `8081`, `8555` | AI inference, RTSP output |
 | `px4` | `px4io/px4-sitl` | `14550` | Flight controller simulator |
-| `mavlink-router` | custom build | `14551` | MAVLink UDP routing (:14550 → :14541) |
+| `mavlink-router` | custom build | `14551` (UDP, published to `HOST_IP`) | MAVLink UDP routing (:14550 → :14541); remote QGroundControl connects to :14551 |
 | `metrics-manager` | `intel/metrics-manager` | `9090` | CPU/GPU/NPU/power metrics |
-| `nginx` | `nginx:1.27-alpine` | `80` (redirects to 443), `443` (HTTPS, self-signed cert), `8555` (RTSP passthrough) — published to `HOST_IP` | Reverse proxy / TLS termination — the only service that publishes ports to the host |
+| `nginx` | `nginx:1.27-alpine` | `80` (redirects to 443), `443` (HTTPS, self-signed cert), `8555` (RTSP passthrough) — published to `HOST_IP` | Reverse proxy / TLS termination — publishes the web, RTSP and MQTT ports to the host |
 
 > `dlstreamer-pipeline-server` and `metrics-manager` no longer publish ports directly —
 > both are reachable only through `nginx` on the internal `app_network`.
@@ -264,8 +264,9 @@ Each output frame carries these overlaid fields in the upper-left corner:
 
 ## Port Reference
 
-`nginx` is the only service that publishes ports to the host (bound to `HOST_IP`, not
-`0.0.0.0`). Everything else below is reachable only on the internal `app_network`.
+`nginx` and `mavlink-router` (UDP `14551`, for a remote QGroundControl) are the only services that
+publish ports to the host (bound to `HOST_IP`, not `0.0.0.0`). Everything else below is reachable
+only on the internal `app_network`.
 
 | Port | Protocol | Service | Published to host? | Mode |
 | --- | --- | --- | --- | --- |
@@ -273,6 +274,7 @@ Each output frame carries these overlaid fields in the upper-left corner:
 | `443` | HTTPS | `nginx` → proxies to `dlstreamer-pipeline-server:8081` (REST API) and `metrics-manager:9090` (metrics); self-signed cert, use `curl -k` | Yes | All modes |
 | `8555` | RTSP | `nginx` → raw TCP passthrough to `dlstreamer-pipeline-server:8555` | Yes | All modes |
 | `8081` | HTTP | DL Streamer REST API | No (internal only) | All modes |
+| `14551` | UDP | `mavlink-router` MAVLink endpoint for a remote QGroundControl (see [QGroundControl](../how-to-guides/qgroundcontrol.md)) | Yes | pymavlink modes |
 | `14541` | UDP | MAVLink broadcast (mavlink-router) | No (internal only) | pymavlink modes |
 | `9090` | HTTP | metrics-manager (HW metrics) | No (internal only) | pymavlink modes |
 

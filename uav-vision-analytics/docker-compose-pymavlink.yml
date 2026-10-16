@@ -42,6 +42,10 @@ services:
     restart: unless-stopped
     volumes:
       - ./configs/mavlink-router/main.conf:/etc/mavlink-router/main.conf
+    # MAVLink over UDP for a remote QGroundControl; bound to HOST_IP like the
+    # other published ports (127.0.0.1 only when HOST_IP is unset).
+    ports:
+      - "${HOST_IP:-127.0.0.1}:${MAVLINK_UDP_PORT:-14551}:14551/udp"
     networks:
       - app_network
 
@@ -120,8 +124,8 @@ services:
     networks:
       - app_network
 
-  # Nginx reverse proxy / TLS — the only service that publishes
-  # ports to the host. Binds to HOST_IP (falls back to loopback-only when
+  # Nginx reverse proxy / TLS — publishes the HTTP(S), RTSP and MQTT ports to
+  # the host (mavlink-router publishes its own UDP port above). Binds to HOST_IP (falls back to loopback-only when
   # HOST_IP is unset) rather than all interfaces.
   nginx:
     image: nginx:1.27-alpine

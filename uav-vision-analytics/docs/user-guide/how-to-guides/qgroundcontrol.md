@@ -35,6 +35,31 @@ rtsp://<HOST_IP>:8555/uav-mavlink-npu   # NPU
 > Make sure `make start-rtsp` is running in the DL Streamer Pipeline Server container before
 > attempting to connect QGroundControl to the RTSP stream.
 
+## Connecting QGroundControl from another machine
+
+`mavlink-router` exposes a UDP endpoint on `<HOST_IP>:14551` (bound to `HOST_IP` only,
+like the other published ports). QGroundControl on a different machine does not
+discover the vehicle automatically, so add a link:
+
+1. In QGroundControl open `Q icon` → `Application Settings` → `Comm Links` → `Add`.
+2. Set `Type` to `UDP`.
+3. Under `Server Addresses`, click `Add Server` and enter `<HOST_IP>:14551`.
+4. Save, select the new link, and click `Connect`.
+
+QGroundControl sends its heartbeat first and the router learns its address, then
+forwards telemetry to it and commands from it to PX4. Several stations can connect
+at the same time. To use a different host port, set `MAVLINK_UDP_PORT` in `.env`
+before `make pymav-up`.
+
+> [!NOTE]
+> The router's TCP server (port 5760) is disabled on purpose. With the router
+> built into this stack it accepts a TCP connection but fails to send to it
+> (`Error sending tcp packet (Invalid argument)`), so no data reaches the client.
+
+> [!IMPORTANT]
+> Anyone who can reach `<HOST_IP>:14551` can command the vehicle. Keep the host on a
+> trusted network.
+
 ## Troubleshooting
 
 - [QGroundControl — "Network Not Available" warnings](./troubleshooting.md#qgroundcontrol--network-not-available-warnings)
