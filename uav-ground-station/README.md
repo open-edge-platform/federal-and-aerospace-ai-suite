@@ -87,6 +87,8 @@ All configuration is via `.env` (see `.env.example`):
 | `VSS_LIVE_SYNC_INTERVAL_SECONDS` | `15` | How often running UAV pipelines are synced to VSS live streams |
 | `VSS_DATASTORE_BUCKET` | `video-summary` | VSS MinIO bucket for uploaded videos |
 | `VSS_SEARCH_TIMEOUT_SECONDS` | `60` | Timeout for one search request to VSS |
+| `VSS_SEARCH_MIN_PEAK_SCORE` | `0.25` | Hides hits whose best frame is less similar to the query than this; tuned for CLIP ViT-B/32, retune for other embedding models (`0` disables) |
+| `VSS_SEARCH_RELATIVE_CUTOFF` | `0.90` | Keeps hits whose peak frame similarity is at least this fraction of the best hit's (`0` disables) |
 
 The remote-port defaults assume the standard nginx-published ports from
 `uav-vision-analytics/docker-compose-pymavlink.yml`; only change them if that

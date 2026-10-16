@@ -90,15 +90,17 @@
     return `at ${formatTime(r.seek_timestamp ?? r.segment_start)}`;
   }
 
-  // Backend already applies a relative-cutoff filter and re-scores the
-  // surviving hits as a 0-100 "relevance" number scaled across this result
-  // set (see vss_search.py's _filter_and_score) -- not the raw cosine
-  // similarity, which runs ~0.2-0.4 even for strong matches and so is
-  // meaningless rendered directly as a percentage. Fall back to the raw
-  // score only for older backends that haven't computed display_score.
+  // VSS's relevance score is ranked within this query (the top hit is always
+  // 100%). Weak matches are already dropped by the backend using the absolute
+  // peak frame similarity, which is shown as a tooltip.
   function scorePct(r) {
-    if (r.display_score != null) return Math.round(r.display_score);
     return r.score == null ? null : Math.round(Math.max(0, Math.min(1, r.score)) * 100);
+  }
+
+  function scoreTitle(r) {
+    const parts = ["Relevance ranked within this search"];
+    if (r.peak_score != null) parts.push(`peak frame similarity ${r.peak_score.toFixed(3)}`);
+    return parts.join(" · ");
   }
 
   function setPill(state, text) {
@@ -196,7 +198,11 @@
     title.title = displayName(r);
     titleRow.appendChild(title);
     const pct = scorePct(r);
-    if (pct != null) titleRow.appendChild(el("span", "score-pill", `${pct}% match`));
+    if (pct != null) {
+      const pill = el("span", "score-pill", `${pct}% match`);
+      pill.title = scoreTitle(r);
+      titleRow.appendChild(pill);
+    }
     info.appendChild(titleRow);
 
     const facts = el("dl", "player-facts");
@@ -274,6 +280,7 @@
     const pct = scorePct(r);
     if (pct != null) {
       const score = el("div", "result-score");
+      score.title = scoreTitle(r);
       const bar = el("div", "score-bar");
       const fill = el("div", "score-fill");
       fill.style.width = `${pct}%`;
@@ -316,8 +323,11 @@
   function renderFilterBar(counts) {
     const bar = el("div", "results-toolbar");
     bar.appendChild(el("span", "results-count", `${results.length} result${results.length === 1 ? "" : "s"}`));
-    // Low-confidence matches are filtered intentionally; so the
-    //  hidden count doesn't read as "missing"/broken results
+    if (filteredOutCount > 0) {
+      const hidden = el("span", "results-hidden muted", `${filteredOutCount} weak match${filteredOutCount === 1 ? "" : "es"} hidden`);
+      hidden.title = "VSS returned these clips, but their best frame was not similar enough to the query to show.";
+      bar.appendChild(hidden);
+    }
     if (counts.live && counts.upload) {
       const seg = el("div", "segmented");
       [["all", `All ${results.length}`], ["upload", `Uploads ${counts.upload}`], ["live", `Live ${counts.live}`]].forEach(([key, label]) => {

@@ -466,6 +466,7 @@ code { color: var(--accent); }
   border-bottom: 1px solid var(--panel-border);
 }
 .results-count { font-size: 13px; font-weight: 600; }
+.results-hidden { font-size: 12px; margin-right: auto; cursor: help; }
 .segmented { display: inline-flex; background: #0d1117; border: 1px solid var(--panel-border); border-radius: 7px; padding: 2px; }
 .segmented-btn {
   background: transparent; border: none; color: var(--muted);

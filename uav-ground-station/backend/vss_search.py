@@ -48,24 +48,21 @@ VSS_DATASTORE_URL = os.environ.get("VSS_DATASTORE_URL", "http://host.docker.inte
 VSS_DATASTORE_BUCKET = os.environ.get("VSS_DATASTORE_BUCKET", "video-summary")
 VSS_SEARCH_TIMEOUT_SECONDS = float(os.environ.get("VSS_SEARCH_TIMEOUT_SECONDS", "60"))
 
-# --- Relevance filtering / display scoring --------------------------------
-#   1. Keep only hits within VSS_SEARCH_RELATIVE_CUTOFF of the *top* score
-#      in this result set (relative, not absolute, since the useful score
-#      range shifts per query/model) -- drops the long tail of unrelated
-#      clips that merely scored "not zero".
-#   2. If even the top score is below VSS_SEARCH_MIN_ABS_SCORE, treat the
-#      whole query as having no confident match (empty results) rather than
-#      surfacing a best-of-the-worst hit.
-#   3. Re-express the surviving scores as a relative 0-100 "relevance"
-#      number scaled across the kept hits (worst kept -> ~50, best -> ~99)
-#      instead of multiplying the raw cosine score by 100, so the UI shows a
-#      meaningful ranking signal instead of a bogus absolute percentage.
-# All three are tunable via env since the right cutoffs depend on the
-# embedding model VSS was deployed with.
+# --- Relevance filtering ----------------------------------------------------
+# VSS's relevance_score is min-max normalized per query (the top hit is always
+# 1.0), so it ranks hits but cannot tell a real match from the best of a set of
+# unrelated clips. score_breakdown.max_frame_score -- the raw query-to-frame
+# similarity of the segment's best frame -- is the only absolute signal, so
+# filtering is done on that:
+#   1. Drop hits whose peak frame score is below VSS_SEARCH_MIN_PEAK_SCORE. This
+#      is what turns "an elephant" over road footage into zero results.
+#   2. Of the rest, keep hits whose peak is within VSS_SEARCH_RELATIVE_CUTOFF of
+#      the best peak, trimming a weak tail behind a strong match.
+# Both depend on the embedding model VSS runs (0.25 suits CLIP ViT-B/32), so
+# both are tunable via env. Set VSS_SEARCH_MIN_PEAK_SCORE=0 and
+# VSS_SEARCH_RELATIVE_CUTOFF=0 to show everything VSS returns.
+VSS_SEARCH_MIN_PEAK_SCORE = float(os.environ.get("VSS_SEARCH_MIN_PEAK_SCORE", "0.25"))
 VSS_SEARCH_RELATIVE_CUTOFF = float(os.environ.get("VSS_SEARCH_RELATIVE_CUTOFF", "0.90"))
-VSS_SEARCH_MIN_ABS_SCORE = float(os.environ.get("VSS_SEARCH_MIN_ABS_SCORE", "0.0"))
-VSS_SEARCH_DISPLAY_SCORE_FLOOR = 50
-VSS_SEARCH_DISPLAY_SCORE_CEIL = 99
 
 SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9._-]+$")
 MAX_QUERY_LENGTH = 500
@@ -281,6 +278,7 @@ async def search(req: SearchRequest):
             "stream_name": (stream or {}).get("stream_name"),
             "captured_at": _live_captured_at(frame.get("media_path"), frame.get("timestamp")) if frame else None,
             "score": _as_float(metadata.get("relevance_score")),
+            "peak_score": _peak_score(metadata),
             "segment_start": _as_float(metadata.get("segment_start")),
             "segment_end": _as_float(metadata.get("segment_end")),
             "seek_timestamp": _as_float(metadata.get("seek_timestamp")),
@@ -371,42 +369,27 @@ async def search_frame(
     )
 
 
-def _filter_and_score(results: list) -> tuple:
-    """Apply the relative-cutoff filter and relative display scoring
-    described above. Returns (kept_results, raw_count).
+def _peak_score(metadata: dict) -> Optional[float]:
+    breakdown = metadata.get("score_breakdown")
+    if not isinstance(breakdown, dict):
+        return None
+    return _as_float(breakdown.get("max_frame_score"))
 
-    Never drops every hit silently when they're un-scored (score is None for
-    some VSS deployments/queries) -- filtering only kicks in when scores are
-    present, so this stays a strict improvement over "show everything".
+
+def _filter_and_score(results: list) -> tuple:
+    """Apply the peak-score filters described above. Returns (kept, raw_count).
+
+    Hits without a peak score (older VSS builds that don't report a
+    score_breakdown) are kept unfiltered rather than silently dropped.
     """
     raw_count = len(results)
-    scored = [r for r in results if r.get("score") is not None]
-    if not scored:
+    peaks = [r["peak_score"] for r in results if r.get("peak_score") is not None]
+    if not peaks:
         return results, raw_count
 
-    top_score = max(r["score"] for r in scored)
-    if top_score < VSS_SEARCH_MIN_ABS_SCORE:
-        return [], raw_count
-
-    threshold = top_score * VSS_SEARCH_RELATIVE_CUTOFF
-    kept = [r for r in results if r.get("score") is None or r["score"] >= threshold]
-    kept.sort(key=lambda r: (r.get("score") is not None, r.get("score")), reverse=True)
-
-    kept_scores = [r["score"] for r in kept if r.get("score") is not None]
-    if kept_scores:
-        lo, hi = min(kept_scores), max(kept_scores)
-        span = hi - lo
-        for r in kept:
-            if r.get("score") is None:
-                continue
-            if span <= 1e-9:
-                r["display_score"] = VSS_SEARCH_DISPLAY_SCORE_CEIL
-            else:
-                frac = (r["score"] - lo) / span
-                r["display_score"] = round(
-                    VSS_SEARCH_DISPLAY_SCORE_FLOOR
-                    + frac * (VSS_SEARCH_DISPLAY_SCORE_CEIL - VSS_SEARCH_DISPLAY_SCORE_FLOOR)
-                )
+    threshold = max(VSS_SEARCH_MIN_PEAK_SCORE, max(peaks) * VSS_SEARCH_RELATIVE_CUTOFF)
+    kept = [r for r in results if r.get("peak_score") is None or r["peak_score"] >= threshold]
+    kept.sort(key=lambda r: (r.get("score") is not None, r.get("score") or 0.0), reverse=True)
     return kept, raw_count
 
 
