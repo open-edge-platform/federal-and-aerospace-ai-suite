@@ -12,7 +12,7 @@ services:
       - ./configs/mosquitto:/mosquitto/config
     networks:
       - app_network
-    restart: on-failure:5
+    restart: unless-stopped
 
   px4:
     image: px4io/px4-sitl:latest
@@ -26,6 +26,9 @@ services:
       - app_network
     depends_on:
        - mavlink-router
+    # PX4 looks the router's address up only when it starts (see 10040_sihsim_quadx.post), so if
+    # mavlink-router is ever recreated with a new address, restart this container as well.
+    restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -104,10 +107,10 @@ services:
       - ${NPU_DEVICE:-/dev/null}:${NPU_DEVICE:-/dev/null}
     networks:
       - app_network
-    deploy:
-      restart_policy:
-        condition: on-failure
-        max_attempts: 5
+    # Not "on-failure": when the pipeline server aborts (for example a GPU runtime error while
+    # loading several models) its startup script still exits with code 0, which "on-failure"
+    # would not restart. A manual `docker stop` still stays stopped.
+    restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
