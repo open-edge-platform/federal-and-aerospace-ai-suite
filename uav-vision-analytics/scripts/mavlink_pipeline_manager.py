@@ -36,7 +36,7 @@ PIPELINE_DEVICE = os.getenv("PIPELINE_DEVICE", "gpu").lower()
 CAPTION_ENABLED = os.getenv("CAPTION", "false").strip().lower() in ("1", "true", "yes")
 
 # Passed via make start-rtsp BBOX_THICKNESS=<1-10>; default 6 (gvawatermark's
-# own default). Applied as overlay-properties on the RTSP/WebRTC destinations
+# own default). Applied as overlay-properties on the RTSP destination
 # -- the pipeline server auto-inserts 'gvawatermark displ-cfg=thickness=N'
 # ahead of the encoder for each destination, so this needs no pipeline.json
 # or dlstreamer-pipeline-server image change, just a REST request field.
@@ -104,31 +104,18 @@ def _build_rtsp_caption_payload(pipeline: dict) -> dict:
     # mqtt_publisher — both are known to deadlock the pipeline; see
     # configs/config-pymavlink.json comments and docs/ for details).
     #
-    # 'destination.frame' is a list here (not a single dict) so the pipeline
-    # server attaches both an RTSP AppDestination and a WebRTC AppDestination
-    # to the same appsink -- i.e. one running pipeline serves both transports
-    # from the same raw frames, no extra GPU/CPU encode cost per viewer.
     # Detection-box overlay is NOT drawn in-pipeline (only a gvapython
     # telemetry-text overlay runs before gvametaconvert/gvametapublish) --
-    # it's rendered per-destination by the pipeline server's own
-    # AppDestination (gvawatermark auto-inserted ahead of each destination's
-    # encoder), so 'overlay' must be left at its default (on) here too,
-    # matching the RTSP destination, or the WebRTC viewer shows no bounding
-    # boxes. 'overlay-properties' (thickness) is applied identically on both.
+    # it's rendered by the pipeline server's own RTSP AppDestination
+    # (gvawatermark auto-inserted ahead of the encoder), so 'overlay' must
+    # be left at its default (on). 'overlay-properties' sets the thickness.
     return {
         "destination": {
-            "frame": [
-                {
-                    "type": "rtsp",
-                    "path": pipeline["frame_path"],
-                    "overlay-properties": BBOX_OVERLAY_PROPERTIES,
-                },
-                {
-                    "type": "webrtc",
-                    "peer-id": pipeline["frame_path"],
-                    "overlay-properties": BBOX_OVERLAY_PROPERTIES,
-                },
-            ],
+            "frame": {
+                "type": "rtsp",
+                "path": pipeline["frame_path"],
+                "overlay-properties": BBOX_OVERLAY_PROPERTIES,
+            },
         },
     }
 
@@ -207,9 +194,6 @@ def _print_stream_urls(pipelines: list[dict], sink: str) -> None:
     if sink == "rtsp":
         urls = "\n".join(f"  rtsp://{host_ip}:8555/{p['frame_path']}" for p in active)
         print(f"RTSP streams available at:\n{urls}")
-        if CAPTION_ENABLED:
-            webrtc_urls = "\n".join(f"  https://{host_ip}/webrtc/{p['frame_path']}" for p in active)
-            print(f"WebRTC (WHEP) viewers available at:\n{webrtc_urls}")
     else:
         urls = "\n".join(f"  {p['device']}: udp://0.0.0.0:{p['port']}" for p in active)
         print(f"UDP streams available at:\n{urls}")

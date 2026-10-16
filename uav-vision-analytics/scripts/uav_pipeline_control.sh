@@ -30,8 +30,8 @@
 # stop/status.
 #
 # BBOX_THICKNESS (in .env, default "6") sets the detection bounding-box line
-# thickness (1-10, gvawatermark's own default is 2) via the RTSP/WebRTC
-# destinations' "overlay-properties": {"thickness": N} field -- no
+# thickness (1-10, gvawatermark's own default is 2) via the RTSP
+# destination's "overlay-properties": {"thickness": N} field -- no
 # pipeline.json or dlstreamer-pipeline-server image change needed.
 
 set -Eeuo pipefail
@@ -97,17 +97,9 @@ rtsp_frame_json() {
   echo "{\"type\": \"rtsp\", \"path\": \"${path}\", \"overlay-properties\": {\"thickness\": ${BBOX_THICKNESS}}${encoding_field}}"
 }
 
-webrtc_frame_json() {
-  # Same overlay-properties mechanism applies independently to the WebRTC
-  # destination (see gstreamer_webrtc_destination.py) -- both need the same
-  # thickness for the RTSP/WebRTC views to look identical.
-  local peer_id="$1"
-  echo "{\"type\": \"webrtc\", \"peer-id\": \"${peer_id}\", \"overlay-properties\": {\"thickness\": ${BBOX_THICKNESS}}}"
-}
-
 start_one() {
   local device="$1" caption="$2" h264="$3"
-  local name path sfile payload response instance_id rtsp_frame webrtc_frame
+  local name path sfile payload response instance_id rtsp_frame
 
   if [[ "${device}" == "npu" && "${NPU_DEVICE}" == "/dev/null" ]]; then
     err "Skipping NPU: NPU_DEVICE is not set in .env (no NPU device available)."
@@ -146,24 +138,16 @@ start_one() {
     # known to deadlock gvadetect/gvagenai when wired through the tee used
     # by these pipelines.
     #
-    # 'destination.frame' is a list (not a single dict) so the pipeline
-    # server attaches both an RTSP and a WebRTC AppDestination to the same
-    # appsink -- matches mavlink_pipeline_manager.py's
-    # _build_rtsp_caption_payload(). Detection-box overlay is NOT drawn
-    # in-pipeline (the *_caption GStreamer string only has a gvapython
-    # telemetry-text overlay before gvametaconvert/gvametapublish) -- it is
-    # rendered per-destination by the pipeline server's own AppDestination,
-    # so 'overlay' must be left at its default (on) here too, matching the
-    # RTSP destination, or the WebRTC viewer shows no bounding boxes.
+    # Detection-box overlay is NOT drawn in-pipeline (the *_caption
+    # GStreamer string only has a gvapython telemetry-text overlay before
+    # gvametaconvert/gvametapublish) -- it is rendered by the pipeline
+    # server's own RTSP AppDestination, so 'overlay' must be left at its
+    # default (on).
     rtsp_frame="$(rtsp_frame_json "${path}" "${h264}")"
-    webrtc_frame="$(webrtc_frame_json "${path}")"
     payload="$(cat <<EOF
 {
   "destination": {
-    "frame": [
-      ${rtsp_frame},
-      ${webrtc_frame}
-    ]
+    "frame": ${rtsp_frame}
   }
 }
 EOF
@@ -201,7 +185,6 @@ EOF
   log "Started '${name}'. Instance ID: ${instance_id}"
   log "RTSP output: rtsp://${HOST_IP}:8555/${path} ($([ "${h264}" == "true" ] && echo "H.264" || echo "MJPEG"))"
   if [[ "${caption}" == "true" ]]; then
-    log "WebRTC (WHEP) viewer: https://${HOST_IP}/webrtc/${path}/"
     log "MQTT captions: topic 'uav/caption/${device}' on broker:1883"
   fi
 }
