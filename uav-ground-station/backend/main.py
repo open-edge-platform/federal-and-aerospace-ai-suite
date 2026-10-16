@@ -18,23 +18,17 @@ service:
     on this box -- see the "UAV Ground Station Utilization" panel.
   * Bridges MQTT scene captions (topic uav/caption/<device>) to the browser
     over SSE.
-  * "H.264 Relay" video -- the only video mode: whenever the running remote
-    pipeline's RTSP destination uses "encoding": "h264" (see
-    pipeline_info's "rtsp_encoding"; uav-vision-analytics encodes H.264
-    by default), the local viz-backend configures a mediamtx sidecar
+  * "H.264 Relay" video -- the only video path: whenever a remote pipeline
+    is publishing RTSP for a device (see pipeline_info's "rtsp_available";
+    uav-vision-analytics publishes H.264), the local viz-backend configures a mediamtx sidecar
     (docker-compose-mediamtx.yml, always brought up alongside this
     service -- see `make up`) to pull that already-H.264 RTSP stream on
     demand and re-serve it as WebRTC -- pure remux, no transcoding: see
     /api/relay-path, and the dashboard iframes that local mediamtx's own
-    WHEP viewer page. The remote stack's own native WebRTC destination
-    (nginx/mediamtx/coturn, available on *_caption pipeline variants) is
-    intentionally never consumed directly here -- RTSP is always ingested
-    and relayed locally instead, so this stack's own compute/network
-    footprint is visible and consistent regardless of how the remote
-    pipeline was started.
-  * Otherwise (RTSP that is not H.264) the dashboard shows a placeholder
-    message instead of video -- the remote pipeline must publish H.264
-    (uav-vision-analytics's default) to enable relay video.
+    WHEP viewer page, so this stack's own compute/network footprint for
+    video is visible.
+  * When no remote pipeline is publishing for a device, the dashboard
+    shows a "No video stream" placeholder instead of video.
   * Natural-language video search via a separately deployed Video Search
     and Summarization (VSS) stack -- see vss_search.py.
 
@@ -206,11 +200,10 @@ async def pipeline_info(host: str = Query(...), device: str = Query(..., pattern
         "max_new_tokens": None,
         "frame_rate": None,
         "source_of_truth": None,
-        # The RTSP destination's encoding, as set by uav-vision-analytics's
-        # "encoding" field (uav-vision-analytics sets h264)
-        # -- "h264" means "H.264 Relay" mode is usable; anything else leaves
-        # the dashboard showing a placeholder instead of video.
-        "rtsp_encoding": None,
+        # True once a remote pipeline instance publishes an RTSP frame
+        # destination for this device's path -- the dashboard then starts the
+        # H.264 relay; otherwise it shows a "No video stream" placeholder.
+        "rtsp_available": False,
     }
     try:
         # Self-signed TLS on the remote nginx (see configs/nginx/ssl on that
@@ -247,7 +240,7 @@ async def pipeline_info(host: str = Query(...), device: str = Query(..., pattern
                     if frame_dest is None:
                         continue
 
-                    info["rtsp_encoding"] = frame_dest.get("encoding", "unknown")
+                    info["rtsp_available"] = True
 
                     pipeline = request.get("pipeline") or {}
                     params = request.get("parameters") or {}

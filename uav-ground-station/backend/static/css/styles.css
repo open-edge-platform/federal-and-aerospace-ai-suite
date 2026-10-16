@@ -602,7 +602,7 @@ code { color: var(--accent); }
 /* ---- Architecture dialog (js/arch.js) ---- */
 .arch-dialog {
   width: min(1560px, 100%); height: min(960px, 100%);
-  --c-video: #5fd4e8; --c-webrtc: #8be0b5; --c-turn: #9fb0c4; --c-mqtt: #c3a6ff; --c-rest: #7fb2ff; --c-files: #f4c779;
+  --c-video: #5fd4e8; --c-webrtc: #8be0b5; --c-mqtt: #c3a6ff; --c-rest: #7fb2ff; --c-files: #f4c779;
   --c-oep: #3fa0ff; --c-oss: #8a9db6; --c-app: #3fc1c0;
   --c-cpu: #7fb2ff; --c-gpu: #6fd0a0; --c-npu: #b99bff;
 }
@@ -666,7 +666,6 @@ code { color: var(--accent); }
 #arch-svg .edge text { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: #0d1218; stroke-width: 4px; stroke-linejoin: round; }
 #arch-svg .edge.video path { stroke: var(--c-video); }
 #arch-svg .edge.webrtc path { stroke: var(--c-webrtc); }
-#arch-svg .edge.turn path { stroke: var(--c-turn); stroke-dasharray: 5 4; }
 #arch-svg .edge.mqtt path { stroke: var(--c-mqtt); }
 #arch-svg .edge.files path { stroke: var(--c-files); }
 #arch-svg .edge.off { opacity: 0.2; }
@@ -679,7 +678,7 @@ code { color: var(--accent); }
 
 .arch-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 11.5px; color: var(--muted); }
 .arch-legend i { display: inline-block; width: 22px; border-top: 3px solid; vertical-align: middle; margin-right: 6px; }
-.lg-video { color: var(--c-video); } .lg-webrtc { color: var(--c-webrtc); } .lg-turn { color: var(--c-turn); border-top-style: dashed !important; }
+.lg-video { color: var(--c-video); } .lg-webrtc { color: var(--c-webrtc); }
 .lg-mqtt { color: var(--c-mqtt); } .lg-rest { color: var(--c-rest); } .lg-files { color: var(--c-files); }
 
 .arch-card {

@@ -154,10 +154,5 @@ than VSS's `LIVE_RETENTION_HOURS` may no longer be available.
 - The UAV host's TLS certificate is self-signed; the backend skips
   verification when calling it (trusted-LAN tool posture, consistent with the
   `-k`/`--insecure` curl examples in `uav-vision-analytics`'s own README).
-  The browser's direct WebRTC iframe is the one exception: it loads the
-  remote host's HTTPS page *directly* (not proxied through viz-backend), so
-  it will show its own self-signed-certificate warning the first time --
-  accept it once per browser (e.g. by visiting `https://<host>/` directly
-  first) and it won't reappear.
 - This project makes outbound, read-only requests to whatever host you enter;
   it never starts/stops pipelines on the remote stack.

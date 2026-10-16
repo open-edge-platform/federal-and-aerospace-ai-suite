@@ -179,7 +179,7 @@
     meta.textContent = "—";
     // Expands the live video to the whole screen (Esc returns). Fullscreens
     // our own container rather than relying on the remote viewer page's
-    // controls, so it works for both Direct and Relay modes.
+    // controls.
     const expandBtn = document.createElement("button");
     expandBtn.type = "button";
     expandBtn.className = "btn btn-ghost btn-icon-only device-expand-btn";
@@ -194,8 +194,8 @@
     header.appendChild(title);
     header.appendChild(headerRight);
 
-    // Holds either an <iframe> (the remote host's native WHEP viewer) or a
-    // placeholder <div> (no native WebRTC destination available) -- swapped
+    // Holds either an <iframe> (the local mediamtx's WHEP viewer for the
+    // H.264 relay) or a placeholder <div> (no stream published) -- swapped
     // by syncVideoMode() below.
     const videoContainer = document.createElement("div");
     videoContainer.className = "device-video-container";
@@ -286,16 +286,13 @@
   }
 
   // --- Video modes -----------------------------------------------------
-  // "H.264 Relay" is the only video mode: whenever the running remote
-  // pipeline's RTSP destination is already H.264 (the uav-vision-analytics
-  // default, see "rtsp_encoding"), the local viz-backend configures a mediamtx sidecar
+  // "H.264 Relay" is the only video path: whenever a remote pipeline is
+  // publishing RTSP for this device (see "rtsp_available"; uav-vision-analytics
+  // publishes H.264), the local viz-backend configures a mediamtx sidecar
   // (docker-compose-mediamtx.yml, always brought up alongside this service
   // -- see `make up`) to pull that RTSP stream on demand and re-serve it as
   // WebRTC -- pure remux, no transcoding -- then this iframes mediamtx's
-  // own WHEP viewer page. The remote stack's own native WebRTC destination
-  // is intentionally never consumed directly: RTSP is always ingested and
-  // relayed locally instead, so this stack's footprint stays consistent
-  // regardless of how the remote pipeline was started.
+  // own WHEP viewer page.
   async function startH264RelayStream(host, card) {
     card.videoContainer.innerHTML = "";
     const loading = document.createElement("div");
@@ -330,7 +327,7 @@
     }
   }
 
-  function showNoWebrtcPlaceholder(card) {
+  function showNoStreamPlaceholder(card) {
     card.videoContainer.innerHTML = "";
     const placeholder = document.createElement("div");
     placeholder.className = "device-video-placeholder";
@@ -349,28 +346,23 @@
       // Header shows only state + pipeline; the rest stays available on hover.
       const details = [info.captioning ? "captioning on" : "captioning off"];
       if (info.frame_rate !== null && info.frame_rate !== undefined) details.push(`${info.frame_rate} fps`);
-      if (info.rtsp_encoding === "h264") {
-        details.push("H.264 Relay");
-      } else {
-        details.push("no video stream");
-      }
+      details.push(info.rtsp_available ? "H.264 Relay" : "no video stream");
       card.metaEl.textContent = parts.join(" • ");
       card.metaEl.title = [...parts, ...details].join(" • ");
       card.rtspPath = info.rtsp_path || `uav-mavlink-${card.device}`;
-      syncVideoMode(host, card, info.rtsp_encoding === "h264");
+      syncVideoMode(host, card, info.rtsp_available);
     } catch (err) {
       card.metaEl.textContent = "error";
     }
   }
 
-  // Starts/swaps the card's video element to match the current remote
-  // destination's capabilities, without restarting anything that's already
+  // Starts/swaps the card's video element to match whether the remote
+  // pipeline is publishing, without restarting anything that's already
   // active and still correct (avoids tearing down a working WebRTC session
-  // on every 5s pipeline-info poll). Picks H.264 Relay (local mediamtx
-  // remux, only when the remote RTSP is already H.264) or a placeholder
-  // (RTSP that is not H.264, nothing we can show without a transcode).
-  function syncVideoMode(host, card, h264Available) {
-    const mode = h264Available ? "relay" : "none";
+  // on every 5s pipeline-info poll). Shows the H.264 Relay (local mediamtx
+  // remux) when a stream is published, otherwise a placeholder.
+  function syncVideoMode(host, card, streamAvailable) {
+    const mode = streamAvailable ? "relay" : "none";
     if (card.activeVideoMode === mode && card.relayHost === host) return;
     card.activeVideoMode = mode;
     card.relayHost = host;
@@ -378,7 +370,7 @@
     if (mode === "relay") {
       startH264RelayStream(host, card);
     } else {
-      showNoWebrtcPlaceholder(card);
+      showNoStreamPlaceholder(card);
     }
   }
 
@@ -562,7 +554,7 @@
 
   function connectCard(host, card) {
     // Video is started by refreshPipelineInfo()'s syncVideoMode() once we
-    // know whether the pipeline has a native WebRTC destination;
+    // know whether a pipeline is publishing for this device;
     // card.activeVideoMode starts unset so that first call always (re)starts
     // it.
     card.activeVideoMode = null;
