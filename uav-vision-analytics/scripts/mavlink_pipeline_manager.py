@@ -23,6 +23,11 @@ from pymavlink import mavutil
 CONNECTION_STRING   = "udpin:0.0.0.0:14541"
 PIPELINE_BASE_URL   = "http://localhost:8081/pipelines/user_defined_pipelines"
 PIPELINE_DELETE_URL = "http://localhost:8081/pipelines/{instance_id}"
+PIPELINE_STATUS_URL = "http://localhost:8081/pipelines/{instance_id}/status"
+# Loading models (GPU/NPU compile, VLM) can take a while after a (re)start, so the
+# start request and the wait for RUNNING get generous timeouts.
+START_REQUEST_TIMEOUT = 60
+START_READY_TIMEOUT   = 180
 MODEL_PATH          = (
     "/home/pipeline-server/resources/models/"
     "yolo11s/yolo11s_openvino_model/yolo11s.xml"
@@ -131,6 +136,27 @@ def _filter_by_device(pipelines: list[dict], device: str) -> list[dict]:
 running_instance_ids: list[str] = []
 
 
+def _wait_until_running(name: str, instance_id: str) -> bool:
+    """Block until the instance reports RUNNING; False on ERROR/ABORTED or timeout."""
+    url = PIPELINE_STATUS_URL.format(instance_id=instance_id)
+    deadline = time.time() + START_READY_TIMEOUT
+    state = None
+    while time.time() < deadline:
+        try:
+            state = requests.get(url, timeout=5).json().get("state")
+        except (requests.RequestException, ValueError):
+            state = None
+        if state == "RUNNING":
+            print(f"[pipeline] '{name}' is RUNNING")
+            return True
+        if state in ("ERROR", "ABORTED"):
+            print(f"[pipeline] '{name}' failed to start (state {state})")
+            return False
+        time.sleep(1)
+    print(f"[pipeline] '{name}' not RUNNING after {START_READY_TIMEOUT}s (last state {state})")
+    return False
+
+
 def start_pipelines(pipelines: list[dict], build_payload) -> None:
     """POST all configured pipelines and record their instance_ids."""
     global running_instance_ids
@@ -149,7 +175,7 @@ def start_pipelines(pipelines: list[dict], build_payload) -> None:
                 url,
                 headers={"Content-Type": "application/json"},
                 json=payload,
-                timeout=10,
+                timeout=START_REQUEST_TIMEOUT,
             )
             print(f"[pipeline] Start '{pipeline['name']}' → {resp.status_code}: {resp.text}")
             if resp.status_code == 200:
@@ -159,6 +185,9 @@ def start_pipelines(pipelines: list[dict], build_payload) -> None:
                     instance_id = resp.text.strip().strip('"')
                 if instance_id:
                     running_instance_ids.append(instance_id)
+                    # One pipeline at a time: starting several caption pipelines at once
+                    # made their GPU model loads collide and crashed the pipeline server.
+                    _wait_until_running(pipeline["name"], instance_id)
         except requests.RequestException as exc:
             print(f"[pipeline] Failed to start '{pipeline['name']}': {exc}")
 
@@ -190,6 +219,18 @@ def stop_pipelines() -> None:
 
 # ── Main monitor loop ─────────────────────────────────────────────────────────
 
+def _is_vehicle_heartbeat(msg) -> bool:
+    """True for a heartbeat sent by the vehicle's autopilot.
+
+    Ground-control stations (QGroundControl: system 255, MAV_TYPE_GCS) also send
+    heartbeats, and QGroundControl sets the "armed" bit in base_mode. Reacting to
+    those would flip the armed state every heartbeat and start/stop the
+    pipelines in a loop once a remote QGroundControl connects.
+    """
+    return (msg.type != mavutil.mavlink.MAV_TYPE_GCS
+            and msg.autopilot != mavutil.mavlink.MAV_AUTOPILOT_INVALID)
+
+
 def monitor_and_control() -> None:
     if CAPTION_ENABLED:
         pipelines     = RTSP_CAPTION_PIPELINES
@@ -205,10 +246,13 @@ def monitor_and_control() -> None:
     print(f"Connecting to {CONNECTION_STRING}...")
 
     master = mavutil.mavlink_connection(CONNECTION_STRING)
-    print("Waiting for heartbeat...")
-    master.wait_heartbeat()
-    print(f"Heartbeat received from System {master.target_system} "
-          f"Component {master.target_component}")
+    print("Waiting for vehicle heartbeat...")
+    msg = None
+    while msg is None or not _is_vehicle_heartbeat(msg):
+        msg = master.recv_match(type="HEARTBEAT", blocking=True)
+    vehicle_sysid = msg.get_srcSystem()
+    print(f"Heartbeat received from System {vehicle_sysid} "
+          f"Component {msg.get_srcComponent()}")
 
     last_armed_state = None
     print("Monitoring ARMED/DISARMED status. Press Ctrl+C to stop.\n")
@@ -218,6 +262,8 @@ def monitor_and_control() -> None:
             msg = master.recv_match(type="HEARTBEAT", blocking=True)
             if not msg:
                 time.sleep(0.01)
+                continue
+            if msg.get_srcSystem() != vehicle_sysid or not _is_vehicle_heartbeat(msg):
                 continue
 
             is_armed = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
