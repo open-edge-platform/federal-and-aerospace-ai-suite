@@ -30,7 +30,9 @@ srt: no
 webrtc: yes
 webrtcAddress: :8889
 webrtcLocalUDPAddress: :8189
-webrtcLocalTCPAddress: ""
+# ICE-TCP candidate on the same port number as UDP: a fallback for browser networks
+# that block or badly drop UDP (the browser still prefers UDP when it works).
+webrtcLocalTCPAddress: :8189
 
 # Paths are added/updated at runtime via the control API (viz-backend's
 # /api/relay-path), one per device ("relay-cpu"/"relay-gpu"/"relay-npu"),

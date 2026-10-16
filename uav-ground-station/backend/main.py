@@ -502,7 +502,10 @@ async def relay_path(host: str = Query(...), device: str = Query(..., pattern=DE
     """
     path_name = f"relay-{device}"
     source = f"rtsp://{host}:{REMOTE_RTSP_PORT}/{_frame_path(device)}"
-    body = {"source": source, "sourceOnDemand": True}
+    # rtspTransport=tcp: the UAV host's nginx only forwards RTSP over TCP, so the default
+    # "automatic" mode wastes several seconds trying UDP ("no UDP packets received,
+    # switching to TCP") every time a viewer opens a stream.
+    body = {"source": source, "sourceOnDemand": True, "rtspTransport": "tcp"}
     try:
         async with httpx.AsyncClient(timeout=5.0, trust_env=False) as client:
             resp = await client.patch(f"{MEDIAMTX_API_BASE}/v3/config/paths/patch/{path_name}", json=body)

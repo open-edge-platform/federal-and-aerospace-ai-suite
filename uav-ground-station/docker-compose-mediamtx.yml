@@ -32,6 +32,7 @@ services:
     ports:
       - "${VIZ_HOST_IP:-127.0.0.1}:${MEDIAMTX_WEBRTC_PORT:-8889}:8889"
       - "${VIZ_HOST_IP:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_UDP_PORT:-8189}:8189/udp"
+      - "${VIZ_HOST_IP:-127.0.0.1}:${MEDIAMTX_WEBRTC_ICE_TCP_PORT:-8189}:8189/tcp"
     restart: on-failure:5
 
   viz-backend:
