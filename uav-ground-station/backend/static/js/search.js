@@ -145,12 +145,22 @@
   }
 
   // ---------- player ----------
+  // Sized thumbnails and a low-bitrate playback preview keep results usable
+  // over slow links; the backend falls back to the originals if it can't
+  // produce them.
+  const THUMB_WIDTH = 320;
+  const POSTER_WIDTH = 960;
+
+  function withParam(url, key, value) {
+    return url ? `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}` : url;
+  }
+
   function renderFrameFallback(container, r, note) {
     const frame = el("div", "player-media player-frame");
     if (r.thumbnail_url) {
       const img = el("img");
       img.alt = "Best-matching frame";
-      img.src = r.thumbnail_url;
+      img.src = withParam(r.thumbnail_url, "width", POSTER_WIDTH);
       img.addEventListener("error", () => {
         img.remove();
         note = "Media is no longer available (it may have expired from VSS live-stream retention).";
@@ -173,17 +183,24 @@
       video.muted = true;
       video.playsInline = true;
       video.preload = "metadata";
-      if (r.thumbnail_url) video.poster = r.thumbnail_url;
+      if (r.thumbnail_url) video.poster = withParam(r.thumbnail_url, "width", POSTER_WIDTH);
       const seekTo = r.seek_timestamp ?? r.segment_start ?? 0;
       video.addEventListener("loadedmetadata", () => {
         video.currentTime = Math.min(seekTo, video.duration || seekTo);
         if (autoplay) video.play().catch(() => {});
       }, { once: true });
-      // Browsers can't decode some stored codecs (e.g. some live segments).
+      // If the preview fails, retry with the original clip; if that fails too
+      // (browsers can't decode some stored codecs), show the best frame.
+      let triedOriginal = false;
       video.addEventListener("error", () => {
+        if (!triedOriginal) {
+          triedOriginal = true;
+          video.src = r.video_proxy_url;
+          return;
+        }
         renderFrameFallback(mediaBox, r, "This clip's codec can't be played in the browser — showing the best-matching frame.");
-      }, { once: true });
-      video.src = r.video_proxy_url;
+      });
+      video.src = withParam(r.video_proxy_url, "preview", "1");
       mediaBox.appendChild(video);
     } else if (r.thumbnail_url) {
       renderFrameFallback(mediaBox, r, "Showing the best-matching frame.");
@@ -258,7 +275,8 @@
       const img = el("img");
       img.alt = "";
       img.loading = "lazy";
-      img.src = r.thumbnail_url;
+      img.decoding = "async";
+      img.src = withParam(r.thumbnail_url, "width", THUMB_WIDTH);
       img.addEventListener("error", () => { img.remove(); thumb.classList.add("result-thumb-missing"); }, { once: true });
       thumb.appendChild(img);
     } else {

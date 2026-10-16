@@ -89,6 +89,11 @@ All configuration is via `.env` (see `.env.example`):
 | `VSS_SEARCH_TIMEOUT_SECONDS` | `60` | Timeout for one search request to VSS |
 | `VSS_SEARCH_MIN_PEAK_SCORE` | `0.25` | Hides hits whose best frame is less similar to the query than this; tuned for CLIP ViT-B/32, retune for other embedding models (`0` disables) |
 | `VSS_SEARCH_RELATIVE_CUTOFF` | `0.90` | Keeps hits whose peak frame similarity is at least this fraction of the best hit's (`0` disables) |
+| `VSS_PREVIEW_ENABLED` | `true` | Plays a cached low-bitrate preview of each result instead of the full-resolution clip; `false` streams originals |
+| `VSS_PREVIEW_HEIGHT` | `360` | Preview height in pixels (never upscaled) |
+| `VSS_PREVIEW_MAX_KBPS` | `800` | Preview video bitrate cap |
+| `VSS_PREVIEW_CACHE_MB` | `1024` | Disk budget for cached previews in `viz-backend` |
+| `VSS_PREVIEW_PREWARM` | `3` | Top results transcoded as soon as a search returns |
 
 The remote-port defaults assume the standard nginx-published ports from
 `uav-vision-analytics/docker-compose-pymavlink.yml`; only change them if that

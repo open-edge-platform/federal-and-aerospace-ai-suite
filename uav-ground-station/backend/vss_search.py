@@ -18,22 +18,31 @@ route below except ``/api/search/status`` returns 404:
   * ``POST /api/search``        -- natural-language query; results are
     flattened and joined with filenames from Pipeline Manager's ``GET /videos``.
   * ``GET  /api/search-video``  -- Range-aware stream of a result's video
-    object from VSS's object store (MinIO), so <video> can seek.
+    object from VSS's object store (MinIO), so <video> can seek. With
+    ``preview=1`` it serves a cached, low-bitrate transcode instead (see
+    "Playback previews" below), falling back to the original on failure.
   * ``GET  /api/search-frame``  -- best-matching frame as JPEG via
     Pipeline Manager's ``GET /frames``; used as the result thumbnail and as the fallback
     when the browser can't decode the clip (e.g. some stored live-stream segments).
+    ``width`` downscales it so a result list doesn't pull full 1080p frames.
 """
 
+import asyncio
+import hashlib
 import logging
 import os
 import re
+import shutil
+import tempfile
+from collections import OrderedDict
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Optional
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, unquote, urlencode
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
@@ -63,6 +72,32 @@ VSS_SEARCH_TIMEOUT_SECONDS = float(os.environ.get("VSS_SEARCH_TIMEOUT_SECONDS", 
 # VSS_SEARCH_RELATIVE_CUTOFF=0 to show everything VSS returns.
 VSS_SEARCH_MIN_PEAK_SCORE = float(os.environ.get("VSS_SEARCH_MIN_PEAK_SCORE", "0.25"))
 VSS_SEARCH_RELATIVE_CUTOFF = float(os.environ.get("VSS_SEARCH_RELATIVE_CUTOFF", "0.90"))
+
+# --- Playback previews / thumbnails ------------------------------------------
+# Stored clips are full-resolution (live segments are 1080p at ~4 Mbps), which
+# stalls playback for a browser on a slow or lossy link (VPN, WAN). With ffmpeg
+# available, the player is served a cached H.264 transcode at
+# VSS_PREVIEW_HEIGHT and at most VSS_PREVIEW_MAX_KBPS, with its index at the
+# front of the file so playback starts after the first few KB. "Download clip"
+# still returns the original. Set VSS_PREVIEW_ENABLED=false to always stream
+# originals.
+FFMPEG = shutil.which("ffmpeg")
+VSS_PREVIEW_ENABLED = os.environ.get("VSS_PREVIEW_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
+VSS_PREVIEW_HEIGHT = max(144, min(1080, int(os.environ.get("VSS_PREVIEW_HEIGHT", "360"))))
+VSS_PREVIEW_MAX_KBPS = max(100, min(8000, int(os.environ.get("VSS_PREVIEW_MAX_KBPS", "800"))))
+VSS_PREVIEW_CACHE_DIR = Path(os.environ.get("VSS_PREVIEW_CACHE_DIR", os.path.join(tempfile.gettempdir(), "vss-preview-cache")))
+VSS_PREVIEW_CACHE_MB = max(50, int(os.environ.get("VSS_PREVIEW_CACHE_MB", "1024")))
+# Results whose previews are transcoded as soon as a search returns, so the
+# clip the player opens first is usually ready by the time it's requested.
+VSS_PREVIEW_PREWARM = max(0, min(10, int(os.environ.get("VSS_PREVIEW_PREWARM", "3"))))
+PREVIEW_SOURCE_MAX_BYTES = 1024 * 1024 * 1024
+PREVIEW_TIMEOUT_SECONDS = 180.0
+THUMBNAIL_CACHE_ENTRIES = 512
+
+_preview_locks: dict = {}
+_preview_slots = asyncio.Semaphore(2)
+_background_tasks: set = set()
+_thumbnail_cache: "OrderedDict[tuple, bytes]" = OrderedDict()
 
 SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9._-]+$")
 MAX_QUERY_LENGTH = 500
@@ -288,6 +323,7 @@ async def search(req: SearchRequest):
         })
 
     results, raw_count = _filter_and_score(results)
+    _prewarm_previews(results)
     return {
         "query": query,
         "results": results,
@@ -297,11 +333,29 @@ async def search(req: SearchRequest):
 
 
 @router.get("/api/search-video")
-async def search_video(request: Request, path: str = Query(..., min_length=3, max_length=512)):
+async def search_video(
+    request: Request,
+    path: str = Query(..., min_length=3, max_length=512),
+    preview: bool = Query(False),
+):
     _require_enabled()
     path = path.strip("/")
     if not _is_safe_object_path(path) or "/" not in path:
         raise HTTPException(status_code=400, detail="Invalid video path")
+
+    if preview and _previews_available():
+        try:
+            preview_file = await _ensure_preview(path)
+        except _MediaNotFound:
+            raise HTTPException(status_code=404, detail="Video not available")
+        except Exception as exc:  # serve the original rather than fail playback
+            logger.warning("VSS preview transcode failed for %s: %s", path, exc)
+        else:
+            return FileResponse(
+                preview_file,
+                media_type="video/mp4",
+                headers={"Cache-Control": "private, max-age=3600", "X-Preview": "1"},
+            )
 
     headers = {}
     range_header = request.headers.get("range")
@@ -345,6 +399,7 @@ async def search_frame(
     timestamp: float = Query(..., ge=0, le=10_000_000),
     bucket_name: Optional[str] = Query(None, max_length=128, pattern=SAFE_SEGMENT.pattern),
     media_path: Optional[str] = Query(None, max_length=256),
+    width: Optional[int] = Query(None, ge=64, le=1920),
 ):
     _require_enabled()
     params: dict = {"video_id": video_id, "timestamp": timestamp}
@@ -354,6 +409,13 @@ async def search_frame(
         if not _is_safe_object_path(media_path):
             raise HTTPException(status_code=400, detail="Invalid media path")
         params["media_path"] = media_path
+
+    cache_key = (video_id, round(timestamp, 3), bucket_name, media_path, width)
+    cached = _thumbnail_cache.get(cache_key)
+    if cached is not None:
+        _thumbnail_cache.move_to_end(cache_key)
+        return Response(content=cached, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
+
     try:
         async with _client(timeout=30.0) as client:
             resp = await client.get("/frames", params=params)
@@ -362,11 +424,143 @@ async def search_frame(
         raise HTTPException(status_code=502, detail="Cannot reach the VSS search service.")
     if resp.status_code != 200 or not resp.headers.get("content-type", "").startswith("image/"):
         raise HTTPException(status_code=404 if resp.status_code in (400, 404) else 502, detail="Frame not available")
-    return Response(
-        content=resp.content,
-        media_type=resp.headers["content-type"],
-        headers={"Cache-Control": "private, max-age=3600"},
+
+    content, media_type = resp.content, resp.headers["content-type"]
+    if width and FFMPEG:
+        try:
+            content = await _run_ffmpeg(
+                ["-f", "image2pipe", "-i", "pipe:0", "-vf", f"scale='min({width},iw)':-2",
+                 "-q:v", "5", "-f", "image2pipe", "-c:v", "mjpeg", "pipe:1"],
+                stdin_data=resp.content, timeout=15.0,
+            )
+            media_type = "image/jpeg"
+        except Exception as exc:  # the full-size frame still works as a thumbnail
+            logger.warning("Thumbnail resize failed for %s: %s", video_id, exc)
+    if media_type == "image/jpeg":
+        _thumbnail_cache[cache_key] = content
+        while len(_thumbnail_cache) > THUMBNAIL_CACHE_ENTRIES:
+            _thumbnail_cache.popitem(last=False)
+    return Response(content=content, media_type=media_type, headers={"Cache-Control": "private, max-age=3600"})
+
+
+class _MediaNotFound(Exception):
+    pass
+
+
+def _previews_available() -> bool:
+    return VSS_PREVIEW_ENABLED and FFMPEG is not None
+
+
+async def _run_ffmpeg(args: list, stdin_data: Optional[bytes] = None, timeout: float = 60.0) -> bytes:
+    """Run ffmpeg with an argument list (never a shell) and return its stdout."""
+    proc = await asyncio.create_subprocess_exec(
+        FFMPEG, "-nostdin", "-hide_banner", "-loglevel", "error", *args,
+        stdin=asyncio.subprocess.PIPE if stdin_data is not None else asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
+    try:
+        out, err = await asyncio.wait_for(proc.communicate(stdin_data), timeout)
+    except asyncio.TimeoutError:
+        proc.kill()
+        await proc.wait()
+        raise RuntimeError(f"ffmpeg timed out after {timeout:.0f}s")
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg exited {proc.returncode}: {err.decode(errors='replace').strip()[-300:]}")
+    return out
+
+
+async def _download_object(path: str, dest: Path) -> None:
+    received = 0
+    async with _client(VSS_DATASTORE_URL, timeout=httpx.Timeout(10.0, read=60.0)) as client:
+        async with client.stream("GET", f"/{path}") as resp:
+            if resp.status_code in (403, 404):
+                raise _MediaNotFound(path)
+            if resp.status_code != 200:
+                raise RuntimeError(f"object store returned HTTP {resp.status_code}")
+            with dest.open("wb") as fh:
+                async for chunk in resp.aiter_bytes():
+                    received += len(chunk)
+                    if received > PREVIEW_SOURCE_MAX_BYTES:
+                        raise RuntimeError("source video is too large to preview")
+                    fh.write(chunk)
+
+
+async def _ensure_preview(path: str) -> Path:
+    """Return the cached preview for an object path, transcoding it once if needed."""
+    key = hashlib.sha256(path.encode()).hexdigest()[:32]
+    out = VSS_PREVIEW_CACHE_DIR / f"{key}.mp4"
+    if out.is_file():
+        os.utime(out)
+        return out
+
+    lock = _preview_locks.setdefault(key, asyncio.Lock())
+    try:
+        async with lock:
+            if out.is_file():
+                return out
+            VSS_PREVIEW_CACHE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+            async with _preview_slots:
+                with tempfile.TemporaryDirectory(dir=VSS_PREVIEW_CACHE_DIR) as work:
+                    src = Path(work) / "source"
+                    part = Path(work) / "preview.mp4"
+                    await _download_object(path, src)
+                    kbps = VSS_PREVIEW_MAX_KBPS
+                    await _run_ffmpeg([
+                        "-i", str(src),
+                        "-map", "0:v:0", "-map", "0:a:0?",
+                        "-vf", f"scale=-2:'min({VSS_PREVIEW_HEIGHT},ih)'",
+                        "-c:v", "libx264", "-preset", "veryfast", "-crf", "28",
+                        "-maxrate", f"{kbps}k", "-bufsize", f"{kbps * 2}k",
+                        "-g", "30", "-pix_fmt", "yuv420p",
+                        "-c:a", "aac", "-b:a", "64k",
+                        "-movflags", "+faststart",
+                        "-y", str(part),
+                    ], timeout=PREVIEW_TIMEOUT_SECONDS)
+                    os.replace(part, out)
+            _prune_preview_cache()
+            return out
+    finally:
+        if not lock.locked():
+            _preview_locks.pop(key, None)
+
+
+def _prune_preview_cache() -> None:
+    try:
+        files = sorted(VSS_PREVIEW_CACHE_DIR.glob("*.mp4"), key=lambda f: f.stat().st_mtime)
+        total = sum(f.stat().st_size for f in files)
+        limit = VSS_PREVIEW_CACHE_MB * 1024 * 1024
+        while files and total > limit:
+            oldest = files.pop(0)
+            total -= oldest.stat().st_size
+            oldest.unlink(missing_ok=True)
+    except OSError as exc:
+        logger.debug("Preview cache prune failed: %s", exc)
+
+
+def _prewarm_previews(results: list) -> None:
+    if not _previews_available() or not VSS_PREVIEW_PREWARM:
+        return
+    paths = []
+    for r in results:
+        url = r.get("video_proxy_url") or ""
+        if url.startswith("/api/search-video?path="):
+            path = unquote(url.split("=", 1)[1])
+            if path not in paths:
+                paths.append(path)
+        if len(paths) >= VSS_PREVIEW_PREWARM:
+            break
+
+    async def warm(path: str) -> None:
+        try:
+            await _ensure_preview(path)
+        except Exception as exc:
+            logger.debug("Preview pre-warm failed for %s: %s", path, exc)
+
+    for path in paths:
+        task = asyncio.create_task(warm(path))
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
 
 
 def _peak_score(metadata: dict) -> Optional[float]:
