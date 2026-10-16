@@ -154,6 +154,24 @@ curl -sk -X POST "https://<HOST_IP>/pipelines/user_defined_pipelines/uav_object_
 Omit `parameters` to use the pipeline's default model/device (as documented above).
 `captioner_device` accepts `CPU` or `GPU`.
 
+### Using your own videos
+
+The pipelines read looping `.avi` files from `resources/videos/` (`uav_sample_front.avi`,
+`uav_sample_back.avi`, `uav_sample_bottom.avi` for the CPU, GPU and NPU pipelines). To use your own footage
+in any format ffmpeg can read (`.mp4`, `.mov`, `.mkv`, `.avi`, `.ts`, ...), convert it with:
+
+```bash
+./scripts/convert_video.sh my_clip.mp4 -o resources/videos/uav_sample_front.avi -f
+```
+
+The script writes H.264 (High, yuv420p), 30 fps, no audio, ~4 Mbps, with a keyframe every 250 frames, trimmed to
+whole GOPs so the loop point is clean, and verifies the result. If you have several cameras, pass the same
+`--frames N` to every file so their loops have the same length and stay in step (for example `-n 1750`).
+Other options: `--bitrate`, `--fps`, `--size WxH`, `--gop`, `--no-trim`; run it with `--help`.
+It uses `ffmpeg` from the host if installed, otherwise the DL Streamer image from `.env`, so only Docker is
+required. Restart the pipelines after replacing a file. See
+[Use Your Own Videos](docs/user-guide/how-to-guides/convert-videos.md) for the full steps.
+
 ### Manually starting/stopping a pipeline (without arming the drone)
 
 `make start-rtsp` relies on MAVLink ARM/DISARM events to start/stop pipelines

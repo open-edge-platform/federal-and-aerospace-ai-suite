@@ -7,6 +7,8 @@ Learn more about:
   details, `make model` usage
 - [Makefile Reference](./how-to-guides/makefile.md) — Shorthand targets for
   model setup, stack management, and pipeline control
+- [Use Your Own Videos](./how-to-guides/convert-videos.md) — Convert an mp4, mkv, avi, or other
+  video into the format the pipelines use
 - [Intel RealSense Camera](./how-to-guides/realsense-guide.md) — Connect and
   stream from an Intel RealSense depth camera as the video source
 - [QGroundControl](./how-to-guides/qgroundcontrol.md) — Configure QGroundControl
@@ -21,6 +23,7 @@ Learn more about:
 
 YOLO11s AI Model <./how-to-guides/model.md>
 Makefile Reference <./how-to-guides/makefile.md>
+Use Your Own Videos <./how-to-guides/convert-videos.md>
 RealSense Camera <./how-to-guides/realsense-guide.md>
 QGroundControl <./how-to-guides/qgroundcontrol.md>
 Troubleshooting <./how-to-guides/troubleshooting.md>
