@@ -95,7 +95,7 @@ Then, for either option, initialize the environment:
 make init
 ```
 
-`make init` creates `.env` from the template and **auto-detects your Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`REALSENSE_DEVICE`). It skips if `.env` already exists.
+`make init` creates `.env` from the template and **auto-detects your Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
 
 Then set your host IP address in `.env`:
 
@@ -211,14 +211,15 @@ make pymav-down
 
 ### pymavlink mode (`config-pymavlink.json`)
 
-| Pipeline | Device | Source | Output |
+| Pipeline | Detection | Captions (VLM) | Source |
 | --- | --- | --- | --- |
-| `uav_object_detection_cpu` | CPU | Looped video file (`uav_sample.avi`) | RTSP `:8555` |
-| `uav_object_detection_gpu` | GPU | Looped video file (`uav_sample.avi`) | RTSP `:8555` |
-| `uav_object_detection_npu` | NPU | Looped video file (`uav_sample.avi`) | RTSP `:8555` |
-| `uav_realsense_cpu` | CPU | Intel RealSense camera (v4l2src) | RTSP `:8555` |
-| `uav_realsense_gpu` | GPU | Intel RealSense camera (v4l2src) | RTSP `:8555` |
-| `uav_realsense_npu` | NPU | Intel RealSense camera (v4l2src) | RTSP `:8555` |
+| `uav_object_detection_<det>` | `cpu`, `gpu` or `npu` | no | Looped video file in `resources/videos` |
+| `uav_object_detection_<det>_<vlm>` | `cpu`, `gpu` or `npu` | `cpu` or `gpu` | Looped video file |
+| `uav_camera_npu`, `uav_camera_npu_gpu` | `npu` | none / `gpu` | Live camera (Intel RealSense or USB webcam) |
+
+All of them publish RTSP on `:8555`. The camera pipelines for the CPU and GPU are in `configs/config-pymavlink-realsense.json`.
+`make start-rtsp` picks the pipeline for each camera in `configs/cameras.yaml`
+([Configure the cameras](../how-to-guides/cameras.md)).
 
 > [!NOTE]
 > **Using different or your own aerial footage:** The bundled video `uav_sample.avi` is a placeholder. To see detection on a different aerial footage, replace `uav-vision-analytics/resources/videos/uav_sample.avi` with your own video containing vehicles/pedestrians in appropriate file format (keep the same filename). If the stack is already running with the old video, run [Step 6 — Stop all services](#6-stop-all-services), then restart from [Step 3 — Standalone mode (pymavlink)](#3-standalone-mode-pymavlink) and [Step 4 — Start inference pipelines](#4-start-inference-pipelines) — the file is only read when a pipeline starts.

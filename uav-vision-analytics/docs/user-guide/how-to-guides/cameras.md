@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Configure the Cameras
 
 `make start-rtsp` streams the cameras listed in `configs/cameras.yaml` when the vehicle is armed. For every camera you
-choose the video it plays, which device runs object detection, whether a vision-language model (VLM) writes scene
+choose its source (a video file or a live camera such as an Intel RealSense),  which device runs object detection, whether a vision-language model (VLM) writes scene
 captions (and on which device, with which model and prompt), and whether detections are drawn on the stream. Edit the
 file, apply it, and check the result; no pipeline definition has to be touched.
 
@@ -18,7 +18,7 @@ version: 1
 cameras:
   - id: front_camera                 # a-z, 0-9 and _ ; also the stream name uav-front-camera and caption topic uav/caption/front_camera
     enabled: true                    # false skips the camera without deleting its settings
-    video: uav_sample_front.avi      # file name in resources/videos
+    video: uav_sample_front.avi      # file name in resources/videos (or device: for a live camera, see below)
     overlay: true                    # false hides the detection boxes AND the telemetry text
     detection:
       device: npu                    # cpu | gpu | npu
@@ -39,7 +39,7 @@ unless `enabled: true`).
 | --- | --- |
 | `id` | Camera name: lowercase letters, digits and `_`. Also names the RTSP stream (`uav-<id>` with `_` replaced by `-`) and the caption topic. |
 | `enabled` | `false` leaves the camera out. |
-| `video` | A file in `resources/videos` (`.avi`, `.mp4`, `.mkv` or `.ts`, no folders). Prepare your own with [`scripts/convert_video.sh`](./convert-videos.md). |
+| `video` / `device` | The source: either `video`, or `device` for a live camera ([below](#live-cameras-realsense-usb-webcams)), never both. `video` is a file in `resources/videos` (`.avi`, `.mp4`, `.mkv` or `.ts`, no folders). Prepare your own with [`scripts/convert_video.sh`](./convert-videos.md). |
 | `overlay` | `false` removes the detection boxes and the telemetry text from the stream. |
 | `detection.device` / `.model` | Where and with which model objects are detected. The model path is relative to `resources/models`. Cameras with the same device and model share one loaded model. |
 | `captioning.enabled` | `true` adds captions. They are published on MQTT `uav/caption/<id>`. |
@@ -48,14 +48,19 @@ unless `enabled: true`).
 
 ### Which pipeline runs
 
-The nine pipelines in `configs/config-pymavlink-pipelines.json` are chosen from the devices:
+The pipelines are chosen from the source and the devices. `configs/config-pymavlink.json` has the nine for
+video files and two for live cameras (`uav_camera_npu`, `uav_camera_npu_gpu`); `configs/config-pymavlink-realsense.json`
+holds all nine live camera pipelines for reference (copy the ones you need into the first file and recreate the container):
 
-| Captioning | Pipeline | Combinations |
-| --- | --- | --- |
-| off | `uav_object_detection_<det>` | `cpu`, `gpu`, `npu` |
-| on | `uav_object_detection_<det>_<vlm>` | `<det>` = `cpu`/`gpu`/`npu` with `<vlm>` = `cpu`/`gpu` |
+| Source | Captioning | Pipeline | Combinations |
+| --- | --- | --- | --- |
+| `video` (file) | off | `uav_object_detection_<det>` | `cpu`, `gpu`, `npu` |
+| `video` (file) | on | `uav_object_detection_<det>_<vlm>` | `<det>` = `cpu`/`gpu`/`npu` with `<vlm>` = `cpu`/`gpu` |
+| `device` (live camera) | off | `uav_camera_<det>` | `cpu`, `gpu`, `npu` |
+| `device` (live camera) | on | `uav_camera_<det>_<vlm>` | as above |
 
-Each pipeline is tuned for its detection device, so the file chooses a pipeline and never edits one.
+A camera that needs a pipeline the server does not have is reported by `make check-cameras`. A `uav_camera_*` pipeline is its video twin with a `v4l2src` source instead of a file source. Each pipeline is tuned for
+its detection device, so the file chooses a pipeline and never edits one.
 
 ## Apply a change and see the effect
 
@@ -107,6 +112,35 @@ Each pipeline is tuned for its detection device, so the file chooses a pipeline 
    every camera has a card with its devices as badges (`NPU`, `VLM GPU`, `no overlay`); hover the card header for the
    models, prompt and video. Streams are `rtsp://<HOST_IP>:8555/uav-<camera>`, captions
    `mosquitto_sub -h <HOST_IP> -t uav/caption/<camera>`.
+
+## Live cameras (RealSense, USB webcams)
+
+A live camera is a camera whose source is `device` instead of `video`. Everything else (detection, captioning, overlay)
+is the same, and RealSense cameras and ordinary UVC webcams are treated alike. They run the `uav_camera_*` pipelines.
+
+The shipped `configs/cameras.yaml` has such a camera, `realsense_camera`, disabled; set `enabled: true` once a camera is connected.
+
+```yaml
+  - id: realsense_front
+    device: /dev/v4l/by-id/usb-Intel_R__RealSense_TM__Depth_Camera_435_Intel_R__RealSense_TM__Depth_Camera_435-video-index0
+    width: 1280                      # optional, default 1280
+    height: 720                      # optional, default 720
+    detection: {device: npu}
+```
+
+1. **Find the node.** `v4l2-ctl --list-devices` lists the cameras. A RealSense exposes several nodes (depth, infrared,
+   colour): use the colour one, the one whose `v4l2-ctl -d <node> --list-formats-ext` shows YUYV or UYVY. The `index` number in
+   the `/dev/v4l/by-id/` name does not tell which one it is (on a D435 tested here the colour node was `index0`).
+2. **Prefer a stable name.** `/dev/videoN` numbers change with the plug order and after a reboot. The links in
+   `/dev/v4l/by-id/` (they follow the camera) and `/dev/v4l/by-path/` (they follow the USB port) do not. `device` accepts
+   `/dev/videoN`, `/dev/v4l/by-id/<name>` and `/dev/v4l/by-path/<name>`.
+3. **Make it visible to the container.** Put the same path in `.env` as `CAMERA_DEVICE_1` (up to `CAMERA_DEVICE_4`;
+   `make init` fills `CAMERA_DEVICE_1` with the first USB camera it finds) and recreate the container with `make pymav-up`.
+4. **Check.** `make check-cameras` reports a device that is missing. A camera that is not plugged in is left out with a
+   warning (in `check-cameras`, `cameras-status` and the manager log), and the other cameras still start.
+
+Each device can be used by one camera only, and the images must be raw video (not MJPEG) at the requested size. Several
+cameras on one USB controller can exceed its bandwidth; spread them over different ports.
 
 ## Examples
 

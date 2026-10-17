@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 
 | Folder | What it tests | Needs |
 | --- | --- | --- |
-| `camera_config/` | `scripts/camera_config.py`: schema, validation, pipeline choice, the start requests, and that every request satisfies the parameter schema of the pipelines in `configs/config-pymavlink-pipelines.json` | Docker and the built image only |
-| `live/` | The running stack: all nine pipelines, the cameras of `configs/cameras.yaml`, shutdown, settings, bad files, the arm cycle | `make pymav-up`, an idle stack |
+| `camera_config/` | `scripts/camera_config.py`: schema, validation, pipeline choice, the start requests, and that every request satisfies the parameter schema of the pipelines in `configs/config-pymavlink.json` | Docker and the built image only |
+| `live/` | The running stack: the nine video pipelines, the cameras of `configs/cameras.yaml`, shutdown, settings, bad files, the arm cycle | `make pymav-up`, an idle stack |
 
 ```bash
 tests/run_tests.sh                  # offline unit tests

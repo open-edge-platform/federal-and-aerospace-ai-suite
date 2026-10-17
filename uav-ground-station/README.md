@@ -26,8 +26,9 @@ that host until you enter its IP in the dashboard and press **Connect**.
 - Scene captions (`uav/caption/<camera>` over MQTT, bridged to the browser via
   SSE), shown under the video of cameras whose pipeline has captioning on.
 - One card per camera (a running pipeline with an RTSP stream, shown as `uav-<name>`),
-  with the devices of its pipeline as badges (detection device, VLM device, overlay
-  off), and the models, prompt and video in the tooltip (from the DL Streamer
+  with the devices of its pipeline as badges (detection device, VLM device, `LIVE` for
+  a live camera such as a RealSense, overlay off), and the models, prompt and video or
+  camera device in the tooltip (from the DL Streamer
   Pipeline Server's REST API and the start request of each pipeline).
 - CPU/GPU/NPU utilization, proxied from `metrics-manager`.
 - **Live Natural Language Search**: the **Search Videos** button (top bar or side
