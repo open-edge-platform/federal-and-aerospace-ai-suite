@@ -115,6 +115,17 @@ async function main() {
   check("the stopped camera no longer listens for captions", live("uav/caption/bottom_camera").length === 0);
   check("a detection-only camera has no caption subscription", live("uav/caption/left_camera").length === 0 && card("left camera").querySelector(".caption-panel").hidden);
 
+  console.log("== a live camera (RealSense) next to the video cameras");
+  cameras = [cameras[0], camera("realsense", { video: null, device: "/dev/v4l/by-id/usb-Intel_RealSense-video-index4", camera_size: "1280x720", captioning: false, vlm_device: null, vlm_model: null, mqtt_topic: null, pipeline_name: "uav_camera_npu", detection_device: "npu" }), cameras[1]];
+  await pollTimer();
+  await tick(150);
+  const rs = card("realsense camera");
+  check("live camera card has a LIVE badge with the device in the tooltip",
+        rs && JSON.stringify(badges(rs)) === JSON.stringify(["NPU", "LIVE"]) && /usb-Intel_RealSense-video-index4 \(1280x720\)/.test(rs.querySelector(".device-badge-live").title), rs && badges(rs).join(" + "));
+  check("its tooltip names the device, not a video file", /live camera \/dev\/v4l\/by-id\/usb-Intel_RealSense-video-index4 1280x720/.test(rs.querySelector(".device-card-meta").title) && !/video uav_sample/.test(rs.querySelector(".device-card-meta").title));
+  check("video cameras have no LIVE badge", !badges(card("front camera")).includes("LIVE"));
+  check("a live camera without captions has no caption subscription", card("realsense camera").querySelector(".caption-panel").hidden && live("uav/caption/realsense_camera").length === 0);
+
   console.log("== host unreachable keeps the cards");
   reachable = false;
   await pollTimer();

@@ -86,9 +86,9 @@ LOCAL_METRICS_MANAGER_BASE = os.environ.get("LOCAL_METRICS_MANAGER_BASE", "http:
 # topic of a camera is "uav/caption/<name>". Both end up in URLs / subscriptions, so they are validated.
 CAMERA_PATTERN = r"^[A-Za-z0-9_-]{1,48}$"
 TOPIC_PATTERN = r"^uav/caption/[A-Za-z0-9_-]{1,48}$"
-# uav_object_detection_<detection device>[_<vlm device>]; the older uav_object_detection_<device>_caption
+# uav_object_detection_<det>[_<vlm>] (video file) or uav_camera_<det>[_<vlm>] (live camera); the older uav_object_detection_<device>_caption
 # naming is still recognised so a UAV host that has not been updated keeps working.
-_PIPELINE_NAME = re.compile(r"^uav_object_detection_(cpu|gpu|npu)(?:_(cpu|gpu)|(_caption))?$")
+_PIPELINE_NAME = re.compile(r"^uav_(?:object_detection|camera)_(cpu|gpu|npu)(?:_(cpu|gpu)|(_caption))?$")
 # Display order of the camera cards: a camera whose name contains one of these
 # words (e.g. "uav-front-camera" -> "front") is placed by that word's position;
 # any other camera follows, alphabetically.
@@ -178,6 +178,9 @@ def _camera_record(inst: dict, request: dict, path: str, frame: dict) -> dict:
         "mqtt_topic": topic,
         "overlay": frame.get("overlay", True) is not False,
         "video": params.get("video"),
+        # a live camera (RealSense, USB webcam) has a device node instead of a video file
+        "device": params.get("device"),
+        "camera_size": f"{params['camera_width']}x{params['camera_height']}" if params.get("device") and params.get("camera_width") else None,
         "label": params.get("overlay_label"),
         "frame_rate": params.get("frame_rate"),
     }

@@ -308,6 +308,7 @@
       add(info.vlm_device ? `VLM ${info.vlm_device.toUpperCase()}` : "VLM", "device-badge-vlm",
         `Captions by ${info.vlm_model || "the VLM"}${info.vlm_device ? ` on ${info.vlm_device.toUpperCase()}` : ""}`);
     }
+    if (info.device) add("LIVE", "device-badge-live", `Live camera ${info.device}${info.camera_size ? ` (${info.camera_size})` : ""}`);
     if (info.overlay === false) add("no overlay", "device-badge-off", "Detection boxes and telemetry text are not drawn on this stream");
   }
 
@@ -396,6 +397,7 @@
       if (info.prompt) details.push(`prompt: ${info.prompt}`);
       details.push(info.overlay === false ? "overlay off" : "overlay on");
       if (info.video) details.push(`video ${info.video}`);
+      if (info.device) details.push(`live camera ${info.device}${info.camera_size ? ` ${info.camera_size}` : ""}`);
       if (info.frame_rate !== null && info.frame_rate !== undefined) details.push(`${info.frame_rate} fps`);
       details.push(info.rtsp_available ? "H.264 Relay" : "no video stream");
       card.metaEl.textContent = parts.join(" • ");
