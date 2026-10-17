@@ -98,70 +98,31 @@ make pymav-up
 make uavsdk-up
 ```
 
-### Step 3: Start RTSP pipelines
+### Step 3: Start the cameras
 
 ```bash
-make start-rtsp DEVICE=gpu   # or cpu | npu | all
+make check-cameras   # validate configs/cameras.yaml and show what would run (nothing is started)
+make start-rtsp      # start the cameras when the vehicle is armed
 ```
 
-#### Optional: scene captioning (VLM)
+The cameras come from [`configs/cameras.yaml`](configs/cameras.yaml): for each one the video, the device and model that
+detect objects, whether a VLM writes scene captions (device, model, prompt) and whether detections are drawn on the stream.
+The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`), detection on the NPU and captions from
+the VLM on the GPU, so arming the vehicle is all that is needed. After editing the file, `make check-cameras` validates
+it, `make start-rtsp` (or disarm and arm again) applies it, and `make cameras-status` compares the file with what is
+running. See [Configure the Cameras](docs/user-guide/how-to-guides/cameras.md).
 
-Pass `CAPTION=true` to also run a VLM scene-captioning branch alongside the normal
-detection + telemetry-overlay RTSP output:
-
-```bash
-make start-rtsp DEVICE=cpu CAPTION=true
-```
-
-This switches to the `uav_object_detection_<device>_caption` pipeline variants, which
-`tee` the decoded video right after decode into two independent branches:
-
-1. **Detection/RTSP branch** — unchanged: YOLO11s detection, bounding boxes, telemetry
-   overlay, published to the same RTSP path as the non-caption pipeline.
-2. **Captioning branch** — runs on the *clean, raw* (non-overlaid) frames, generating a
-   natural-language scene description via `gvagenai` (OpenVINO VLM, `InternVL2-1B`) and
-   publishing it over MQTT on `uav/caption/<device>` (e.g. `uav/caption/cpu`). The
-   captioner runs on the **same device as the pipeline variant** for `cpu`/`gpu`
-   (`resources/ov_models/{cpu,gpu}/InternVL2-1B`). The `npu_caption` variant currently
-   falls back to the **CPU** VLM model/device — NPU VLM conversion requires `int4`
-   quantization, which fails today in the upstream `intel/model-download` image
-   (`ModuleNotFoundError: No module named 'numpy'` in its NPU fallback conversion path,
-   reproduced across the `mcp-rc`, `2026.2.0`, and latest weekly tags). Detection still
-   runs on NPU as normal for that variant; only the VLM captioner is CPU.
-
-`CAPTION=true` requires the VLM model to be downloaded first — run `make vlm-model`
-(at minimum for `CPU`; see below). Default is `CAPTION=false` (original pipelines,
-no captioning, no extra CPU/VLM load).
-
-**Using a different VLM model:** the captioner's model path/device are REST
-`parameters`, not hardcoded, so you can point captioning at any OpenVINO IR model
-already present on disk (e.g. a different model fetched via
-`make vlm-model VLM_MODEL_ID=...`) by overriding `captioner_model_path` and
-`captioner_device` when starting the pipeline:
-
-```bash
-curl -sk -X POST "https://<HOST_IP>/pipelines/user_defined_pipelines/uav_object_detection_cpu_caption" \
-  -H 'Content-Type: application/json' \
-  -d '{
-        "destination": {"frame": {"type": "rtsp", "path": "uav-mavlink-cpu"}},
-        "parameters": {
-          "captioner_model_path": "/home/pipeline-server/resources/ov_models/<device>/<ModelName>",
-          "captioner_device": "GPU"
-        }
-      }'
-```
-
-Omit `parameters` to use the pipeline's default model/device (as documented above).
-`captioner_device` accepts `CPU` or `GPU`.
+Streams are published as `rtsp://<HOST_IP>:8555/uav-<camera>` (for example `uav-front-camera`) and the captions of a
+camera on MQTT `uav/caption/<camera>`. Captions need the VLM models: run `make vlm-model` once.
 
 ### Using your own videos
 
-The pipelines read looping `.avi` files from `resources/videos/` (`uav_sample_front.avi`,
-`uav_sample_back.avi`, `uav_sample_bottom.avi` for the CPU, GPU and NPU pipelines). To use your own footage
+The cameras play looping `.avi` files from `resources/videos/` (`uav_sample_front.avi`,
+`uav_sample_bottom.avi`, `uav_sample_back.avi` in the shipped `configs/cameras.yaml`). To use your own footage
 in any format ffmpeg can read (`.mp4`, `.mov`, `.mkv`, `.avi`, `.ts`, ...), convert it with:
 
 ```bash
-./scripts/convert_video.sh my_clip.mp4 -o resources/videos/uav_sample_front.avi -f
+./scripts/convert_video.sh my_clip.mp4 -o resources/videos/my_clip.avi -f   # then set 'video: my_clip.avi' for a camera
 ```
 
 The script writes H.264 (High, yuv420p), 30 fps, no audio, ~4 Mbps, with a keyframe every 250 frames, trimmed to
@@ -169,27 +130,31 @@ whole GOPs so the loop point is clean, and verifies the result. If you have seve
 `--frames N` to every file so their loops have the same length and stay in step (for example `-n 1750`).
 Other options: `--bitrate`, `--fps`, `--size WxH`, `--gop`, `--no-trim`; run it with `--help`.
 It uses `ffmpeg` from the host if installed, otherwise the DL Streamer image from `.env`, so only Docker is
-required. Restart the pipelines after replacing a file. See
+required. Restart the cameras (`make start-rtsp`) after replacing a file. See
 [Use Your Own Videos](docs/user-guide/how-to-guides/convert-videos.md) for the full steps.
 
-### Manually starting/stopping a pipeline (without arming the drone)
+### Starting pipelines without arming the drone
 
-`make start-rtsp` relies on MAVLink ARM/DISARM events to start/stop pipelines
-automatically. For ad-hoc testing against an already-running stack (`make
-pymav-up`) without arming via QGroundControl/SITL, use
-`scripts/uav_pipeline_control.sh` instead:
+`make start-rtsp` waits for the vehicle to be armed. To run the cameras of `configs/cameras.yaml` right away, without
+a vehicle (Ctrl+C stops them):
 
 ```bash
-./scripts/uav_pipeline_control.sh start  cpu --caption   # or gpu|npu|all
-./scripts/uav_pipeline_control.sh status cpu --caption
-./scripts/uav_pipeline_control.sh stop   cpu --caption
+docker exec -it -e HOST_IP=<HOST_IP> dlstreamer-pipeline-server \
+  python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now
 ```
 
-Drop `--caption` to control the base (non-captioning) pipeline instead. Each
-started pipeline's instance ID is cached in `.uav_pipeline_<device>[_caption]_instance_id`
-so `stop`/`status` can find it later.
+For a single ad-hoc pipeline with the default video, models and prompt, `scripts/uav_pipeline_control.sh` starts one
+pipeline per detection device:
 
-The RTSP output is H.264 encoded, which is what the `uav-ground-station` relay expects.
+```bash
+./scripts/uav_pipeline_control.sh start  gpu              # uav_object_detection_gpu, stream uav-manual-gpu
+./scripts/uav_pipeline_control.sh start  npu --caption    # uav_object_detection_npu_gpu (captions on the GPU VLM)
+./scripts/uav_pipeline_control.sh status npu --caption
+./scripts/uav_pipeline_control.sh stop   npu --caption
+```
+
+Each started pipeline's instance ID is cached in `.uav_pipeline_<device>[_caption]_instance_id` so `stop`/`status` can
+find it later. The RTSP output is H.264 encoded, which is what the `uav-ground-station` relay expects.
 
 ## Endpoints
 
@@ -200,8 +165,8 @@ and `metrics-manager` no longer publish ports directly to the host.
 | Service | URL / Path | Notes |
 |---------|-----------|-------|
 | DL Streamer Pipeline Server REST API | `https://<HOST_IP>/` | Pipeline control and status, proxied to `dlstreamer-pipeline-server:8081` |
-| RTSP annotated stream | `rtsp://<HOST_IP>:8555` | Detection + telemetry overlay output (H.264); TCP passthrough via nginx `stream {}` |
-| MQTT scene captions (`CAPTION=true` only) | `mqtt://<HOST_IP>:1883`, topic `uav/caption/<device>` | VLM-generated natural-language scene description from the raw (non-overlaid) video; one topic per device (`cpu`/`gpu`/`npu`); TCP passthrough via nginx `stream {}` to the `broker` container (e.g. `mosquitto_sub -h <HOST_IP> -t uav/caption/cpu -v`) |
+| RTSP annotated streams | `rtsp://<HOST_IP>:8555/uav-<camera>` | One stream per camera of `configs/cameras.yaml`: detection + telemetry overlay output (H.264; the overlay can be switched off per camera); TCP passthrough via nginx `stream {}` |
+| MQTT scene captions (cameras with captioning on) | `mqtt://<HOST_IP>:1883`, topic `uav/caption/<camera>` | VLM-generated natural-language scene description from the raw (non-overlaid) video; one topic per camera; TCP passthrough via nginx `stream {}` to the `broker` container (e.g. `mosquitto_sub -h <HOST_IP> -t uav/caption/cpu -v`) |
 | Metrics manager SSE stream (Standalone mode only) | `https://<HOST_IP>/metrics/stream` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |
 | Metrics manager REST snapshot (Standalone mode only) | `https://<HOST_IP>/api/v1/metrics/latest` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |
 
@@ -225,7 +190,9 @@ make pymav-up       Start standalone pymavlink stack (PX4 SITL + broker + DL Str
 make pymav-down     Stop and remove pymavlink stack (includes volumes)
 make uavsdk-up      Start UAV Mission Compute SDK stack (requires uav-mission-compute-sdk running first)
 make uavsdk-down    Stop and remove UAV Mission Compute SDK stack (includes volumes)
-make start-rtsp     Start RTSP pipelines. DEVICE=cpu|gpu|npu|all (default: gpu). CAPTION=true|false (default: false) to also run VLM scene captioning (requires 'make vlm-model').
+make start-rtsp     Start the cameras of configs/cameras.yaml when the vehicle is armed (the file is re-read at every arming)
+make check-cameras  Validate configs/cameras.yaml and show what would run
+make cameras-status Compare configs/cameras.yaml with the pipelines that are running
 make build          Alias: start the default pymavlink stack
 ```
 

@@ -21,12 +21,12 @@ In QGroundControl, `Click on Left top Q icon` → `Settings` → `Video` → `So
 → `select "RTSP Video Stream"` in the dropdown. Then in RTSP URL enter the URL
 for the desired pipeline.
 
-URL for all three device pipelines (CPU/GPU/NPU):
+URLs of the cameras (`rtsp://<HOST_IP>:8555/uav-<camera>`, one per camera of `configs/cameras.yaml`):
 
 ```text
-rtsp://<HOST_IP>:8555/uav-mavlink-cpu   # CPU
-rtsp://<HOST_IP>:8555/uav-mavlink-gpu   # GPU
-rtsp://<HOST_IP>:8555/uav-mavlink-npu   # NPU
+rtsp://<HOST_IP>:8555/uav-front-camera    # one stream per camera of configs/cameras.yaml
+rtsp://<HOST_IP>:8555/uav-bottom-camera
+rtsp://<HOST_IP>:8555/uav-back-camera
 ```
 
 ![QGroundControl RTSP stream](../_assets/QGC-rtsp.gif)

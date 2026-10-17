@@ -103,7 +103,7 @@ GPU_RENDER_DEVICE=/dev/dri/renderD128
 **Symptom:**
 
 ```text
-ffplay rtsp://<HOST_IP>:8555/uav-mavlink-cpu
+ffplay rtsp://<HOST_IP>:8555/uav-front-camera
 Command 'ffplay' not found, but can be installed with:
 sudo apt install ffmpeg
 ```
@@ -114,7 +114,7 @@ sudo apt install ffmpeg
 sudo apt install ffmpeg
 
 # Then verify RTSP stream
-ffplay rtsp://<HOST_IP>:8555/uav-mavlink-cpu
+ffplay rtsp://<HOST_IP>:8555/uav-front-camera
 ```
 
 To view the output stream without `ffplay` (e.g., on a headless server),
@@ -122,7 +122,7 @@ record it instead:
 
 ```bash
 ffmpeg -rtsp_transport tcp \
-  -i "rtsp://<HOST_IP>:8555/uav-mavlink-cpu" \
+  -i "rtsp://<HOST_IP>:8555/uav-front-camera" \
   -c copy -t 30 output.mkv
 ```
 

@@ -20,7 +20,9 @@ Run `make help` (or just `make`) to list all targets with descriptions.
 | `make pymav-down` | Stop and remove the pymavlink stack (includes volumes) |
 | `make uavsdk-up` | Start the uav-mission-compute-sdk stack |
 | `make uavsdk-down` | Stop and remove the uav-mission-compute-sdk stack (includes volumes) |
-| `make start-rtsp` | Start inference pipeline(s) with RTSP output. `DEVICE=cpu\|gpu\|npu\|all` (default: `gpu`) |
+| `make start-rtsp` | Start the cameras of `configs/cameras.yaml` (RTSP output) when the vehicle is armed |
+| `make check-cameras` | Validate `configs/cameras.yaml` and show what would run |
+| `make cameras-status` | Compare `configs/cameras.yaml` with the running pipelines |
 | `make build` | Alias for `pymav-up` |
 
 ## Target Details
@@ -107,23 +109,21 @@ make uavsdk-up
 
 ### `make start-rtsp`
 
-Executes `pipeline_manager.py` inside the running
-`dlstreamer-pipeline-server` container. This script monitors MAVLink ARMED/DISARMED
-state and automatically starts/stops inference pipeline(s) with
-**RTSP frame output** on port `8555`.
-
-By default, only the **GPU** pipeline starts. Pass `DEVICE=cpu|gpu|npu|all` to choose:
+Executes `pipeline_manager.py` inside the running `dlstreamer-pipeline-server` container. It monitors the MAVLink
+ARMED/DISARMED state and starts/stops one inference pipeline per camera of `configs/cameras.yaml`, each with
+**RTSP frame output** on port `8555` (`rtsp://<HOST_IP>:8555/uav-<camera>`). The file is read when the manager starts
+and again at every arming, so after an edit you either run `make start-rtsp` again or disarm and arm. `CAMERAS=<file>`
+uses another configuration file.
 
 ```bash
-make start-rtsp                # GPU only (default)
-make start-rtsp DEVICE=cpu     # CPU only
-make start-rtsp DEVICE=npu     # NPU only
-make start-rtsp DEVICE=all     # CPU + GPU + NPU simultaneously
+make check-cameras     # validate the file and show what would run (nothing is started)
+make start-rtsp        # start the cameras on arming
+make cameras-status    # file versus running pipelines
 ```
 
-`DEVICE=npu` falls back to GPU if `NPU_DEVICE` was not detected during `make init`.
-
-Requires the DL Streamer Pipeline Server container to already be running (`make pymav-up` or `make uavsdk-up` first).
+See [Configure the Cameras](./cameras.md) for the file format. Requires the DL Streamer Pipeline Server container to
+already be running (`make pymav-up` first). Not used in UAV Mission Compute SDK mode, which has its own pipeline manager
+(`DEVICE=cpu|gpu|npu|all` selects its pipeline).
 
 ### `make build`
 

@@ -20,14 +20,15 @@ that host until you enter its IP in the dashboard and press **Connect**.
   browser as WebRTC (WHEP) -- pure remux, no transcoding. Requires the
   remote pipeline's RTSP output to be H.264, as uav-vision-analytics publishes;
   if the remote stream is not H.264, the dashboard shows a placeholder message ("No video
-  stream — start this device's pipeline on the remote host.").
+  stream — start this camera's pipeline on the remote host.").
   Each card's expand button (or the player's own full-screen control)
   shows that feed full screen; Esc or "Exit full screen" returns.
-- Scene captions (`uav/caption/<device>` over MQTT, bridged to the browser via
-  SSE), shown under the video.
-- Which pipeline/model is currently running for the selected device (from the
-  DL Streamer Pipeline Server's REST API), including the VLM model path/device
-  when captioning is enabled.
+- Scene captions (`uav/caption/<camera>` over MQTT, bridged to the browser via
+  SSE), shown under the video of cameras whose pipeline has captioning on.
+- One card per camera (a running pipeline with an RTSP stream, shown as `uav-<name>`),
+  with the devices of its pipeline as badges (detection device, VLM device, overlay
+  off), and the models, prompt and video in the tooltip (from the DL Streamer
+  Pipeline Server's REST API and the start request of each pipeline).
 - CPU/GPU/NPU utilization, proxied from `metrics-manager`.
 - **Live Natural Language Search**: the **Search Videos** button (top bar or side
   panel, or press `/`) opens a popup where you type a natural-language prompt
@@ -77,9 +78,10 @@ All configuration is via `.env` (see `.env.example`):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `VIZ_HOST_IP` | `127.0.0.1` | Bind address for this machine's published port |
+| `VIZ_HOST_IP` | `127.0.0.1` (`make init` sets the host's LAN IP) | Bind address for this machine's published port |
 | `VIZ_PORT` | `8080` | Dashboard port |
 | `VIZ_COMPANION_HOST` | `127.0.0.1` | Pre-filled value in the dashboard's UAV Companion Compute IP field |
+| `VIZ_CAMERA_ORDER` | `front,bottom,back` | Camera card order, by a word in the stream name; unlisted cameras follow alphabetically |
 | `VIZ_REMOTE_HTTPS_PORT` | `443` | UAV host's nginx HTTPS port |
 | `VIZ_REMOTE_MQTT_PORT` | `1883` | UAV host's nginx MQTT passthrough port |
 | `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(required with `make up-vss`)_ | Credentials for the VSS overlay's MinIO and Postgres |
@@ -115,7 +117,7 @@ and the search routes return 404.
 2. `make up-vss` (base + mediamtx + VSS overlay). The first start downloads
    the CLIP embedding model (and YOLOX, for object crops) into Docker volumes.
 3. Open the dashboard and **Connect** to the UAV. Every RUNNING pipeline
-   (`uav-mavlink-cpu/gpu/npu` on `REMOTE_RTSP_PORT`) is registered with VSS
+   (`uav-<camera>` on `REMOTE_RTSP_PORT`) is registered with VSS
    as a live stream and indexed continuously. A backend loop
    (`VSS_LIVE_SYNC_INTERVAL_SECONDS`) adds pipelines that start later and
    pauses ones that stop; **Disconnect** pauses all of them. Indexed footage

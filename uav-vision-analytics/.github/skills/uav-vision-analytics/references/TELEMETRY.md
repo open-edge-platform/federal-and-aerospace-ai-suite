@@ -117,24 +117,22 @@ volumes:
 Monitors the MAVLink HEARTBEAT `base_mode` flag for `MAV_MODE_FLAG_SAFETY_ARMED`.
 Only RTSP output is supported (there is no `--sink` option).
 
-**RTSP pipelines defined:**
-```python
-RTSP_PIPELINES = [
-    {"name": "uav_object_detection_cpu", "frame_path": "uav-mavlink-cpu", "device": "CPU"},
-    {"name": "uav_object_detection_gpu", "frame_path": "uav-mavlink-gpu", "device": "GPU"},
-]
-```
+**Cameras:** the pipelines are not hard-coded. `camera_config.py` (next to the manager) loads and validates
+`configs/cameras.yaml` (mounted at `/home/pipeline-server/configs/cameras.yaml`) and returns one plan per enabled camera: the
+pipeline (`uav_object_detection_<det>` or `uav_object_detection_<det>_<vlm>`), its start request and the RTSP path
+`uav-<camera>`. The manager re-reads the file at every arming and keeps the last good configuration when the file is broken.
 
 **Key constants:**
 ```python
 CONNECTION_STRING   = "udpin:0.0.0.0:14541"
-PIPELINE_BASE_URL   = "http://localhost:8081/pipelines/user_defined_pipelines"
-PIPELINE_DELETE_URL = "http://localhost:8081/pipelines/{instance_id}"
+PIPELINE_SERVER_URL = "http://localhost:8081"          # PIPELINE_SERVER_URL overrides it
 ```
 
 **Invocation inside container:**
 ```bash
-python3 /home/pipeline-server/scripts/pipeline_manager.py
+python3 /home/pipeline-server/scripts/pipeline_manager.py              # wait for ARM, start the cameras
+python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now  # start them now, no vehicle
+python3 /home/pipeline-server/scripts/pipeline_manager.py --status     # file versus running pipelines
 ```
 
 **Makefile target:**
