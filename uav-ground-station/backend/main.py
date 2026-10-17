@@ -9,17 +9,18 @@ or docker-compose-uavsdk, with nginx publishing its usual ports), this
 service:
 
   * Looks up which DL Streamer pipeline/model is currently serving a given
-    device's RTSP path, via the Pipeline Server's REST API (through nginx).
+    camera's RTSP stream, via the Pipeline Server's REST API (through nginx). A camera is a
+    running pipeline with an RTSP frame destination, identified by its stream path (uav-<name>).
   * Proxies the metrics-manager SSE stream so the browser never needs direct,
     cross-origin, self-signed-TLS access to the remote host.
   * Also streams this ground-station machine's *own* CPU/RAM utilization
     (via /api/local-metrics-stream, read from /proc) so the dashboard can
     show how much local compute "H.264 Relay" mode's mediamtx remux costs
     on this box -- see the "UAV Ground Station Utilization" panel.
-  * Bridges MQTT scene captions (topic uav/caption/<device>) to the browser
+  * Bridges MQTT scene captions (topic uav/caption/<camera>, taken from pipeline-info) to the browser
     over SSE.
   * "H.264 Relay" video -- the only video path: whenever a remote pipeline
-    is publishing RTSP for a device (see pipeline_info's "rtsp_available";
+    is publishing RTSP for a camera (see pipeline_info's "rtsp_available";
     uav-vision-analytics publishes H.264), the local viz-backend configures a mediamtx sidecar
     (docker-compose-mediamtx.yml, always brought up alongside this
     service -- see `make up`) to pull that already-H.264 RTSP stream on
@@ -27,7 +28,7 @@ service:
     /api/relay-path, and the dashboard iframes that local mediamtx's own
     WHEP viewer page, so this stack's own compute/network footprint for
     video is visible.
-  * When no remote pipeline is publishing for a device, the dashboard
+  * When no remote pipeline is publishing for a camera, the dashboard
     shows a "No video stream" placeholder instead of video.
   * Natural-language video search via a separately deployed Video Search
     and Summarization (VSS) stack -- see vss_search.py.
@@ -40,6 +41,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from typing import Optional
 
 import httpx
@@ -80,39 +82,23 @@ MEDIAMTX_WEBRTC_PORT = int(os.environ.get("MEDIAMTX_WEBRTC_PORT", "8889"))
 LOCAL_METRICS_MANAGER_BASE = os.environ.get("LOCAL_METRICS_MANAGER_BASE", "http://gs-metrics-manager:9090")
 
 
-DEVICE_PATTERN = "^(cpu|gpu|npu)$"
-
-# Fallback display values when a running instance didn't echo "parameters" in
-# its REST request (i.e. it relied on the pipeline's own schema defaults) —
-# mirrors configs/config-pymavlink.json on the remote host.
-DEFAULT_CAPTION_PARAMS = {
-    "cpu": {
-        "model_path": "/home/pipeline-server/resources/ov_models/cpu/InternVL2-1B",
-        "model_device": "CPU",
-        "max_new_tokens": 50,
-    },
-    "gpu": {
-        "model_path": "/home/pipeline-server/resources/ov_models/gpu/InternVL2-1B",
-        "model_device": "GPU",
-        "max_new_tokens": 50,
-    },
-    "npu": {
-        "model_path": "/home/pipeline-server/resources/ov_models/cpu/InternVL2-1B",
-        "model_device": "CPU",
-        "max_new_tokens": 50,
-    },
-}
-
+# A camera is identified by its RTSP stream path (for example "uav-front-camera"); the MQTT caption
+# topic of a camera is "uav/caption/<name>". Both end up in URLs / subscriptions, so they are validated.
+CAMERA_PATTERN = r"^[A-Za-z0-9_-]{1,48}$"
+TOPIC_PATTERN = r"^uav/caption/[A-Za-z0-9_-]{1,48}$"
+# uav_object_detection_<detection device>[_<vlm device>]; the older uav_object_detection_<device>_caption
+# naming is still recognised so a UAV host that has not been updated keeps working.
+_PIPELINE_NAME = re.compile(r"^uav_object_detection_(cpu|gpu|npu)(?:_(cpu|gpu)|(_caption))?$")
+# Display order of the camera cards: a camera whose name contains one of these
+# words (e.g. "uav-front-camera" -> "front") is placed by that word's position;
+# any other camera follows, alphabetically.
+CAMERA_ORDER = [w.strip().lower() for w in os.environ.get("CAMERA_ORDER", "front,bottom,back").split(",") if w.strip()]
 
 app = FastAPI(title="UAV Vision Analytics - Remote Viewer")
 
 
 def _remote_base(host: str) -> str:
     return f"https://{host}:{REMOTE_HTTPS_PORT}"
-
-
-def _frame_path(device: str) -> str:
-    return f"uav-mavlink-{device}"
 
 
 def _dest_frame_for_path(destination: dict, frame_path: str) -> Optional[dict]:
@@ -159,223 +145,148 @@ def _pipeline_identity(pipeline: dict) -> Optional[str]:
     return pipeline.get("version") or pipeline.get("name")
 
 
-KNOWN_DEVICES = ["cpu", "gpu", "npu"]
-_FRAME_PATH_TO_DEVICE = {_frame_path(d): d for d in KNOWN_DEVICES}
+def _camera_title(path: str) -> str:
+    """Stream path -> display name: "uav-front-camera" -> "front camera"."""
+    name = path[4:] if path.startswith("uav-") else path
+    return name.replace("-", " ").replace("_", " ")
 
 
-@app.get("/api/health")
-async def health():
-    return {"status": "ok"}
+def _camera_record(inst: dict, request: dict, path: str, frame: dict) -> dict:
+    """Everything the dashboard shows about one camera, taken from the start request of its pipeline."""
+    name = _pipeline_identity(request.get("pipeline") or {})
+    params = request.get("parameters") or {}
+    match = _PIPELINE_NAME.match(name or "")
+    detection_device = match.group(1) if match else None
+    vlm_device = match.group(2) if match else None
+    captioning = bool(vlm_device) or bool(match and match.group(3)) or (match is None and "caption" in (name or ""))
+    topic = None
+    if captioning:
+        default_name = (path[4:] if path.startswith("uav-") else path).replace("-", "_")
+        topic = params.get("mqtt_topic") or f"uav/caption/{default_name}"
+    return {
+        "camera": path,
+        "title": _camera_title(path),
+        "pipeline_name": name,
+        "state": inst.get("state"),
+        "detection_device": detection_device,
+        "detection_model": os.path.basename(params["detection_model"]) if params.get("detection_model") else None,
+        "captioning": captioning,
+        "vlm_device": vlm_device,
+        "vlm_model": os.path.basename(params["captioner_model_path"]) if params.get("captioner_model_path") else None,
+        "prompt": params.get("captioner_prompt"),
+        "max_new_tokens": params.get("captioner_max_new_tokens"),
+        "mqtt_topic": topic,
+        "overlay": frame.get("overlay", True) is not False,
+        "video": params.get("video"),
+        "label": params.get("overlay_label"),
+        "frame_rate": params.get("frame_rate"),
+    }
+
+
+async def _instances_with_requests(client: httpx.AsyncClient, base: str, running_only: bool) -> list:
+    """(instance, request) for the remote pipelines, RUNNING first and newest first, so stale or
+    aborted runs on the same stream path never hide the live one."""
+    resp = await client.get(f"{base}/pipelines/status")
+    resp.raise_for_status()
+    instances = resp.json()
+    if not isinstance(instances, list):
+        return []
+    instances = sorted(instances, key=lambda inst: (0 if inst.get("state") == "RUNNING" else 1, -(inst.get("start_time") or 0)))
+    found = []
+    for inst in instances:
+        if running_only and inst.get("state") != "RUNNING":
+            continue
+        inst_id = inst.get("id")
+        if inst_id is None:
+            continue
+        detail_resp = await client.get(f"{base}/pipelines/{inst_id}")
+        if detail_resp.status_code != 200:
+            continue
+        found.append((inst, (detail_resp.json().get("request") or {})))
+    return found
+
+
+def _cameras_from(instances: list) -> list:
+    """One record per RTSP stream path, first (best) instance wins."""
+    cameras, seen = [], set()
+    for inst, request in instances:
+        destination = request.get("destination") or {}
+        for path in _dest_frame_paths(destination):
+            if not isinstance(path, str) or not re.fullmatch(CAMERA_PATTERN, path) or path in seen:
+                continue
+            seen.add(path)
+            frame = _dest_frame_for_path(destination, path) or {}
+            cameras.append(_camera_record(inst, request, path, frame))
+    return sorted(cameras, key=_camera_sort_key)
+
+
+def _camera_sort_key(camera: dict) -> tuple:
+    words = _camera_title(camera["camera"]).lower().split()
+    rank = next((i for i, w in enumerate(CAMERA_ORDER) if w in words), len(CAMERA_ORDER))
+    return (rank, camera["camera"])
 
 
 @app.get("/api/runtime-config")
 async def runtime_config():
     return {
         "defaultHost": DEFAULT_REMOTE_HOST,
-        "devices": ["cpu", "gpu", "npu"],
+        "remoteHttpsPort": REMOTE_HTTPS_PORT,
         # Where the browser should reach the local mediamtx sidecar's own
-        # WHEP viewer page for "H.264 Relay" mode -- see module docstring.
-        # Harmless to send even if docker-compose-mediamtx.yml isn't up;
-        # the dashboard only uses these once /api/relay-path succeeds.
+        # WHEP viewer page for "H.264 Relay" mode. Harmless to send even if
+        # docker-compose-mediamtx.yml isn't up; the dashboard only uses these
+        # once /api/relay-path succeeds.
         "mediamtxWebrtcHost": MEDIAMTX_WEBRTC_HOST,
         "mediamtxWebrtcPort": MEDIAMTX_WEBRTC_PORT,
     }
 
 
 @app.get("/api/pipeline-info")
-async def pipeline_info(host: str = Query(...), device: str = Query(..., pattern=DEVICE_PATTERN)):
-    """Report which pipeline/model is currently serving the given device's RTSP path."""
-    frame_path = _frame_path(device)
-    base = _remote_base(host)
+async def pipeline_info(host: str = Query(...), camera: str = Query(..., pattern=CAMERA_PATTERN)):
+    """Report which pipeline, devices and models currently serve the given camera's RTSP stream."""
     info = {
         "reachable": False,
-        "device": device,
-        "rtsp_path": frame_path,
-        "caption_topic": f"uav/caption/{device}",
+        "camera": camera,
+        "rtsp_path": camera,
+        "title": _camera_title(camera),
         "pipeline_name": None,
         "state": None,
         "captioning": False,
-        "model_path": None,
-        "model_device": None,
-        "max_new_tokens": None,
-        "frame_rate": None,
-        "source_of_truth": None,
-        # True once a remote pipeline instance publishes an RTSP frame
-        # destination for this device's path -- the dashboard then starts the
-        # H.264 relay; otherwise it shows a "No video stream" placeholder.
+        "caption_topic": None,
+        # True once a remote pipeline instance publishes an RTSP frame destination for this camera's
+        # path -- the dashboard then starts the H.264 relay; otherwise it shows a "No video stream" placeholder.
         "rtsp_available": False,
     }
     try:
-        # Self-signed TLS on the remote nginx (see configs/nginx/ssl on that
-        # host) — trusted-LAN tool, same posture as the -k curl examples in
-        # the main README.
+        # Self-signed TLS on the remote nginx (see configs/nginx/ssl on that host) -- trusted-LAN tool,
+        # same posture as the -k curl examples in the main README.
         async with httpx.AsyncClient(verify=False, timeout=5.0, trust_env=False) as client:
-            resp = await client.get(f"{base}/pipelines/status")
-            resp.raise_for_status()
-            instances = resp.json()
-            info["reachable"] = True
-            if isinstance(instances, list):
-                # Multiple instances can target the same destination path
-                # (e.g. a stopped/aborted run plus a newer running one).
-                # Prefer RUNNING instances, then the most recently started,
-                # so we don't report stale/dead pipeline info.
-                instances = sorted(
-                    instances,
-                    key=lambda inst: (
-                        0 if inst.get("state") == "RUNNING" else 1,
-                        -(inst.get("start_time") or 0),
-                    ),
-                )
-                for inst in instances:
-                    inst_id = inst.get("id")
-                    if inst_id is None:
-                        continue
-                    detail_resp = await client.get(f"{base}/pipelines/{inst_id}")
-                    if detail_resp.status_code != 200:
-                        continue
-                    detail = detail_resp.json()
-                    request = detail.get("request") or {}
-                    destination = request.get("destination") or {}
-                    frame_dest = _dest_frame_for_path(destination, frame_path)
-                    if frame_dest is None:
-                        continue
-
-                    info["rtsp_available"] = True
-
-                    pipeline = request.get("pipeline") or {}
-                    params = request.get("parameters") or {}
-                    name = _pipeline_identity(pipeline)
-                    captioning = bool(name) and "caption" in name
-
-                    info["pipeline_name"] = name
-                    info["state"] = inst.get("state")
-                    info["captioning"] = captioning
-                    info["frame_rate"] = params.get("frame_rate")
-
-                    if captioning:
-                        defaults = DEFAULT_CAPTION_PARAMS.get(device, {})
-                        info["model_path"] = params.get("captioner_model_path") or defaults.get("model_path")
-                        info["model_device"] = params.get("captioner_device") or defaults.get("model_device")
-                        info["max_new_tokens"] = (
-                            params.get("captioner_max_new_tokens") or defaults.get("max_new_tokens")
-                        )
-                        info["source_of_truth"] = (
-                            "overridden" if "captioner_model_path" in params else "default"
-                        )
-                    break
+            instances = await _instances_with_requests(client, _remote_base(host), running_only=False)
+        info["reachable"] = True
+        record = next((c for c in _cameras_from(instances) if c["camera"] == camera), None)
+        if record:
+            info.update(record)
+            info["caption_topic"] = record["mqtt_topic"]
+            info["rtsp_available"] = True
     except (httpx.HTTPError, ValueError) as exc:
-        logger.warning("pipeline-info lookup failed for host=%s device=%s: %s", host, device, exc)
+        logger.warning("pipeline-info lookup failed for host=%s camera=%s: %s", host, camera, exc)
     return info
-
-
-@app.get("/api/detect-pipeline")
-async def detect_pipeline(host: str = Query(...)):
-    """Auto-detect which device (cpu/gpu/npu) currently has a RUNNING pipeline.
-
-    Used so the browser doesn't need the user to pick a device manually, and
-    so it can notice (by re-polling) when the running pipeline changes --
-    e.g. an operator stops one device's pipeline and starts another's.
-    """
-    base = _remote_base(host)
-    result = {"reachable": False, "device": None, "pipeline_name": None, "state": None}
-    try:
-        async with httpx.AsyncClient(verify=False, timeout=5.0, trust_env=False) as client:
-            resp = await client.get(f"{base}/pipelines/status")
-            resp.raise_for_status()
-            instances = resp.json()
-            result["reachable"] = True
-            if isinstance(instances, list):
-                instances = sorted(
-                    instances,
-                    key=lambda inst: (
-                        0 if inst.get("state") == "RUNNING" else 1,
-                        -(inst.get("start_time") or 0),
-                    ),
-                )
-                for inst in instances:
-                    if inst.get("state") != "RUNNING":
-                        continue
-                    inst_id = inst.get("id")
-                    if inst_id is None:
-                        continue
-                    detail_resp = await client.get(f"{base}/pipelines/{inst_id}")
-                    if detail_resp.status_code != 200:
-                        continue
-                    detail = detail_resp.json()
-                    request = detail.get("request") or {}
-                    destination = request.get("destination") or {}
-                    device = None
-                    for dest_path in _dest_frame_paths(destination):
-                        device = _FRAME_PATH_TO_DEVICE.get(dest_path)
-                        if device is not None:
-                            break
-                    if device is None:
-                        continue
-                    pipeline = request.get("pipeline") or {}
-                    result["device"] = device
-                    result["pipeline_name"] = _pipeline_identity(pipeline)
-                    result["state"] = inst.get("state")
-                    break
-    except (httpx.HTTPError, ValueError) as exc:
-        logger.warning("detect-pipeline lookup failed for host=%s: %s", host, exc)
-    return result
 
 
 @app.get("/api/detect-pipelines")
 async def detect_pipelines(host: str = Query(...)):
-    """Auto-detect every device (cpu/gpu/npu) that currently has a RUNNING
-    pipeline -- same matching as /api/detect-pipeline, but collects *all*
-    matches instead of stopping at the first, so the UI can show one card
-    per concurrently-running device (e.g. CPU and GPU both active).
-    """
-    return await _detect_running_devices(host)
+    """Every camera (RUNNING pipeline with an RTSP stream) on the host, so the UI can show one card per
+    camera and notice, by re-polling, when a pipeline is started, stopped or replaced."""
+    return await _detect_running_cameras(host)
 
 
-async def _detect_running_devices(host: str) -> dict:
+async def _detect_running_cameras(host: str) -> dict:
     """Shared by /api/detect-pipelines and the VSS live-stream sync."""
-    base = _remote_base(host)
-    result = {"reachable": False, "devices": []}
+    result = {"reachable": False, "cameras": []}
     try:
         async with httpx.AsyncClient(verify=False, timeout=5.0, trust_env=False) as client:
-            resp = await client.get(f"{base}/pipelines/status")
-            resp.raise_for_status()
-            instances = resp.json()
-            result["reachable"] = True
-            if isinstance(instances, list):
-                instances = sorted(
-                    instances,
-                    key=lambda inst: (
-                        0 if inst.get("state") == "RUNNING" else 1,
-                        -(inst.get("start_time") or 0),
-                    ),
-                )
-                seen_devices = set()
-                for inst in instances:
-                    if inst.get("state") != "RUNNING":
-                        continue
-                    inst_id = inst.get("id")
-                    if inst_id is None:
-                        continue
-                    detail_resp = await client.get(f"{base}/pipelines/{inst_id}")
-                    if detail_resp.status_code != 200:
-                        continue
-                    detail = detail_resp.json()
-                    request = detail.get("request") or {}
-                    destination = request.get("destination") or {}
-                    device = None
-                    for dest_path in _dest_frame_paths(destination):
-                        device = _FRAME_PATH_TO_DEVICE.get(dest_path)
-                        if device is not None:
-                            break
-                    if device is None or device in seen_devices:
-                        continue
-                    seen_devices.add(device)
-                    pipeline = request.get("pipeline") or {}
-                    result["devices"].append({
-                        "device": device,
-                        "pipeline_name": _pipeline_identity(pipeline),
-                        "state": inst.get("state"),
-                    })
+            instances = await _instances_with_requests(client, _remote_base(host), running_only=True)
+        result["reachable"] = True
+        result["cameras"] = _cameras_from(instances)
     except (httpx.HTTPError, ValueError) as exc:
         logger.warning("detect-pipelines lookup failed for host=%s: %s", host, exc)
     return result
@@ -433,9 +344,8 @@ async def metrics_stream(host: str = Query(...)):
 
 
 @app.get("/api/captions-stream")
-async def captions_stream(host: str = Query(...), device: str = Query(..., pattern=DEVICE_PATTERN)):
-    """Bridge the remote MQTT broker's uav/caption/<device> topic to the browser over SSE."""
-    topic = f"uav/caption/{device}"
+async def captions_stream(host: str = Query(...), topic: str = Query(..., pattern=TOPIC_PATTERN)):
+    """Bridge a caption topic (uav/caption/<name>, from pipeline-info's caption_topic) of the remote MQTT broker to the browser over SSE."""
     loop = asyncio.get_event_loop()
     queue: asyncio.Queue = asyncio.Queue(maxsize=50)
 
@@ -480,8 +390,8 @@ async def captions_stream(host: str = Query(...), device: str = Query(..., patte
 
 
 @app.post("/api/relay-path")
-async def relay_path(host: str = Query(...), device: str = Query(..., pattern=DEVICE_PATTERN)):
-    """(Re)configure the local mediamtx sidecar's "relay-<device>" path to
+async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CAMERA_PATTERN)):
+    """(Re)configure the local mediamtx sidecar's "relay-<camera>" path to
     pull the remote host's H.264 RTSP stream on demand, for "H.264 Relay"
     video mode (see module docstring). Pure remux -- mediamtx does not
     transcode, the remote stream is already H.264.
@@ -493,8 +403,8 @@ async def relay_path(host: str = Query(...), device: str = Query(..., pattern=DE
     the mediamtx sidecar isn't reachable (e.g. docker-compose-mediamtx.yml
     wasn't brought up).
     """
-    path_name = f"relay-{device}"
-    source = f"rtsp://{host}:{REMOTE_RTSP_PORT}/{_frame_path(device)}"
+    path_name = f"relay-{camera}"
+    source = f"rtsp://{host}:{REMOTE_RTSP_PORT}/{camera}"
     # rtspTransport=tcp: the UAV host's nginx only forwards RTSP over TCP, so the default
     # "automatic" mode wastes several seconds trying UDP ("no UDP packets received,
     # switching to TCP") every time a viewer opens a stream.
@@ -507,13 +417,13 @@ async def relay_path(host: str = Query(...), device: str = Query(..., pattern=DE
                 resp = await client.post(f"{MEDIAMTX_API_BASE}/v3/config/paths/add/{path_name}", json=body)
             resp.raise_for_status()
     except httpx.HTTPError as exc:
-        logger.warning("relay-path config failed for host=%s device=%s: %s", host, device, exc)
+        logger.warning("relay-path config failed for host=%s camera=%s: %s", host, camera, exc)
         raise HTTPException(status_code=502, detail=f"Cannot configure local mediamtx relay: {exc}")
     return {"path": path_name}
 
 
 # VSS natural-language search proxy (separate VSS Compose stack) -- see vss_search.py.
-vss_live_sync.configure(_detect_running_devices, REMOTE_RTSP_PORT, _frame_path)
+vss_live_sync.configure(_detect_running_cameras, REMOTE_RTSP_PORT)
 app.include_router(vss_search_router)
 app.include_router(vss_live_sync.router)
 

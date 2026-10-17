@@ -12,12 +12,27 @@ help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / \
 	  {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-init: ## Create .env from template if missing, and auto-detect GPU/NPU device paths
+init: ## Create .env from template if missing, and auto-detect host IP and GPU/NPU device paths
 	@if test -f .env; then \
 		echo ".env already exists — skipping (delete it to re-run init)"; \
 	else \
 		cp .env.example .env; \
 		echo "[init] .env ready. Edit VIZ_COMPANION_HOST to point at your UAV companion-compute board's IP."; \
+		HOST_IP_DETECTED=$$(hostname -I 2>/dev/null | awk '{print $$1}'); \
+		if [ -z "$$HOST_IP_DETECTED" ]; then \
+			HOST_IP_DETECTED=127.0.0.1; \
+			echo "⚠  Could not auto-detect host IP — defaulting VIZ_HOST_IP/VIZ_PUBLIC_HOST=127.0.0.1 (edit .env manually if needed)."; \
+		else \
+			echo "✅ Host IP detected:"; \
+			echo "   VIZ_HOST_IP=$$HOST_IP_DETECTED"; \
+			echo "   VIZ_PUBLIC_HOST=$$HOST_IP_DETECTED"; \
+			echo "   ⚠  Security: the dashboard (8080), mediamtx WebRTC (8889/8189) and VSS"; \
+			echo "      Pipeline Manager (3001) ports will be published on this LAN address."; \
+			echo "      Set VIZ_HOST_IP=127.0.0.1 and VIZ_PUBLIC_HOST=127.0.0.1 in .env for"; \
+			echo "      loopback-only access if this host is not on a trusted, isolated network."; \
+		fi; \
+		sed -i "s|^VIZ_HOST_IP=.*|VIZ_HOST_IP=$$HOST_IP_DETECTED|" .env; \
+		sed -i "s|^VIZ_PUBLIC_HOST=.*|VIZ_PUBLIC_HOST=$$HOST_IP_DETECTED|" .env; \
 		GPU_CARD=$$(ls -1 /dev/dri/card* 2>/dev/null | head -1); \
 		GPU_RENDER=$$(ls -1 /dev/dri/renderD* 2>/dev/null | head -1); \
 		if [ -n "$$GPU_CARD" ] && [ -n "$$GPU_RENDER" ]; then \

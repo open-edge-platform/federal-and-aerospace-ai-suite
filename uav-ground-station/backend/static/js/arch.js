@@ -50,15 +50,15 @@
     camera: { x: 36, y: 52, w: 250, h: 64, icon: "camera", t: "PX4 SITL · camera", s: ["drone video + MAVLink telemetry"],
       kind: "Video source", role: "Simulated (or real) drone camera feeding the vision pipelines; MAVLink telemetry is burned into the overlay." },
     dlsps: { p: "oep", x: 36, y: 146, w: 250, h: 146, icon: "chip", t: "DL Streamer", s: ["Pipeline Server", "detect · overlay · caption"],
-      ep: ["REST /pipelines", "RTSP :8555 uav-mavlink-<dev>"], chips: [["pipe", "YOLO11s"], ["pipe", "InternVL2-1B"]],
-      kind: "Vision pipeline service", role: "One pipeline per device (cpu/gpu/npu): decode, YOLO11s detection, telemetry overlay and, for *_caption variants, VLM scene captions.",
-      runs: "YOLO11s and InternVL2-1B (gvagenai) on the device the pipeline variant targets",
+      ep: ["REST /pipelines", "RTSP :8555 uav-<camera>"], chips: [["pipe", "YOLO11s"], ["pipe", "InternVL2-1B"]],
+      kind: "Vision pipeline service", role: "One pipeline per camera, chosen from cameras.yaml: decode, YOLO11s detection on cpu/gpu/npu, telemetry overlay and, when captioning is on, VLM scene captions on cpu/gpu.",
+      runs: "YOLO11s and InternVL2-1B (gvagenai) on the devices each camera is configured for",
       image: "intel/dlstreamer-pipeline-server (+ pymavlink / uavsdk)",
-      apis: ["GET /pipelines/status — which devices are RUNNING (dashboard + live sync)", "GET /pipelines/{id} — model and destination info",
-        "RTSP out on :8555 /uav-mavlink-<device>", "MQTT publish uav/caption/<device>"] },
-    mqtt: { p: "oss", x: 36, y: 410, w: 250, h: 62, icon: "broker", t: "Mosquitto", s: ["MQTT uav/caption/<device>"],
+      apis: ["GET /pipelines/status — which cameras are RUNNING (dashboard + live sync)", "GET /pipelines/{id} — model and destination info",
+        "RTSP out on :8555 /uav-<camera>", "MQTT publish uav/caption/<camera>"] },
+    mqtt: { p: "oss", x: 36, y: 410, w: 250, h: 62, icon: "broker", t: "Mosquitto", s: ["MQTT uav/caption/<camera>"],
       kind: "MQTT broker", role: "Carries VLM scene captions from DL Streamer. viz-backend subscribes through nginx's :1883 passthrough.",
-      image: "eclipse-mosquitto:2.0.22", apis: ["MQTT uav/caption/<device>"] },
+      image: "eclipse-mosquitto:2.0.22", apis: ["MQTT uav/caption/<camera>"] },
     "uav-metrics": { p: "oep", x: 36, y: 498, w: 250, h: 62, icon: "gauge", t: "Metrics Manager", s: ["UAV board CPU · GPU · NPU"],
       kind: "Telemetry service", role: "Companion-board utilization shown in the \u201cUAV Companion Board Utilization\u201d chart.",
       image: "intel/metrics-manager:2026.2.0", apis: ["GET /metrics/stream (SSE), via nginx /metrics/"] },
@@ -95,7 +95,7 @@
       s: ["live RTSP → frames → vectors"], ep: ["live streams · segments"], chips: [["ingest_embedding", "CLIP frames"], ["detection", "YOLOX-S crops"]],
       kind: "Ingestion service", role: "Pulls each registered RTSP feed, cuts ~10 s segments to MinIO, samples frames, embeds them (plus YOLOX object crops) and writes vectors to VDMS.",
       runs: "CLIP ViT-B/32 frame embeddings; YOLOX-S object crops", image: "multimodal-dataprep",
-      apis: ["RTSP pull rtsp://<uav>:8555/uav-mavlink-<dev>", "Vectors → VDMS", "Segments → MinIO live-streams bucket", "Stream registry → Postgres"] },
+      apis: ["RTSP pull rtsp://<uav>:8555/uav-<camera>", "Vectors → VDMS", "Segments → MinIO live-streams bucket", "Stream registry → Postgres"] },
     retr: { p: "oep", vss: true, x: 840, y: 446, w: 156, h: 66, icon: "search", t: "Vector Retriever", s: ["kNN over VDMS"],
       kind: "Retrieval service", role: "Nearest-neighbour search over the frame embeddings.", image: "vector-retriever-vdms" },
     vdms: { p: "oss", vss: true, x: 1008, y: 446, w: 156, h: 66, icon: "db", t: "VDMS", s: ["vector database"],
@@ -141,7 +141,7 @@
       "mediamtx re-serves it to the browser as WebRTC (WHEP) — a pure remux, no transcoding.",
       "Needs make up-relay (docker-compose-mediamtx.yml)."] },
     captions: { t: "Scene captions", edges: ["q1", "q2", "q3", "h2"], steps: [
-      "*_caption pipelines run InternVL2-1B on clean frames and publish captions on MQTT uav/caption/<device>.",
+      "Cameras with captioning on run InternVL2-1B on clean frames and publish captions on MQTT uav/caption/<camera>.",
       "viz-backend subscribes through nginx's :1883 passthrough.",
       "Captions reach the browser over SSE (/api/captions-stream) and fill each card's timeline."] },
     metrics: { t: "Utilization", edges: ["m1", "h1", "h4", "h2"], steps: [
@@ -149,8 +149,8 @@
       "The ground station's own Metrics Manager reports this machine's usage.",
       "Both reach the charts over SSE, so the browser never needs the UAV host's self-signed TLS."] },
     index: { t: "Live indexing", vss: true, edges: ["c1", "r1", "p1", "h1", "h5", "h7", "r3", "h11", "f2"], steps: [
-      "On Connect, viz-backend checks GET /pipelines/status on the UAV host for RUNNING devices.",
-      "Each running device is registered with Pipeline Manager (POST /streams) as rtsp://<uav>:8555/uav-mavlink-<device>; it re-checks every 15 s, adding new pipelines and pausing stopped ones.",
+      "On Connect, viz-backend checks GET /pipelines/status on the UAV host for RUNNING cameras.",
+      "Each running camera is registered with Pipeline Manager (POST /streams) as rtsp://<uav>:8555/uav-<camera>; it re-checks every 15 s, adding new pipelines and pausing stopped ones.",
       "DataPrep pulls each RTSP feed, stores ~10 s segments in MinIO and writes CLIP frame embeddings (+ YOLOX crops) to VDMS.",
       "Disconnect pauses the streams; indexed footage is kept for VSS_LIVE_RETENTION_HOURS."] },
     search: { t: "Search", vss: true, edges: ["h2", "h5", "h6", "h8", "h9", "h10", "f1"], steps: [
@@ -409,18 +409,18 @@
     if (host && connected) {
       try {
         const r = await fetch(`/api/detect-pipelines?host=${encodeURIComponent(host)}`);
-        if (r.ok) running = (await r.json()).devices || [];
+        if (r.ok) running = (await r.json()).cameras || [];
       } catch (_e) { /* show the static description */ }
     }
     if (running.length) {
-      for (const d of running) {
-        const dev = String(d.device || "").toLowerCase();
-        if (!groups[dev]) continue;
-        groups[dev].push(`UAV · YOLO11s detection (${d.pipeline_name || "uav-mavlink-" + dev})`);
-        if (/caption/.test(d.pipeline_name || "")) groups[dev].push("UAV · InternVL2-1B scene captions");
+      for (const c of running) {
+        const det = String(c.detection_device || "").toLowerCase();
+        if (groups[det]) groups[det].push(`UAV · ${c.title}: YOLO11s detection (${c.pipeline_name})`);
+        const vlm = String(c.vlm_device || "").toLowerCase();
+        if (c.captioning && groups[vlm]) groups[vlm].push(`UAV · ${c.title}: ${c.vlm_model || "VLM"} scene captions`);
       }
     } else {
-      note.push("UAV host: YOLO11s detection and InternVL2-1B captions run on the device each pipeline variant targets (connect to see what is running).");
+      note.push("UAV host: YOLO11s detection and InternVL2-1B captions run on the devices each camera is configured for (connect to see what is running).");
     }
     if (vss.enabled) {
       const put = (key, text) => { const d = chipDevice(key).cls; (groups[d] || groups.cpu).push(text); };

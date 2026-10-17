@@ -12,12 +12,12 @@
   let localMetricsSource = null;
   let pipelinePollTimer = null;
   let currentHost = null;
-  let isConnected = false; // true once at least one device card is live
+  let isConnected = false; // true once at least one camera card is live
   let remoteHttpsPort = 443; // overwritten by /api/runtime-config
   let mediamtxWebrtcHost = "127.0.0.1"; // overwritten by /api/runtime-config
   let mediamtxWebrtcPort = 8889; // overwritten by /api/runtime-config
 
-  // device -> { wrap, videoContainer, video, chipTtft, chipTpot, chipThroughput, chipLag,
+  // camera (RTSP stream path) -> { wrap, videoContainer, video, chipTtft, chipTpot, chipThroughput, chipLag,
   //             captionStatus, captionTimeline, captionHistory,
   //             lastCaptionReceivedAt, captionsSource, titleEl, metaEl }
   const cards = new Map();
@@ -133,15 +133,15 @@
   }, 100);
 
   // --- Pipeline auto-detection -----------------------------------------------
-  // Finds every device (cpu/gpu/npu) that currently has a RUNNING pipeline,
-  // so the user never has to pick one manually, and so multiple concurrently
-  // running devices can each get their own card.
+  // Finds every camera (a RUNNING pipeline with an RTSP stream) on the host,
+  // so the user never has to pick one manually, and so every camera gets its
+  // own card.
   async function detectPipelines(host) {
     try {
       const res = await fetch(`/api/detect-pipelines?host=${encodeURIComponent(host)}`);
       return await res.json();
     } catch (err) {
-      return { reachable: false, devices: [] };
+      return { reachable: false, cameras: [] };
     }
   }
 
@@ -162,7 +162,7 @@
   }
 
   // --- Card creation/teardown ------------------------------------------------
-  function createCard(device) {
+  function createCard(cam) {
     const wrap = document.createElement("section");
     wrap.className = "device-card panel";
 
@@ -170,10 +170,13 @@
     header.className = "device-card-header";
     const title = document.createElement("div");
     title.className = "device-card-title";
-    const deviceBadge = document.createElement("span");
-    deviceBadge.className = `device-badge device-badge-${device}`;
-    deviceBadge.textContent = device.toUpperCase();
-    title.appendChild(deviceBadge);
+    const cameraName = document.createElement("span");
+    cameraName.className = "camera-name";
+    cameraName.textContent = cam.title || cam.camera;
+    const badges = document.createElement("span");
+    badges.className = "device-badges";
+    title.appendChild(cameraName);
+    title.appendChild(badges);
     const meta = document.createElement("div");
     meta.className = "device-card-meta";
     meta.textContent = "—";
@@ -184,7 +187,7 @@
     expandBtn.type = "button";
     expandBtn.className = "btn btn-ghost btn-icon-only device-expand-btn";
     expandBtn.title = "Full screen";
-    expandBtn.setAttribute("aria-label", `View ${device.toUpperCase()} video full screen`);
+    expandBtn.setAttribute("aria-label", `View ${cam.title || cam.camera} video full screen`);
     expandBtn.disabled = true;
     expandBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
     const headerRight = document.createElement("div");
@@ -210,7 +213,7 @@
     const exitBtn = document.createElement("button");
     exitBtn.type = "button";
     exitBtn.className = "btn btn-ghost device-exit-fullscreen";
-    exitBtn.textContent = `${device.toUpperCase()} \u2022 Exit full screen (Esc)`;
+    exitBtn.textContent = `${cam.title || cam.camera} \u2022 Exit full screen (Esc)`;
     exitBtn.addEventListener("click", () => document.exitFullscreen().catch(() => {}));
     videoStage.appendChild(videoContainer);
     videoStage.appendChild(exitBtn);
@@ -261,7 +264,12 @@
     wrap.appendChild(captionPanel);
 
     const card = {
-      device,
+      camera: cam.camera,
+      topic: null,
+      captioning: false,
+      captionPanel,
+      badgesEl: badges,
+      cameraNameEl: cameraName,
       wrap,
       titleEl: title,
       metaEl: meta,
@@ -277,7 +285,43 @@
       captionsSource: null,
     };
     renderCaptionTimeline(card);
+    renderBadges(card, cam);
     return card;
+  }
+
+  // Devices of the camera's pipeline as badges: detection device, VLM device (when captioning) and
+  // whether detections are drawn on the stream.
+  function renderBadges(card, info) {
+    card.badgesEl.innerHTML = "";
+    const add = (text, cls, tip) => {
+      const badge = document.createElement("span");
+      badge.className = `device-badge ${cls}`;
+      badge.textContent = text;
+      if (tip) badge.title = tip;
+      card.badgesEl.appendChild(badge);
+    };
+    if (info.detection_device) {
+      add(info.detection_device.toUpperCase(), `device-badge-${info.detection_device}`,
+        `Object detection on ${info.detection_device.toUpperCase()}${info.detection_model ? ` (${info.detection_model})` : ""}`);
+    }
+    if (info.captioning) {
+      add(info.vlm_device ? `VLM ${info.vlm_device.toUpperCase()}` : "VLM", "device-badge-vlm",
+        `Captions by ${info.vlm_model || "the VLM"}${info.vlm_device ? ` on ${info.vlm_device.toUpperCase()}` : ""}`);
+    }
+    if (info.overlay === false) add("no overlay", "device-badge-off", "Detection boxes and telemetry text are not drawn on this stream");
+  }
+
+  // Shows the caption panel and listens to the camera's MQTT topic only while the pipeline captions.
+  function applyCaptionState(host, card, topic) {
+    card.topic = topic || null;
+    card.captioning = !!topic;
+    card.captionPanel.hidden = !card.captioning;
+    if (card.captioning) {
+      startCaptionsStream(host, card);
+    } else if (card.captionsSource) {
+      card.captionsSource.close();
+      card.captionsSource = null;
+    }
   }
 
   function teardownCard(card) {
@@ -287,7 +331,7 @@
 
   // --- Video modes -----------------------------------------------------
   // "H.264 Relay" is the only video path: whenever a remote pipeline is
-  // publishing RTSP for this device (see "rtsp_available"; uav-vision-analytics
+  // publishing RTSP for this camera (see "rtsp_available"; uav-vision-analytics
   // publishes H.264), the local viz-backend configures a mediamtx sidecar
   // (docker-compose-mediamtx.yml, always brought up alongside this service
   // -- see `make up`) to pull that RTSP stream on demand and re-serve it as
@@ -301,7 +345,7 @@
     card.videoContainer.appendChild(loading);
     try {
       const res = await fetch(
-        `/api/relay-path?host=${encodeURIComponent(host)}&device=${card.device}`,
+        `/api/relay-path?host=${encodeURIComponent(host)}&camera=${encodeURIComponent(card.camera)}`,
         { method: "POST" },
       );
       if (!res.ok) throw new Error(`relay-path ${res.status}`);
@@ -331,25 +375,38 @@
     card.videoContainer.innerHTML = "";
     const placeholder = document.createElement("div");
     placeholder.className = "device-video-placeholder";
-    placeholder.textContent = "No video stream — start this device's pipeline on the remote host.";
+    placeholder.textContent = "No video stream — start this camera's pipeline on the remote host.";
     card.videoContainer.appendChild(placeholder);
   }
 
   // --- Pipeline/model info (shown compactly in the card header) ------------
   async function refreshPipelineInfo(host, card) {
     try {
-      const res = await fetch(`/api/pipeline-info?host=${encodeURIComponent(host)}&device=${card.device}`);
+      const res = await fetch(`/api/pipeline-info?host=${encodeURIComponent(host)}&camera=${encodeURIComponent(card.camera)}`);
       const info = await res.json();
       const state = info.reachable ? (info.state || "unknown") : "unreachable";
       const parts = [state];
       if (info.pipeline_name) parts.push(info.pipeline_name);
       // Header shows only state + pipeline; the rest stays available on hover.
-      const details = [info.captioning ? "captioning on" : "captioning off"];
+      const details = [];
+      if (info.detection_device) details.push(`detection ${info.detection_device.toUpperCase()}${info.detection_model ? ` ${info.detection_model}` : ""}`);
+      details.push(info.captioning
+        ? `captions ${info.vlm_device ? info.vlm_device.toUpperCase() + " " : ""}${info.vlm_model || ""}`.trim()
+        : "captioning off");
+      if (info.prompt) details.push(`prompt: ${info.prompt}`);
+      details.push(info.overlay === false ? "overlay off" : "overlay on");
+      if (info.video) details.push(`video ${info.video}`);
       if (info.frame_rate !== null && info.frame_rate !== undefined) details.push(`${info.frame_rate} fps`);
       details.push(info.rtsp_available ? "H.264 Relay" : "no video stream");
       card.metaEl.textContent = parts.join(" • ");
       card.metaEl.title = [...parts, ...details].join(" • ");
-      card.rtspPath = info.rtsp_path || `uav-mavlink-${card.device}`;
+      card.rtspPath = info.rtsp_path || card.camera;
+      if (info.rtsp_available) {
+        renderBadges(card, info);
+        // The same stream path can be served by another pipeline after the configuration changed.
+        const topic = info.captioning ? info.caption_topic : null;
+        if (topic !== card.topic) applyCaptionState(host, card, topic);
+      }
       syncVideoMode(host, card, info.rtsp_available);
     } catch (err) {
       card.metaEl.textContent = "error";
@@ -513,7 +570,7 @@
     card.chipTpot.textContent = "—";
     card.chipThroughput.textContent = "—";
     card.chipLag.textContent = "—";
-    card.captionsSource = new EventSource(`/api/captions-stream?host=${encodeURIComponent(host)}&device=${card.device}`);
+    card.captionsSource = new EventSource(`/api/captions-stream?host=${encodeURIComponent(host)}&topic=${encodeURIComponent(card.topic)}`);
     card.captionsSource.onmessage = (evt) => {
       let payload;
       try {
@@ -552,42 +609,45 @@
     cards.clear();
   }
 
-  function connectCard(host, card) {
+  function connectCard(host, card, cam) {
     // Video is started by refreshPipelineInfo()'s syncVideoMode() once we
-    // know whether a pipeline is publishing for this device;
+    // know whether a pipeline is publishing for this camera;
     // card.activeVideoMode starts unset so that first call always (re)starts
     // it.
     card.activeVideoMode = null;
-    startCaptionsStream(host, card);
+    applyCaptionState(host, card, cam.captioning ? cam.mqtt_topic : null);
     refreshPipelineInfo(host, card);
   }
 
-  // Reconciles the card grid against the currently-detected running devices:
-  //  - a device that's newly running -> add a card, start its streams.
-  //  - a device that's no longer running -> remove its card, stop its streams.
-  //  - a device still running -> just refresh its pipeline-info text.
-  // (Metrics are host-level, not device-level, so they're left untouched.)
-  function syncCards(host, detectedDevices) {
-    const detectedSet = new Set(detectedDevices);
+  // Reconciles the card grid against the currently-detected running cameras:
+  //  - a camera that's newly running -> add a card, start its streams.
+  //  - a camera that's no longer running -> remove its card, stop its streams.
+  //  - a camera still running -> just refresh its pipeline-info text.
+  // (Metrics are host-level, not camera-level, so they're left untouched.)
+  function syncCards(host, detectedCameras) {
+    const detectedSet = new Set(detectedCameras.map((c) => c.camera));
 
-    for (const [device, card] of Array.from(cards.entries())) {
-      if (!detectedSet.has(device)) {
+    for (const [camera, card] of Array.from(cards.entries())) {
+      if (!detectedSet.has(camera)) {
         teardownCard(card);
-        cards.delete(device);
+        cards.delete(camera);
       } else {
         refreshPipelineInfo(host, card);
       }
     }
 
-    for (const device of detectedDevices) {
-      if (!cards.has(device)) {
+    // Insert new cards at their position in the backend's camera order, so a
+    // camera whose pipeline starts late doesn't end up last.
+    detectedCameras.forEach((cam, idx) => {
+      if (!cards.has(cam.camera)) {
         clearEmptyState();
-        const card = createCard(device);
-        cardsContainer.appendChild(card.wrap);
-        cards.set(device, card);
-        connectCard(host, card);
+        const card = createCard(cam);
+        const next = detectedCameras.slice(idx + 1).map((c) => cards.get(c.camera)).find(Boolean);
+        cardsContainer.insertBefore(card.wrap, next ? next.wrap : null);
+        cards.set(cam.camera, card);
+        connectCard(host, card, cam);
       }
-    }
+    });
 
     if (cards.size === 0) {
       renderEmptyState("No running pipeline detected on this host.");
@@ -605,7 +665,7 @@
       // everything down on a possibly-transient network blip.
       return;
     }
-    syncCards(host, detected.devices.map((d) => d.device));
+    syncCards(host, detected.cameras || []);
   }
 
   async function connectNow() {
@@ -621,7 +681,7 @@
       renderEmptyState("Host unreachable.");
       setStatus("off");
     } else {
-      syncCards(host, detected.devices.map((d) => d.device));
+      syncCards(host, detected.cameras || []);
     }
     pipelinePollTimer = setInterval(() => pollAndReconcile(host), 5000);
     // search.js registers this host's running pipelines for VSS live search.

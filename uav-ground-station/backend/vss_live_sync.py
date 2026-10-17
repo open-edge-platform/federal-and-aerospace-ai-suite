@@ -3,8 +3,8 @@
 
 """Keep VSS live-stream indexing in step with the UAV's running pipelines.
 
-When the dashboard connects to a UAV host, every device (cpu/gpu/npu) with a
-RUNNING pipeline is registered with VSS as a live RTSP stream, so its footage
+When the dashboard connects to a UAV host, every camera (a RUNNING pipeline with an
+RTSP stream) is registered with VSS as a live RTSP stream, so its footage
 becomes searchable while the drone flies. A background loop then reconciles
 every ``VSS_LIVE_SYNC_INTERVAL_SECONDS``, independent of any open browser:
 
@@ -15,7 +15,7 @@ every ``VSS_LIVE_SYNC_INTERVAL_SECONDS``, independent of any open browser:
     VSS stream cannot be changed in place)
   * pipeline stopped, or dashboard disconnected -> pause the VSS stream
 
-Streams are matched by name, ``uav-mavlink-<device>`` (the RTSP path), so a
+Streams are matched by name, ``uav-<camera>`` (the RTSP path), so a
 stream registered by hand under that name is adopted instead of duplicated.
 Other VSS streams are never touched. Deregistering keeps the already indexed
 footage and embeddings (no purge).
@@ -46,7 +46,7 @@ SYNC_INTERVAL_SECONDS = max(5.0, float(os.environ.get("VSS_LIVE_SYNC_INTERVAL_SE
 # Minimum gap before re-registering a stream that VSS reported as failed, so an
 # unreachable RTSP source isn't re-created on every pass.
 RECREATE_BACKOFF_SECONDS = 60.0
-MANAGED_NAME = re.compile(r"^uav-mavlink-(cpu|gpu|npu)$")
+MANAGED_NAME = re.compile(r"^uav-[A-Za-z0-9-]{1,44}$")
 # IPv4 address or DNS hostname; the value ends up inside an RTSP URL.
 HOST_PATTERN = r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$"
 
@@ -56,7 +56,6 @@ router = APIRouter()
 
 _detector: Optional[Detector] = None
 _rtsp_port: int = 8555
-_path_for_device: Callable[[str], str] = lambda device: f"uav-mavlink-{device}"
 
 _lock = asyncio.Lock()
 _task: Optional[asyncio.Task] = None
@@ -64,12 +63,11 @@ _recreated_at: dict = {}
 _state: dict = {"host": None, "last_sync": None, "last_error": None, "streams": []}
 
 
-def configure(detector: Detector, rtsp_port: int, path_for_device: Callable[[str], str]) -> None:
+def configure(detector: Detector, rtsp_port: int) -> None:
     """Called once by main.py with its pipeline detection helpers."""
-    global _detector, _rtsp_port, _path_for_device
+    global _detector, _rtsp_port
     _detector = detector
     _rtsp_port = rtsp_port
-    _path_for_device = path_for_device
 
 
 class LiveSyncRequest(BaseModel):
@@ -92,7 +90,7 @@ def _summary(stream: dict) -> dict:
     match = MANAGED_NAME.fullmatch(str(name or ""))
     stats = stream.get("stats") if isinstance(stream.get("stats"), dict) else {}
     return {
-        "device": match.group(1) if match else None,
+        "camera": name if match else None,
         "stream_name": name,
         "stream_id": stream.get("stream_id"),
         "state": stream.get("state"),
@@ -124,7 +122,7 @@ async def _reconcile() -> None:
                 # pause indexing, so leave VSS untouched until the host answers.
                 _state["last_error"] = f"UAV host {host} is not reachable"
                 return
-            active = {d["device"] for d in detected.get("devices", []) if isinstance(d, dict) and d.get("device")}
+            active = {c["camera"] for c in detected.get("cameras", []) if isinstance(c, dict) and c.get("camera")}
         else:
             active = set()
 
@@ -136,8 +134,8 @@ async def _reconcile() -> None:
                 managed.setdefault(name, stream)
 
         errors = []
-        wanted = {_path_for_device(device): device for device in active}
-        for name, device in wanted.items():
+        wanted = {camera: camera for camera in active if MANAGED_NAME.fullmatch(camera)}
+        for name, camera in wanted.items():
             url = f"rtsp://{host}:{_rtsp_port}/{name}"
             stream = managed.get(name)
             try:
@@ -159,8 +157,8 @@ async def _reconcile() -> None:
                         "stream_url": url,
                         "stream_name": name,
                         "sensor_id": name,
-                        "description": f"UAV {device.upper()} pipeline feed (registered by uav-ground-station)",
-                        "tags": ["uav", device],
+                        "description": f"UAV {camera[4:].replace('-', ' ')} feed (registered by uav-ground-station)",
+                        "tags": ["uav", camera],
                     })
                     _recreated_at[name] = time.monotonic()
                     logger.info("VSS live stream %s registered for %s", name, url)

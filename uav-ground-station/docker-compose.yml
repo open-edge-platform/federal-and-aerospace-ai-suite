@@ -48,6 +48,7 @@ services:
     container_name: viz-backend
     environment:
       - DEFAULT_REMOTE_HOST=${VIZ_COMPANION_HOST:-127.0.0.1}
+      - CAMERA_ORDER=${VIZ_CAMERA_ORDER:-front,bottom,back}
       - REMOTE_HTTPS_PORT=${VIZ_REMOTE_HTTPS_PORT:-443}
       - REMOTE_MQTT_PORT=${VIZ_REMOTE_MQTT_PORT:-1883}
       - REMOTE_RTSP_PORT=${VIZ_REMOTE_RTSP_PORT:-8555}

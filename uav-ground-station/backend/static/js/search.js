@@ -576,7 +576,7 @@
       li.className = "live-index-item";
       const state = String(st.state || "unknown");
       const name = document.createElement("span");
-      name.textContent = (st.device || st.stream_name || "feed").toUpperCase();
+      name.textContent = String(st.stream_name || st.camera || "feed").replace(/^uav-/, "").replace(/-/g, " ").toUpperCase();
       const badge = document.createElement("span");
       badge.className = `live-state live-state-${state.replace(/[^a-z]/g, "")}`;
       badge.textContent = state;

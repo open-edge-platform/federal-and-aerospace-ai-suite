@@ -762,6 +762,11 @@ code { color: var(--accent); }
 .device-badge-cpu { color: #1ad0ff; background: rgba(26, 208, 255, 0.10); border-color: rgba(26, 208, 255, 0.35); }
 .device-badge-gpu { color: #ffb347; background: rgba(255, 179, 71, 0.10); border-color: rgba(255, 179, 71, 0.35); }
 .device-badge-npu { color: #b388ff; background: rgba(179, 136, 255, 0.10); border-color: rgba(179, 136, 255, 0.35); }
+.device-badge-vlm { color: #7ee8a8; background: rgba(126, 232, 168, 0.10); border-color: rgba(126, 232, 168, 0.35); }
+.device-badge-off { color: #8ca0c2; background: rgba(140, 160, 194, 0.10); border-color: rgba(140, 160, 194, 0.35); }
+.camera-name { font-weight: 600; text-transform: capitalize; margin-right: 8px; }
+.device-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle; }
+.caption-panel[hidden] { display: none; }
 .device-card-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
 
 /* Card body rhythm: gap under the video, and header/video/captions share the
