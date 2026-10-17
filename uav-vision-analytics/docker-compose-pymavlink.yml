@@ -82,7 +82,7 @@ services:
     volumes:
       - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999
       - "./resources:/home/pipeline-server/resources"
-      - "./configs/config-pymavlink-pipelines.json:/home/pipeline-server/config.json"
+      - "./configs/config-pymavlink.json:/home/pipeline-server/config.json"
       - "./gvapython/telemetry-overlay-pymavlink.py:/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py"
       - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
       - "./scripts/camera_config.py:/home/pipeline-server/scripts/camera_config.py:ro"
@@ -91,7 +91,6 @@ services:
       - "./configs:/home/pipeline-server/configs:rw"
       - "/run/udev:/run/udev:ro"
       - "/tmp:/tmp"
-      - "${REALSENSE_DEVICE:-/dev/null}:/dev/video4"
     group_add:
       - "44"
       - "109"
@@ -109,6 +108,12 @@ services:
       - ${GPU_DEVICE:-/dev/dri/card0}:${GPU_DEVICE:-/dev/dri/card0}
       - ${GPU_RENDER_DEVICE:-/dev/dri/renderD128}:${GPU_RENDER_DEVICE:-/dev/dri/renderD128}
       - ${NPU_DEVICE:-/dev/null}:${NPU_DEVICE:-/dev/null}
+      # live cameras (RealSense, USB webcams): each one set in .env appears under the same path in the
+      # container, so the path in configs/cameras.yaml is the host path
+      - ${CAMERA_DEVICE_1:-/dev/null}:${CAMERA_DEVICE_1:-/dev/null}
+      - ${CAMERA_DEVICE_2:-/dev/null}:${CAMERA_DEVICE_2:-/dev/null}
+      - ${CAMERA_DEVICE_3:-/dev/null}:${CAMERA_DEVICE_3:-/dev/null}
+      - ${CAMERA_DEVICE_4:-/dev/null}:${CAMERA_DEVICE_4:-/dev/null}
     networks:
       - app_network
     # Not "on-failure": when the pipeline server aborts (for example a GPU runtime error while

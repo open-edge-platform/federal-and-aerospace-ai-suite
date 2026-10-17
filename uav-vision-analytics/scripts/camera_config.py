@@ -2,12 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 """Camera configuration for the pipeline manager: load, validate and turn it into pipeline start requests.
 
-One entry per camera says which video it plays, which device and model detect objects, whether the VLM
+One entry per camera says where its images come from (a video file, or a live camera such as an Intel
+RealSense or a USB webcam, through its /dev/video node), which device and model detect objects, whether the VLM
 captions it (and on which device, with which model and prompt) and whether detections are drawn on the
-stream. From that the manager picks one of the nine pipelines in ``configs/config-pymavlink-pipelines.json``:
+stream. From that the manager picks one of the eighteen pipelines in ``configs/config-pymavlink.json``:
 
-    detection only          uav_object_detection_<det>             det: cpu | gpu | npu
-    detection + captioning  uav_object_detection_<det>_<vlm>      vlm: cpu | gpu
+    video file     detection only          uav_object_detection_<det>             det: cpu | gpu | npu
+                   detection + captioning  uav_object_detection_<det>_<vlm>      vlm: cpu | gpu
+    live camera    detection only          uav_camera_<det>
+                   detection + captioning  uav_camera_<det>_<vlm>
 
 This module has no dependency on MAVLink or on the manager, so a REST endpoint or the web UI can reuse the
 same validation (``CamerasConfig``), the JSON schema (``json_schema()``) and the plan (``build_plan()``).
@@ -21,6 +24,7 @@ CLI:
 import json
 import os
 import re
+import stat
 import sys
 from dataclasses import asdict, dataclass
 from typing import Literal, Optional
@@ -31,6 +35,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 SCHEMA_VERSION = 1
 RESOURCES_DIR = os.getenv("PIPELINE_RESOURCES_DIR", "/home/pipeline-server/resources")
 DEFAULT_FILE = os.getenv("CAMERAS_CONFIG", "/home/pipeline-server/configs/cameras.yaml")
+PIPELINES_FILE = os.getenv("PIPELINES_CONFIG", "/home/pipeline-server/config.json")
 
 # The pipelines accept these values only through schema patterns, so keep the same rules here.
 _ID = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
@@ -38,6 +43,7 @@ _VIDEO = re.compile(r"^[A-Za-z0-9_.-]+\.(avi|mp4|mkv|ts)$")
 _REL_MODEL = re.compile(r"^[A-Za-z0-9_./-]+\.xml$")
 _VLM_MODEL = re.compile(r"^[A-Za-z0-9_.-]+$")
 _PROMPT = re.compile(r"^[A-Za-z0-9 ,.?'-]+$")
+_DEVICE = re.compile(r"^/dev/(video[0-9]{1,3}|v4l/by-(id|path)/[A-Za-z0-9_.:+-]{1,128})$")
 _PATH = re.compile(r"^[A-Za-z0-9_-]{1,48}$")
 _TOPIC = re.compile(r"^uav/caption/[A-Za-z0-9_-]+$")
 
@@ -91,7 +97,11 @@ class Captioning(_Strict):
 class Camera(_Strict):
     id: str
     enabled: bool = True
-    video: str = "uav_sample_front.avi"              # file name below <resources>/videos
+    # exactly one source: a video file below <resources>/videos (default uav_sample_front.avi) or a live camera
+    video: Optional[str] = None
+    device: Optional[str] = None                      # /dev/videoN, or /dev/v4l/by-id|by-path/<name> (stable across reboots)
+    width: Optional[int] = Field(default=None, ge=16, le=7680)     # live camera only; default 1280
+    height: Optional[int] = Field(default=None, ge=16, le=4320)    # live camera only; default 720
     overlay: bool = True                              # False hides the detection boxes AND the telemetry text
     detection: Detection = Detection()
     captioning: Captioning = Captioning()
@@ -107,10 +117,28 @@ class Camera(_Strict):
 
     @field_validator("video")
     @classmethod
-    def _video(cls, value: str) -> str:
-        if not _VIDEO.match(value):
+    def _video(cls, value):
+        if value is not None and not _VIDEO.match(value):
             raise ValueError("must be a file name like uav_sample_front.avi (avi, mp4, mkv or ts, no folders)")
         return value
+
+    @field_validator("device")
+    @classmethod
+    def _device(cls, value):
+        if value is not None and not _DEVICE.match(value):
+            raise ValueError("must be /dev/videoN or /dev/v4l/by-id/<name> or /dev/v4l/by-path/<name>")
+        return value
+
+    @model_validator(mode="after")
+    def _source(self):
+        if self.video is not None and self.device is not None:
+            raise ValueError("set either 'video' (a file) or 'device' (a live camera), not both")
+        if self.device is None:
+            if self.width is not None or self.height is not None:
+                raise ValueError("'width' and 'height' apply to a live camera ('device') only")
+            if self.video is None:
+                self.video = "uav_sample_front.avi"
+        return self
 
     @field_validator("rtsp_path")
     @classmethod
@@ -140,10 +168,12 @@ class CamerasConfig(_Strict):
 
     @model_validator(mode="after")
     def _unique(self):
-        for field, label in (("id", "camera id"), ("stream_path", "RTSP path")):
+        for field, label in (("id", "camera id"), ("stream_path", "RTSP path"), ("device", "camera device")):
             seen = {}
             for camera in self.cameras:
-                key = camera.id if field == "id" else stream_path(camera)
+                key = {"id": camera.id, "stream_path": stream_path(camera), "device": camera.device}[field]
+                if key is None:
+                    continue
                 if key in seen:
                     raise ValueError(f"duplicate {label} '{key}' (cameras '{seen[key]}' and '{camera.id}')")
                 seen[key] = camera.id
@@ -158,7 +188,8 @@ def stream_path(camera: Camera) -> str:
 
 def pipeline_name(camera: Camera) -> str:
     det = camera.detection.device
-    return f"uav_object_detection_{det}_{camera.captioning.device}" if camera.captioning.enabled else f"uav_object_detection_{det}"
+    prefix = "uav_camera" if camera.device else "uav_object_detection"
+    return f"{prefix}_{det}_{camera.captioning.device}" if camera.captioning.enabled else f"{prefix}_{det}"
 
 
 @dataclass(frozen=True)
@@ -173,9 +204,25 @@ class CameraPlan:
     request: dict           # body of POST /pipelines/user_defined_pipelines/<pipeline>
 
 
+def _device_problem(device: str) -> Optional[str]:
+    try:
+        mode = os.stat(device).st_mode
+    except OSError:
+        return (f"camera device {device} not found (is the camera plugged in and its /dev node visible in the "
+                "container? list the nodes with v4l2-ctl --list-devices)")
+    if not stat.S_ISCHR(mode):
+        return f"{device} is not a camera device"
+    return None
+
+
 def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, check_files: bool = True,
-               thickness: str = "6") -> list[CameraPlan]:
-    """Turn the enabled cameras into start requests. Raises ConfigError if a referenced file is missing."""
+               thickness: str = "6", unavailable: Optional[list] = None,
+               pipelines: Optional[set] = None) -> list[CameraPlan]:
+    """Turn the enabled cameras into start requests. Raises ConfigError if a referenced file is missing.
+
+    A live camera whose device is not there is not an error when ``unavailable`` (a list) is given: the camera is
+    left out of the plan and the reason is appended to the list, so the other cameras still start.
+    ``pipelines`` (names defined in the pipeline server's config) makes a camera that needs a missing pipeline an error."""
     problems, plans = [], []
     for camera in config.cameras:
         if not camera.enabled:
@@ -184,7 +231,8 @@ def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, che
         model_path = f"{resources_dir}/models/{det.model}"
         label = f"{camera.id.replace('_', '-')}-{det.device.upper()}" + (f"-{cap.device.upper()}-Caption" if cap.enabled else "")
         parameters = {
-            "video": camera.video,
+            **({"device": camera.device, "camera_width": camera.width or 1280, "camera_height": camera.height or 720}
+               if camera.device else {"video": camera.video}),
             "detection_model": model_path,
             # cameras sharing device and model share one loaded model; a different model gets its own instance
             "detection_instance_id": re.sub(r"[^a-z0-9_]", "_", f"inst{det.device}_{os.path.splitext(os.path.basename(det.model))[0]}".lower()),
@@ -199,12 +247,24 @@ def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, che
         frame = {"type": "rtsp", "path": stream_path(camera), "encoding": "h264", "overlay-properties": {"thickness": thickness}}
         if not camera.overlay:
             frame["overlay"] = False
+        if pipelines is not None and pipeline_name(camera) not in pipelines:
+            problems.append(f"cameras[{camera.id}]: pipeline {pipeline_name(camera)} is not in the pipeline server's config.json"
+                            + (" (copy it from configs/config-pymavlink-realsense.json)" if camera.device else ""))
+        if check_files and camera.device:
+            reason = _device_problem(camera.device)
+            if reason and unavailable is not None:
+                unavailable.append(f"cameras[{camera.id}]: {reason}")
+                continue
+            if reason:
+                problems.append(f"cameras[{camera.id}]: {reason}")
         if check_files:
-            for what, path in (("video", f"{resources_dir}/videos/{camera.video}"), ("detection model", model_path),
+            for what, path in (*((("video", f"{resources_dir}/videos/{camera.video}"),) if camera.video else ()),
+                               ("detection model", model_path),
                                *((("captioning model", vlm_path),) if cap.enabled else ())):
                 if not os.path.exists(path):
                     problems.append(f"cameras[{camera.id}]: {what} not found: {path}")
-        summary = f"{det.device.upper()} {os.path.basename(det.model)}" + (f" + {cap.device.upper()} {cap.model}" if cap.enabled else " (no captions)")
+        source = camera.device or camera.video
+        summary = f"{source}: {det.device.upper()} {os.path.basename(det.model)}" + (f" + {cap.device.upper()} {cap.model}" if cap.enabled else " (no captions)")
         plans.append(CameraPlan(camera.id, pipeline_name(camera), stream_path(camera), topic, camera.overlay, summary,
                                 {"destination": {"frame": frame}, "parameters": parameters}))
     if problems:
@@ -232,6 +292,15 @@ def parse_config(data) -> CamerasConfig:
         raise ConfigError(_format_errors(exc)) from None
 
 
+def load_pipeline_names(path: str = PIPELINES_FILE) -> Optional[set]:
+    """Names of the pipelines the pipeline server knows, or None if its config cannot be read."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            return {p["name"] for p in json.load(handle)["config"]["pipelines"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
 def load_config(path: str = DEFAULT_FILE) -> CamerasConfig:
     try:
         with open(path, encoding="utf-8") as handle:
@@ -250,7 +319,7 @@ def json_schema() -> dict:
 # ── command line ──────────────────────────────────────────────────────────────
 
 def _table(plans: list[CameraPlan]) -> str:
-    rows = [("camera", "pipeline", "stream path", "overlay", "detection / captioning")]
+    rows = [("camera", "pipeline", "stream path", "overlay", "source: detection / captioning")]
     rows += [(p.camera_id, p.pipeline, p.rtsp_path, "on" if p.overlay else "off", p.summary) for p in plans]
     widths = [max(len(row[i]) for row in rows) for i in range(5)]
     return "\n".join("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)).rstrip() for row in rows)
@@ -268,7 +337,8 @@ def main(argv=None) -> int:
         return 2
     try:
         config = load_config(path)
-        plans = build_plan(config)
+        unavailable = []
+        plans = build_plan(config, unavailable=unavailable, pipelines=load_pipeline_names())
     except ConfigError as exc:
         print(f"{path}: NOT valid\n" + "\n".join("  " + line for line in str(exc).splitlines()), file=sys.stderr)
         return 1
@@ -278,6 +348,8 @@ def main(argv=None) -> int:
     disabled = [c.id for c in config.cameras if not c.enabled]
     print(f"{path}: valid, {len(plans)} camera(s) enabled" + (f", disabled: {', '.join(disabled)}" if disabled else ""))
     print(_table(plans))
+    for line in unavailable:
+        print(f"WARNING {line}; left out", file=sys.stderr)
     return 0
 
 

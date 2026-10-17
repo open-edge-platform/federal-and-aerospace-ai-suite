@@ -18,6 +18,16 @@ import camera_config as cc  # noqa: E402
 CAMERA = {"id": "front_camera"}
 
 
+def _pipelines(name):
+    with open(os.path.join(REPO, "configs", name), encoding="utf-8") as handle:
+        return {p["name"]: p for p in json.load(handle)["config"]["pipelines"]}
+
+
+MAIN = _pipelines("config-pymavlink.json")
+REALSENSE = _pipelines("config-pymavlink-realsense.json")
+PIPELINES = set(MAIN)
+
+
 def config(*cameras):
     return cc.parse_config({"version": 1, "cameras": [dict(c) for c in cameras]})
 
@@ -29,8 +39,9 @@ def plan_of(camera: dict) -> cc.CameraPlan:
 class DefaultsAndNames(unittest.TestCase):
     def test_shipped_file_is_valid(self):
         cfg = cc.load_config(os.path.join(REPO, "configs", "cameras.yaml"))
-        self.assertEqual([c.id for c in cfg.cameras], ["front_camera", "bottom_camera", "back_camera"])
-        for plan in cc.build_plan(cfg, check_files=False):
+        self.assertEqual([c.id for c in cfg.cameras], ["front_camera", "bottom_camera", "back_camera", "realsense_camera"])
+        self.assertFalse(cfg.cameras[3].enabled, "the live camera ships disabled")
+        for plan in cc.build_plan(cfg, check_files=False, pipelines=PIPELINES):
             self.assertEqual(plan.pipeline, "uav_object_detection_npu_gpu")
 
     def test_pipeline_name_for_every_combination(self):
@@ -191,14 +202,14 @@ class MatchesThePipelineDefinitions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        path = os.path.join(REPO, "configs", "config-pymavlink-pipelines.json")
-        with open(path, encoding="utf-8") as handle:
-            cls.pipelines = {p["name"]: p for p in json.load(handle)["config"]["pipelines"]}
+        cls.pipelines = MAIN
 
-    def test_all_nine_pipelines_exist(self):
-        expected = {f"uav_object_detection_{d}" for d in ("cpu", "gpu", "npu")} | {
+    def test_all_pipelines_exist(self):
+        video = {f"uav_object_detection_{d}" for d in ("cpu", "gpu", "npu")} | {
             f"uav_object_detection_{d}_{v}" for d in ("cpu", "gpu", "npu") for v in ("cpu", "gpu")}
-        self.assertEqual(expected, set(self.pipelines) & expected)
+        camera = {n.replace("uav_object_detection_", "uav_camera_") for n in video}
+        self.assertEqual(video | {"uav_camera_npu", "uav_camera_npu_gpu"}, set(self.pipelines))
+        self.assertEqual(camera, set(REALSENSE))
 
     def test_requests_satisfy_the_pipeline_schemas(self):
         for det in ("cpu", "gpu", "npu"):
@@ -221,6 +232,117 @@ class MatchesThePipelineDefinitions(unittest.TestCase):
         for key, bad in (("video", "../x.avi"), ("captioner_prompt", 'a"b'), ("mqtt_topic", "x/y"), ("detection_instance_id", "A b")):
             with self.assertRaises(jsonschema.ValidationError):
                 jsonschema.validate({key: bad}, copy.deepcopy(schema))
+
+
+class LiveCameras(unittest.TestCase):
+    DEV = "/dev/video4"
+
+    def live(self, **extra):
+        return {"id": "realsense_front", "device": self.DEV, **extra}
+
+    def test_device_replaces_video_in_the_request(self):
+        params = plan_of(self.live()).request["parameters"]
+        self.assertEqual((params["device"], params["camera_width"], params["camera_height"]), (self.DEV, 1280, 720))
+        self.assertNotIn("video", params)
+
+    def test_size_can_be_set(self):
+        params = plan_of(self.live(width=640, height=480)).request["parameters"]
+        self.assertEqual((params["camera_width"], params["camera_height"]), (640, 480))
+
+    def test_a_file_camera_sends_no_device(self):
+        params = plan_of({"id": "f"}).request["parameters"]
+        self.assertEqual(params["video"], "uav_sample_front.avi")
+        self.assertFalse({"device", "camera_width", "camera_height"} & set(params))
+
+    def test_video_and_device_are_exclusive(self):
+        with self.assertRaisesRegex(cc.ConfigError, "either 'video'"):
+            config(self.live(video="uav_sample_front.avi"))
+
+    def test_size_needs_a_device(self):
+        with self.assertRaisesRegex(cc.ConfigError, "live camera"):
+            config({"id": "f", "width": 640})
+
+    def test_device_names(self):
+        for good in ("/dev/video0", "/dev/video36", "/dev/v4l/by-id/usb-Intel_R__RealSense-video-index4",
+                     "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:2:1.0-video-index0"):
+            config(self.live(device=good))
+        for bad in ("/dev/sda", "/dev/video", "video0", "/dev/v4l/by-id/../../sda", "/dev/video0; rm", "/tmp/video0"):
+            with self.assertRaises(cc.ConfigError, msg=bad):
+                config(self.live(device=bad))
+
+    def test_a_device_can_serve_one_camera_only(self):
+        with self.assertRaisesRegex(cc.ConfigError, "duplicate camera device"):
+            config(self.live(), {**self.live(), "id": "other"})
+
+    def test_missing_device_is_an_error_by_default(self):
+        with self.assertRaisesRegex(cc.ConfigError, "not found"):
+            cc.build_plan(config(self.live(device="/dev/video99")), check_files=True)
+
+    def test_missing_device_is_left_out_when_asked(self):
+        with tempfile.TemporaryDirectory() as root:
+            for sub in ("videos", "models/yolo11s/yolo11s_openvino_model"):
+                os.makedirs(os.path.join(root, sub))
+            open(os.path.join(root, "videos", "uav_sample_front.avi"), "w").close()
+            open(os.path.join(root, "models/yolo11s/yolo11s_openvino_model/yolo11s.xml"), "w").close()
+            unavailable = []
+            plans = cc.build_plan(config({"id": "f"}, self.live(device="/dev/video99")), resources_dir=root, unavailable=unavailable)
+        self.assertEqual([p.camera_id for p in plans], ["f"])
+        self.assertEqual(len(unavailable), 1)
+        self.assertIn("realsense_front", unavailable[0])
+
+    def test_a_node_that_is_not_a_device_is_refused(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.assertIn("not a camera device", cc._device_problem(root))  # pylint: disable=protected-access
+        self.assertIsNone(cc._device_problem("/dev/null"))  # pylint: disable=protected-access
+
+    def test_requests_satisfy_every_pipeline_schema(self):
+        pipelines = {**MAIN, **REALSENSE}
+        for det in ("cpu", "gpu", "npu"):
+            for vlm in (None, "cpu", "gpu"):
+                plan = plan_of(self.live(detection={"device": det}, captioning={"enabled": vlm is not None, "device": vlm or "gpu"}))
+                jsonschema.validate(plan.request["parameters"], pipelines[plan.pipeline]["parameters"])
+                unknown = set(plan.request["parameters"]) - set(pipelines[plan.pipeline]["parameters"]["properties"])
+                self.assertFalse(unknown, unknown)
+
+    def test_live_cameras_use_their_own_pipelines(self):
+        for det in ("cpu", "gpu", "npu"):
+            self.assertEqual(plan_of(self.live(detection={"device": det})).pipeline, f"uav_camera_{det}")
+            for vlm in ("cpu", "gpu"):
+                camera = self.live(detection={"device": det}, captioning={"enabled": True, "device": vlm})
+                self.assertEqual(plan_of(camera).pipeline, f"uav_camera_{det}_{vlm}")
+
+    def test_the_pipeline_files_have_clean_separate_sources(self):
+        pipelines = {**MAIN, **REALSENSE}
+        self.assertEqual(len(pipelines), 18)
+        self.assertEqual(sorted(n for n in MAIN if n.startswith("uav_camera_")), ["uav_camera_npu", "uav_camera_npu_gpu"])
+        for name, pipeline in pipelines.items():
+            text = pipeline["pipeline"].replace("{% raw %}", "").replace("{% endraw %}", "")
+            self.assertNotIn("{%", text, f"{name}: no template logic in the pipelines")
+            live = name.startswith("uav_camera_")
+            self.assertEqual(text.startswith("v4l2src device={parameters[device]}"), live, name)
+            self.assertEqual(text.startswith("multifilesrc"), not live, name)
+            props = pipeline["parameters"]["properties"]
+            self.assertEqual("device" in props, live, name)
+            self.assertEqual("video" in props, not live, name)
+        # a camera pipeline is its video twin with only the source and its parameters replaced
+        for name, pipeline in pipelines.items():
+            if not name.startswith("uav_camera_"):
+                continue
+            twin = pipelines["uav_object_detection_" + name[len("uav_camera_"):]]
+            self.assertEqual(pipeline["pipeline"].split(" ! videoconvert ! video/x-raw,format=NV12", 1)[1],
+                             twin["pipeline"].split(" ! identity sync=true", 1)[1], name)
+        for name in ("uav_camera_npu", "uav_camera_npu_gpu"):          # the two shipped ones are the reference ones
+            self.assertEqual(MAIN[name], REALSENSE[name])
+
+    def test_a_camera_needs_its_pipeline_in_the_servers_config(self):
+        plans = cc.build_plan(config(self.live(captioning={"enabled": True})), check_files=False, pipelines=PIPELINES)
+        self.assertEqual(plans[0].pipeline, "uav_camera_npu_gpu")
+        with self.assertRaisesRegex(cc.ConfigError, "uav_camera_gpu is not in the pipeline server's config.json.*config-pymavlink-realsense.json"):
+            cc.build_plan(config(self.live(detection={"device": "gpu"})), check_files=False, pipelines=PIPELINES)
+        with self.assertRaisesRegex(cc.ConfigError, "uav_object_detection_cpu_cpu is not"):
+            cc.build_plan(config({"id": "f", "detection": {"device": "cpu"}, "captioning": {"enabled": True, "device": "cpu"}}),
+                          check_files=False, pipelines={"uav_object_detection_cpu"})
+        cc.build_plan(config(self.live(detection={"device": "gpu"})), check_files=False)      # not checked without a list
 
 
 if __name__ == "__main__":

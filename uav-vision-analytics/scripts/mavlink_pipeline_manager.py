@@ -98,13 +98,17 @@ class ActiveConfig:
         self._mtime = stamp
         try:
             config = camera_config.load_config(self.path)
-            plans = camera_config.build_plan(config, thickness=BBOX_THICKNESS)
+            unavailable = []
+            plans = camera_config.build_plan(config, thickness=BBOX_THICKNESS, unavailable=unavailable,
+                                            pipelines=camera_config.load_pipeline_names())
         except camera_config.ConfigError as exc:
             log(f"[config] {self.path} has errors, "
                 + ("keeping the previous configuration:" if self.plans else "nothing to start:"))
             for line in str(exc).splitlines():
                 log(f"[config]   {line}")
             return False
+        for line in unavailable:
+            log(f"[config] WARNING {line}; left out until the next arming")
         changed = [p.request for p in plans] != [p.request for p in self.plans]
         self.plans = plans
         if changed or not quiet:
@@ -232,7 +236,9 @@ def print_stream_urls(plans: list) -> None:
 
 def show_status(path: str) -> int:
     try:
-        plans = camera_config.build_plan(camera_config.load_config(path), thickness=BBOX_THICKNESS)
+        unavailable = []
+        plans = camera_config.build_plan(camera_config.load_config(path), thickness=BBOX_THICKNESS, unavailable=unavailable,
+                                            pipelines=camera_config.load_pipeline_names())
     except camera_config.ConfigError as exc:
         log(f"{path} has errors:\n" + "\n".join("  " + line for line in str(exc).splitlines()))
         return 1
@@ -272,6 +278,8 @@ def show_status(path: str) -> int:
     widths = [max(len(str(r[i])) for r in rows) for i in range(len(rows[0]))]
     for row in rows:
         log("  ".join(str(cell).ljust(widths[i]) for i, cell in enumerate(row)).rstrip())
+    for line in unavailable:
+        log(f"WARNING {line}")
     return 0
 
 

@@ -94,18 +94,18 @@ init: ## Create .env from template, auto-detect the host IP, and auto-detect GPU
                                 && echo "$$dev" && break; \
                         done); \
                 if [ -n "$$RS_DEV" ]; then \
-                        echo "✅ USB camera detected: $$RS_DEV → /dev/video4"; \
-                        if grep -q "^REALSENSE_DEVICE=" .env; then \
-                                sed -i "s|^REALSENSE_DEVICE=.*|REALSENSE_DEVICE=$$RS_DEV|" .env; \
+                        echo "✅ USB camera detected: $$RS_DEV (CAMERA_DEVICE_1; use it as device: in configs/cameras.yaml)"; \
+                        if grep -q "^CAMERA_DEVICE_1=" .env; then \
+                                sed -i "s|^CAMERA_DEVICE_1=.*|CAMERA_DEVICE_1=$$RS_DEV|" .env; \
                         else \
-                                echo "REALSENSE_DEVICE=$$RS_DEV" >> .env; \
+                                echo "CAMERA_DEVICE_1=$$RS_DEV" >> .env; \
                         fi; \
                 else \
-                        echo "⚠  No USB camera found — REALSENSE_DEVICE=/dev/null (RealSense/camera pipelines disabled)."; \
-                        if grep -q "^REALSENSE_DEVICE=" .env; then \
-                                sed -i "s|^REALSENSE_DEVICE=.*|REALSENSE_DEVICE=/dev/null|" .env; \
+                        echo "⚠  No USB camera found — CAMERA_DEVICE_1=/dev/null (live cameras disabled)."; \
+                        if grep -q "^CAMERA_DEVICE_1=" .env; then \
+                                sed -i "s|^CAMERA_DEVICE_1=.*|CAMERA_DEVICE_1=/dev/null|" .env; \
                         else \
-                                echo "REALSENSE_DEVICE=/dev/null" >> .env; \
+                                echo "CAMERA_DEVICE_1=/dev/null" >> .env; \
                         fi; \
                 fi; \
 		fi
