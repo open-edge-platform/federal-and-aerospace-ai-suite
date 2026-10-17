@@ -2,26 +2,27 @@
 # SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
-# Manually start/stop/check the uav_object_detection_<device> (and
-# _caption) pipelines on the DL Streamer Pipeline Server fronted by nginx
-# in the pymavlink stack (docker-compose-pymavlink.yml), without needing to
-# arm the drone via MAVLink. Useful for ad-hoc testing of 'make pymav-up'
-# stacks. The MAVLink-driven ARM/DISARM flow (scripts/mavlink_pipeline_manager.py,
-# used by 'make start-rtsp') remains the normal way to run this app end to end.
+# Manually start/stop/check ONE pipeline per detection device on the DL Streamer
+# Pipeline Server fronted by nginx in the pymavlink stack (docker-compose-pymavlink.yml),
+# without needing to arm the drone via MAVLink and without cameras.yaml: ad-hoc testing
+# of 'make pymav-up' stacks with the pipelines' default video, models and prompt.
+# The cameras of configs/cameras.yaml, started when the vehicle is armed by
+# scripts/mavlink_pipeline_manager.py ('make start-rtsp'), remain the normal way to run
+# this app end to end ('make start-rtsp' also has --start-now to run them without a vehicle).
 #
 # Each started pipeline's instance_id is cached in a per-device/variant state
 # file (.uav_pipeline_<device>[_caption]_instance_id) so 'stop'/'status' can
-# find it without the caller tracking it manually.
+# find it without the caller tracking it manually. Streams are published as
+# rtsp://<HOST_IP>:8555/uav-manual-<device>.
 #
 # Usage:
 #   ./scripts/uav_pipeline_control.sh start  [cpu|gpu|npu|all] [--caption]
 #   ./scripts/uav_pipeline_control.sh stop   [cpu|gpu|npu|all] [--caption]
 #   ./scripts/uav_pipeline_control.sh status [cpu|gpu|npu|all] [--caption]
 #
-# --caption starts the uav_object_detection_<device>_caption variant (RTSP +
-# telemetry overlay, same as the base pipeline, plus VLM scene captioning
-# published over MQTT on 'uav/caption/<device>'). Requires 'make vlm-model'
-# to have been run first (see README.md).
+# --caption starts the uav_object_detection_<device>_gpu pipeline (detection on <device> plus
+# VLM scene captioning on the GPU, published over MQTT on 'uav/caption/manual_<device>').
+# Requires 'make vlm-model' to have been run first (see README.md).
 #
 # The RTSP destination is always H.264 encoded (the "encoding": "h264" field,
 # see dlstreamer-pipeline-server's gstreamer_rtsp_destination.py).
@@ -46,7 +47,6 @@ fi
 HOST_IP="${HOST_IP:-127.0.0.1}"
 NPU_DEVICE="${NPU_DEVICE:-/dev/null}"
 BBOX_THICKNESS="${BBOX_THICKNESS:-6}"
-MODEL_PATH="/home/pipeline-server/resources/models/yolo11s/yolo11s_openvino_model/yolo11s.xml"
 ALL_DEVICES=(cpu gpu npu)
 
 log()  { echo "[INFO ] $*"; }
@@ -68,7 +68,7 @@ state_file() {
 pipeline_name() {
   local device="$1" caption="$2"
   if [[ "${caption}" == "true" ]]; then
-    echo "uav_object_detection_${device}_caption"
+    echo "uav_object_detection_${device}_gpu"
   else
     echo "uav_object_detection_${device}"
   fi
@@ -76,10 +76,9 @@ pipeline_name() {
 
 frame_path() {
   # Same RTSP path regardless of --caption, so the URL a viewer connects to
-  # never changes whether captioning is on or off (matches
-  # mavlink_pipeline_manager.py's RTSP_CAPTION_PIPELINES).
+  # never changes whether captioning is on or off.
   local device="$1"
-  echo "uav-mavlink-${device}"
+  echo "uav-manual-${device}"
 }
 
 rtsp_frame_json() {
@@ -126,44 +125,14 @@ start_one() {
 
   log "Starting ${name} on https://${HOST_IP} (RTSP path: ${path})"
 
+  # Video, models, prompt and instance ids come from the pipeline's own defaults. Only the
+  # overlay label and, when captioning, the MQTT topic are set so manual runs are recognisable.
+  # No metadata destination: the pipelines publish no per-frame JSON.
+  rtsp_frame="$(rtsp_frame_json "${path}")"
   if [[ "${caption}" == "true" ]]; then
-    # NOTE: model/device/prompt for the caption branch are hardcoded inline
-    # in the *_caption pipeline strings (config-pymavlink.json) — do not
-    # add 'detection-properties' or 'destination.metadata' here; both are
-    # known to deadlock gvadetect/gvagenai when wired through the tee used
-    # by these pipelines.
-    #
-    # Detection-box overlay is NOT drawn in-pipeline (the *_caption
-    # GStreamer string only has a gvapython telemetry-text overlay before
-    # gvametaconvert/gvametapublish) -- it is rendered by the pipeline
-    # server's own RTSP AppDestination, so 'overlay' must be left at its
-    # default (on).
-    rtsp_frame="$(rtsp_frame_json "${path}")"
-    payload="$(cat <<EOF
-{
-  "destination": {
-    "frame": ${rtsp_frame}
-  }
-}
-EOF
-)"
+    payload="{\"destination\": {\"frame\": ${rtsp_frame}}, \"parameters\": {\"overlay_label\": \"manual-${device}-${device}-gpu\", \"mqtt_topic\": \"uav/caption/manual_${device}\"}}"
   else
-    rtsp_frame="$(rtsp_frame_json "${path}")"
-    payload="$(cat <<EOF
-{
-  "destination": {
-    "metadata": {"type": "file", "path": "/tmp/results_${device}.jsonl", "format": "json-lines"},
-    "frame": ${rtsp_frame}
-  },
-  "parameters": {
-    "detection-properties": {
-      "model": "${MODEL_PATH}",
-      "device": "${device^^}"
-    }
-  }
-}
-EOF
-)"
+    payload="{\"destination\": {\"frame\": ${rtsp_frame}}, \"parameters\": {\"overlay_label\": \"manual-${device}\"}}"
   fi
 
   response="$(api -X POST "https://${HOST_IP}/pipelines/user_defined_pipelines/${name}" \
@@ -180,7 +149,7 @@ EOF
   log "Started '${name}'. Instance ID: ${instance_id}"
   log "RTSP output: rtsp://${HOST_IP}:8555/${path} (H.264)"
   if [[ "${caption}" == "true" ]]; then
-    log "MQTT captions: topic 'uav/caption/${device}' on broker:1883"
+    log "MQTT captions: topic 'uav/caption/manual_${device}' on broker:1883"
   fi
 }
 

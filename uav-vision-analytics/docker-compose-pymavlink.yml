@@ -82,9 +82,13 @@ services:
     volumes:
       - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999
       - "./resources:/home/pipeline-server/resources"
-      - "./configs/config-pymavlink.json:/home/pipeline-server/config.json"
+      - "./configs/config-pymavlink-pipelines.json:/home/pipeline-server/config.json"
       - "./gvapython/telemetry-overlay-pymavlink.py:/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py"
       - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+      - "./scripts/camera_config.py:/home/pipeline-server/scripts/camera_config.py:ro"
+      # The folder with cameras.yaml is mounted, not the file: editors save by replacing the file, and a
+      # single-file mount would keep showing the old one inside the container.
+      - "./configs:/home/pipeline-server/configs:rw"
       - "/run/udev:/run/udev:ro"
       - "/tmp:/tmp"
       - "${REALSENSE_DEVICE:-/dev/null}:/dev/video4"

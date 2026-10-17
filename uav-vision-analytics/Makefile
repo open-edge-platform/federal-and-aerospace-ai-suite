@@ -12,8 +12,6 @@ DLSPS          := dlstreamer-pipeline-server
 MODEL_DIR      := resources/models/yolo11s
 MODEL_XML      := $(MODEL_DIR)/yolo11s_openvino_model/yolo11s.xml
 VENV           := resources/venv
-DEVICE         ?= gpu
-CAPTION        ?= false
 SSL_DIR        := configs/nginx/ssl
 VLM_MODEL_PATH := $(CURDIR)/resources
 VLM_MODEL_ID   ?= OpenGVLab/InternVL2-1B
@@ -34,7 +32,7 @@ VLM_DOWNLOAD_SCRIPT      := $(CURDIR)/.cache/download_models.sh
         _fetch_vlm_download_script \
         pymav-up pymav-down \
         uavsdk-up uavsdk-down \
-        start-rtsp
+        start-rtsp check-cameras cameras-status
 
 help: ## Show available targets
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / \
@@ -204,18 +202,17 @@ uavsdk-down: ## Stop and remove UAV Mission Compute SDK stack (includes volumes)
 
 # ── Pipeline management ───────────────────────────────────────────────────────
 
-start-rtsp: ## Start RTSP pipelines. DEVICE=cpu|gpu|npu|all (default: gpu). CAPTION=true|false (default: false) to also run VLM scene captioning (requires 'make vlm-model').
-	@if [ "$(CAPTION)" = "true" ] && [ ! -f "resources/ov_models/cpu/InternVL2-1B/openvino_language_model.xml" ]; then \
-		echo "❌ VLM captioning model not found: resources/ov_models/cpu/InternVL2-1B/"; \
-		echo "   Run 'make vlm-model' first (CAPTION=true requires the CPU VLM model)."; \
-		exit 1; \
-	fi
+start-rtsp: ## Start the cameras in configs/cameras.yaml when the vehicle is armed (the file is re-read at every arming). CAMERAS=<file> uses another file.
 	-docker exec -it \
 	  -e HOST_IP=$(HOST_IP) \
-	  -e PIPELINE_DEVICE=$(DEVICE) \
-	  -e CAPTION=$(CAPTION) \
 	  $(DLSPS) bash -c \
-	  "python3 /home/pipeline-server/scripts/pipeline_manager.py"
+	  "python3 /home/pipeline-server/scripts/pipeline_manager.py $(if $(CAMERAS),--config $(CAMERAS))"
+
+check-cameras: ## Validate configs/cameras.yaml and show what would run (nothing is started). CAMERAS=<file> checks another file.
+	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/camera_config.py check $(if $(CAMERAS),$(CAMERAS),/home/pipeline-server/configs/cameras.yaml)
+
+cameras-status: ## Compare configs/cameras.yaml with the pipelines that are running
+	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/pipeline_manager.py --status $(if $(CAMERAS),--config $(CAMERAS))
 
 # ── Convenience alias ─────────────────────────────────────────────────────────
 
