@@ -397,6 +397,7 @@
       if (info.prompt) details.push(`prompt: ${info.prompt}`);
       details.push(info.overlay === false ? "overlay off" : "overlay on");
       if (info.video) details.push(`video ${info.video}`);
+      if (info.rtsp_url) details.push(`stream ${info.rtsp_url}`);
       if (info.device) details.push(`live camera ${info.device}${info.camera_size ? ` ${info.camera_size}` : ""}`);
       if (info.frame_rate !== null && info.frame_rate !== undefined) details.push(`${info.frame_rate} fps`);
       details.push(info.rtsp_available ? "H.264 Relay" : "no video stream");

@@ -29,6 +29,10 @@ class CameraRecord(unittest.TestCase):
         self.assertEqual((info["video"], info["device"], info["camera_size"]), (None, "/dev/video4", "1280x720"))
         self.assertEqual((info["detection_device"], info["captioning"], info["mqtt_topic"]), ("npu", False, None))
 
+    def test_rtsp_camera(self):
+        info = record("uav_object_detection_cpu", {"rtsp_url": "rtsp://host.docker.internal:8554/uav-1/nadir"})
+        self.assertEqual((info["rtsp_url"], info["video"], info["device"]), ("rtsp://host.docker.internal:8554/uav-1/nadir", None, None))
+
     def test_live_camera_with_captions_and_no_overlay(self):
         info = record("uav_camera_gpu_cpu", {"device": "/dev/video2", "camera_width": 640, "camera_height": 480}, overlay=False)
         self.assertEqual((info["camera_size"], info["vlm_device"], info["overlay"], info["mqtt_topic"]),

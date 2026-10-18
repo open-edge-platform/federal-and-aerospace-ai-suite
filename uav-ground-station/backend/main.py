@@ -180,6 +180,7 @@ def _camera_record(inst: dict, request: dict, path: str, frame: dict) -> dict:
         "video": params.get("video"),
         # a live camera (RealSense, USB webcam) has a device node instead of a video file
         "device": params.get("device"),
+        "rtsp_url": params.get("rtsp_url"),
         "camera_size": f"{params['camera_width']}x{params['camera_height']}" if params.get("device") and params.get("camera_width") else None,
         "label": params.get("overlay_label"),
         "frame_rate": params.get("frame_rate"),
