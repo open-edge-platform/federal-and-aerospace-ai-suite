@@ -1,0 +1,7 @@
+src/secrets/*
+!src/secrets/generate_secrets.sh
+!src/secrets/openssl.cnf
+src/nginx/ssl/
+.env
+.venv-test/
+tests/artifacts/

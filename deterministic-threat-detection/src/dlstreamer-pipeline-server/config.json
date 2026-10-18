@@ -1,0 +1,88 @@
+{
+  "config": {
+    "logging": {
+      "C_LOG_LEVEL": "INFO",
+      "PY_LOG_LEVEL": "INFO"
+    },
+    "pipelines": [
+      {
+        "name": "hota-cam1",
+        "source": "gstreamer",
+        "pipeline": "rtspsrc location=rtsp://192.168.127.12:8554/Cam_x1_0 latency=200 ! rtph264depay ! h264parse ! gvapython class=SEIParser arg=[\"camera1\"] function=process module=/home/pipeline-server/user_scripts/gvapython/sscape/sei_parser.py name=sei_parser ! avdec_h264 ! videoconvert ! videoscale ! video/x-raw,format=BGR,width=800,height=600 ! sscape_timestamp_capture name=timesync ! gvadetect threshold=0.4 model=/home/pipeline-server/models/omz/person-detection-retail-0013/FP32/person-detection-retail-0013.xml model-proc=/home/pipeline-server/models/object_detection/person/person-detection-retail-0013.json ! gvametaconvert add-tensor-data=true name=metaconvert ! sscape_post_inference_data_publish name=datapublisher ! gvametapublish name=destination method=file file-path=/dev/null ! appsink sync=true",
+        "auto_start": true,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "cameraid": {
+              "element": {
+                "name": "datapublisher",
+                "property": "cameraid"
+              },
+              "type": "string"
+            },
+            "metadatagenpolicy": {
+              "element": {
+                "name": "datapublisher",
+                "property": "metadatagenpolicy"
+              },
+              "type": "string"
+            },
+            "detection_labels": {
+              "element": {
+                "name": "datapublisher",
+                "property": "detection-labels"
+              },
+              "type": "string"
+            }
+          }
+        },
+        "payload": {
+          "parameters": {
+            "cameraid": "Cam_x1_0",
+            "metadatagenpolicy": "detectionPolicy",
+            "detection_labels": "person"
+          }
+        }
+      },
+      {
+        "name": "hota-cam2",
+        "source": "gstreamer",
+        "pipeline": "rtspsrc location=rtsp://192.168.127.13:8554/Cam_x2_0 latency=200 ! rtph264depay ! h264parse ! gvapython class=SEIParser arg=[\"camera2\"] function=process module=/home/pipeline-server/user_scripts/gvapython/sscape/sei_parser.py name=sei_parser ! avdec_h264 ! videoconvert ! videoscale ! video/x-raw,format=BGR,width=800,height=600 ! sscape_timestamp_capture name=timesync ! gvadetect threshold=0.4 model=/home/pipeline-server/models/omz/person-detection-retail-0013/FP32/person-detection-retail-0013.xml model-proc=/home/pipeline-server/models/object_detection/person/person-detection-retail-0013.json ! gvametaconvert add-tensor-data=true name=metaconvert ! sscape_post_inference_data_publish name=datapublisher ! gvametapublish name=destination method=file file-path=/dev/null ! appsink sync=true",
+        "auto_start": true,
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "cameraid": {
+              "element": {
+                "name": "datapublisher",
+                "property": "cameraid"
+              },
+              "type": "string"
+            },
+            "metadatagenpolicy": {
+              "element": {
+                "name": "datapublisher",
+                "property": "metadatagenpolicy"
+              },
+              "type": "string"
+            },
+            "detection_labels": {
+              "element": {
+                "name": "datapublisher",
+                "property": "detection-labels"
+              },
+              "type": "string"
+            }
+          }
+        },
+        "payload": {
+          "parameters": {
+            "cameraid": "Cam_x2_0",
+            "metadatagenpolicy": "detectionPolicy",
+            "detection_labels": "person"
+          }
+        }
+      }
+    ]
+  }
+}

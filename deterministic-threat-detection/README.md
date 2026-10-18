@@ -2,6 +2,8 @@
 
 The Deterministic Threat Detection with Time-Sensitive Networking (TSN) project demonstrates how to deliver deterministic, low-latency AI and sensor workloads in shared networks. This application is currently in preview.
 
+> **Standalone HOTA app:** the Docker Compose application in this folder (`docker-compose.yml`, `Makefile`, `src/`, `tests/`) runs the `hota-scene` end to end. See [README.standalone.md](./README.standalone.md).
+
 ---
 
 ## Overview
