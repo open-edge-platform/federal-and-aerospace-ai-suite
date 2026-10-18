@@ -42,6 +42,8 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 .switch input:checked + .track { background: var(--ok); }
 .switch input:checked + .track::after { transform: translateX(20px); }
 .switch input:disabled + .track { opacity: .5; }
+.switch.busy .track { animation: pulse 1s ease-in-out infinite; opacity: .8; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(26, 115, 232, .35); } }
 .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .check { display: block; margin: 4px 0 10px; }
 .btn { background: transparent; color: var(--text); border: 1px solid var(--panel-border);
@@ -64,3 +66,7 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 .chart-head h2 { margin: 0; }
 .chart-wrap { position: relative; height: 420px; margin-top: 8px; }
 .empty { position: absolute; inset: 60px 0 0 0; display: flex; align-items: center; justify-content: center; color: var(--muted); pointer-events: none; }
+
+.warn { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--warn); border-left-width: 4px; border-radius: 6px;
+  background: rgba(245, 166, 35, .10); color: var(--text); font-size: 12px; }
+.warn strong { color: var(--warn); }

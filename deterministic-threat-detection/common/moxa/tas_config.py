@@ -49,21 +49,32 @@ def queues_of(gates):
     return [q for q in range(7, -1, -1) if gates >> q & 1]
 
 
-def get_state(sw, port):
-    """Parse `show dot1qbv administrative` for one port."""
-    text = sw.run("show dot1qbv administrative")
+def _port_block(text, port, what):
     block = next((b for b in re.split(r"(?=Port Idx:)", text) if re.match(rf"Port Idx:\s*{port}\s", b)), None)
     if block is None:
-        raise RuntimeError(f"port {port} not found in show dot1qbv administrative")
+        raise RuntimeError(f"port {port} not found in {what}")
+    return block
+
+
+def _entries(block):
+    return [(int(t), int(g, 16)) for g, t in
+            re.findall(r"Gate States:\s*0x([0-9A-Fa-f]+)\s+Time Interval:\s*(\d+)", block)]
+
+
+def get_state(sw, port):
+    """Parse `show dot1qbv administrative` (what is configured) and `... operative` (what is running)."""
+    block = _port_block(sw.run("show dot1qbv administrative"), port, "show dot1qbv administrative")
     num = re.search(r"Numerator:\s*(\d+)", block)
     den = re.search(r"Denominator:\s*(\d+)", block)
-    entries = [(int(t), int(g, 16)) for g, t in
-               re.findall(r"Gate States:\s*0x([0-9A-Fa-f]+)\s+Time Interval:\s*(\d+)", block)]
+    oper = _port_block(sw.run("show dot1qbv operative"), port, "show dot1qbv operative")
     return {
         "port": port,
         "config_change": "Config Change: True" in block,
+        # 'Schedule Gate' is the per-port toggle of the web page; this CLI has no keyword to set it
+        "gate": "Schedule Gate: True" in block,
         "cycle_ns": int(num[1]) * NS_DENOM // int(den[1]) if num and den else None,
-        "entries": entries,  # [(interval_ns, gate_states)]
+        "entries": _entries(block),  # [(interval_ns, gate_states)] configured
+        "oper_entries": _entries(oper),  # what the switch is really running
     }
 
 
@@ -74,6 +85,9 @@ def show(st):
         print(f"  slot {i}: interval={ns / 1000:g} us gates=0x{g:02X} queues=q{', q'.join(map(str, queues_of(g)))}")
     if not st["entries"]:
         print("  (no gate control entries)")
+    # Extra lines for the dashboard: the web-page toggle and whether the schedule is really running.
+    print(f"  gate toggle (web page): {'on' if st['gate'] else 'off'}")
+    print(f"  operative: {'active' if st['oper_entries'] else 'not active'} ({len(st['oper_entries'])} entries)")
 
 
 def plan(port, slots):

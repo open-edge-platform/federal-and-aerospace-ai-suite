@@ -3,7 +3,7 @@
 (() => {
   const COLORS = ['#4da3ff', '#3ecf8e', '#f5a623', '#c58bff', '#ef5b5b'];
   const $ = (id) => document.getElementById(id);
-  const state = { includeProcessing: false, cfg: null, series: {}, colorIdx: 0, lastNow: 0, offset: 0, qbvTouched: 0 };
+  const state = { includeProcessing: false, cfg: null, series: {}, colorIdx: 0, lastNow: 0, qbvRequestedAt: 0 };
 
   const chart = new Chart($('chart'), {
     type: 'line',
@@ -105,9 +105,34 @@
 
     const q = msg.qbv;
     $('qbv-port').textContent = `port ${q.port}`;
-    if (Date.now() - state.qbvTouched > 1500) $('qbv').checked = q.enabled;
-    $('qbv').disabled = q.busy || q.read_only;
-    $('qbv-label').textContent = q.busy ? 'Applying…' : q.enabled ? 'On' : 'Off';
+    // While a change is being applied show where it is heading (disabled, "Enabling…"); once the
+    // switch has been read back show what it really has. Never trust the click, trust the switch.
+    // A click locks the button until the server reports 'busy' (or 4 s pass): a push that was built
+    // before the request reached the server must not re-enable it for a moment.
+    if (q.busy) state.qbvRequestedAt = 0;
+    const requested = state.qbvRequestedAt > 0 && Date.now() - state.qbvRequestedAt < 4000;
+    const known = q.known !== false;
+    const shown = q.busy && q.target !== null && q.target !== undefined ? q.target : q.enabled;
+    $('qbv').checked = known && shown;
+    // The shaper's per-port toggle lives in the switch web page; the CLI cannot set it. Without it
+    // a schedule is stored but never runs, so say so and do not offer a button that cannot work.
+    const gateOff = known && q.gate === false;
+    $('qbv').disabled = q.busy || q.read_only || !known || requested || gateOff;
+    $('qbv-label').textContent = !known ? 'Reading switch…'
+      : q.busy ? (q.target ? 'Enabling…' : 'Disabling…') : q.enabled ? 'On' : 'Off';
+    const warn = $('qbv-warn');
+    if (gateOff) {
+      warn.innerHTML = `<strong>Qbv cannot run on port ${q.port}.</strong> Turn on the Time-aware Shaper for port ${q.port} in the ` +
+        'switch web page (Layer 2 Switching → Time-aware Shaper → toggle in front of the port). ' +
+        'Until then this button is disabled.';
+    } else if (known && q.configured && q.active === false && !q.busy) {
+      warn.innerHTML = `<strong>Schedule configured but not running.</strong> The switch has a gate list for port ${q.port} ` +
+        'but is not applying it. Check the Time-aware Shaper status in the switch web page.';
+    } else {
+      warn.textContent = '';
+    }
+    warn.classList.toggle('hidden', !warn.textContent);
+    document.querySelector('.switch').classList.toggle('busy', q.busy || requested);
     const qm = $('qbv-msg');
     qm.textContent = q.error || (q.read_only ? 'Read-only: switch changes are disabled' : '');
     qm.classList.toggle('hidden', !qm.textContent);
@@ -132,13 +157,18 @@
   });
 
   $('qbv').addEventListener('change', async (e) => {
-    state.qbvTouched = Date.now();
-    const r = await post('/api/qbv', { enabled: e.target.checked });
+    const wanted = e.target.checked;
+    state.qbvRequestedAt = Date.now();  // lock the button right away; the server state takes over
+    $('qbv').disabled = true;
+    $('qbv-label').textContent = wanted ? 'Enabling…' : 'Disabling…';
+    const r = await post('/api/qbv', { enabled: wanted });
     if (!r.ok) {
+      state.qbvRequestedAt = 0;
       const m = $('qbv-msg');
       m.textContent = (await r.json()).detail || 'Request failed';
       m.classList.remove('hidden');
-      e.target.checked = !e.target.checked;
+      e.target.checked = !wanted;
+      $('qbv').disabled = false;
     }
   });
 

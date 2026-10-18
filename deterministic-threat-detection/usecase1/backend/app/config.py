@@ -29,8 +29,9 @@ MAX_PLAUSIBLE_LATENCY_S = _float("MAX_PLAUSIBLE_LATENCY_S", 60)
 
 # "sim" only records the request; "iperf" drives iperf3 from the injector host.
 TRAFFIC_MODE = os.environ.get("TRAFFIC_MODE", "sim")
-# iperf3 -b counts UDP payload; 1000M would exceed 1 Gbit/s on the wire.
-TRAFFIC_MAX_MBPS = _int("TRAFFIC_MAX_MBPS", 900)
+# iperf3 -b counts UDP payload; with default packets 960M is already ~1 Gbit/s on the wire, so
+# the top of the slider saturates the injector's NIC (the point: the noise fills the whole link).
+TRAFFIC_MAX_MBPS = _int("TRAFFIC_MAX_MBPS", 1000)
 # "sim" fakes the switch; "moxa" drives it through the Moxa scripts on a control host.
 SWITCH_MODE = os.environ.get("SWITCH_MODE", "sim")
 SWITCH_PORT = _int("SWITCH_PORT", 1)

@@ -53,7 +53,7 @@ class IperfServer:
             self.error = f"{self.binary} not found on this machine (install iperf3)"
             log.error(self.error)
             return
-        cmd = [self.binary, "-s", "-B", self.bind_ip, "-i", "1", "-f", "m"]
+        cmd = [self.binary, "-s", "-B", self.bind_ip, "-i", "1", "-f", "m", "--forceflush"]
         self._proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         self._thread = threading.Thread(target=self._read, daemon=True)
         self._thread.start()
@@ -113,7 +113,7 @@ class TrafficController:
         """
         remote = (
             f"timeout {self.guard_s + 5} iperf3 -c {self.server_ip} -B {self.client_ip} -u "
-            f"-b {int(rate_mbps)}M -l 1400 -t {self.guard_s} -f m"
+            f"-b {int(rate_mbps)}M -t {self.guard_s} -f m"
         )
         return ["ssh", "-tt", *self.ssh_opts, self.client_target, remote]
 

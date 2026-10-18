@@ -7,14 +7,24 @@ PublishResult - last in the pipeline: publishes the detections itself over MQTT 
                 send_ts immediately before publishing, so the dashboard can split
                   processing = send_ts - capture_ts      (decode + inference, machine dependent)
                   network    = arrival - send_ts         (what TSN is about)
+The detection frame is published too (JPEG with the boxes drawn, base64 in "image"), like the old
+pipeline did with publish_frame=true: realistic camera traffic (~60 KB per message) that competes
+for the link, instead of a few hundred bytes of metadata. PUBLISH_FRAME=0 turns it off.
 The system clock is disciplined by PTP (ptp4l + phc2sys), so no offset correction is needed.
 """
 
+import base64
 import json
 import os
 import time
 
 import paho.mqtt.client as mqtt
+
+try:  # both ship in the pipeline-server image (the SceneScape plugins use them too)
+    import cv2
+    import numpy as np
+except ImportError:  # the latency demo still works without frames
+    cv2 = np = None
 
 _counter = {"seq": 0}
 
@@ -45,6 +55,8 @@ class PublishResult:
         self.topic = topic
         self.cam = topic.split("/")[1] if topic.count("/") >= 2 else topic
         self.dropped = 0
+        self.publish_frame = os.environ.get("PUBLISH_FRAME", "1") == "1" and cv2 is not None
+        self.jpeg_quality = int(os.environ.get("JPEG_QUALITY", "85"))
         # The pipeline-server image ships paho-mqtt 1.x (no CallbackAPIVersion); 2.x needs it.
         if hasattr(mqtt, "CallbackAPIVersion"):
             self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -72,6 +84,21 @@ class PublishResult:
             pass
         return out[:20]
 
+    def _jpeg_base64(self, frame, objects):
+        """JPEG of the frame with the detection boxes drawn on it, base64 encoded."""
+        try:
+            with frame.data() as data:
+                image = np.array(data)  # copy: never draw into the pipeline's own buffer
+            if image.ndim == 3 and image.shape[2] == 4:
+                image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+            for obj in objects:
+                cv2.rectangle(image, (obj["x"], obj["y"]), (obj["x"] + obj["w"], obj["y"] + obj["h"]),
+                              (0, 0, 255), 2)
+            ok, jpeg = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
+            return base64.b64encode(jpeg).decode("ascii") if ok else None
+        except Exception:  # a bad frame must not stop the pipeline
+            return None
+
     def process(self, frame):
         capture_ts, seq = _stamp(frame)
         objects = self._objects(frame)
@@ -80,9 +107,13 @@ class PublishResult:
             "metadata": {"ptp_timestamp": capture_ts, "seq": seq, "objects": len(objects)},
             "objects": objects,
         }
-        # Stamp last, right before the publish call, to keep processing time out of the network number.
-        message["metadata"]["send_timestamp"] = time.time()
-        info = self.client.publish(self.topic, json.dumps(message), qos=0)
+        if self.publish_frame:
+            message["image"] = self._jpeg_base64(frame, objects)
+        # Serialise first (a 60 KB message takes a moment), then splice the send time in as late as
+        # possible, so encoding and JSON time count as processing and not as network latency.
+        message["metadata"]["send_timestamp"] = "@@SEND@@"
+        left, right = json.dumps(message).split('"@@SEND@@"')
+        info = self.client.publish(self.topic, left + repr(time.time()) + right, qos=0)
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
             self.dropped += 1
         return True

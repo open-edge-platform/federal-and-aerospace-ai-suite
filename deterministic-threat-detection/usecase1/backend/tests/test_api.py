@@ -22,7 +22,7 @@ def test_status_and_config(client):
 
 def test_traffic_rate_is_clamped(client):
     assert client.post("/api/traffic", json={"rate_mbps": 250}).json()["rate_mbps"] == 250
-    assert client.post("/api/traffic", json={"rate_mbps": 99999}).json()["rate_mbps"] == 900
+    assert client.post("/api/traffic", json={"rate_mbps": 99999}).json()["rate_mbps"] == 1000
     assert client.post("/api/traffic", json={"rate_mbps": -1}).status_code == 422
     assert client.post("/api/traffic", json={"rate_mbps": 0}).json()["running"] is False
 
@@ -49,4 +49,4 @@ def test_traffic_command_uses_vlan5_addresses(client):
     cmd = client.app.state.traffic.command(300)
     assert cmd[0:2] == ["ssh", "-tt"] and cmd[-2] == "tsndemo@10.106.147.208"  # lab address, not VLAN 1
     assert "-B 192.168.5.14" in cmd[-1] and "-c 192.168.5.11" in cmd[-1] and "-b 300M" in cmd[-1]
-    assert "timeout " in cmd[-1] and "-t 3600" in cmd[-1]
+    assert "timeout " in cmd[-1] and "-t 3600" in cmd[-1] and "-l " not in cmd[-1]  # default packet size

@@ -18,6 +18,9 @@ services:
       REST_SERVER_PORT: ${REST_PORT:-8081}
       MQTT_HOST: ${MQTT_HOST:?set MQTT_HOST}
       MQTT_PORT: ${MQTT_PORT:-1884}
+      # JPEG of every frame (with boxes) goes in the MQTT message, like the old publish_frame=true
+      PUBLISH_FRAME: ${PUBLISH_FRAME:-1}
+      JPEG_QUALITY: ${JPEG_QUALITY:-85}
       no_proxy: ${MQTT_HOST},127.0.0.1,localhost,${EXTRA_NO_PROXY:-127.0.0.1}
       NO_PROXY: ${MQTT_HOST},127.0.0.1,localhost,${EXTRA_NO_PROXY:-127.0.0.1}
     volumes:
