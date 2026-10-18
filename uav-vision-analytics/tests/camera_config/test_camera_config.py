@@ -24,6 +24,7 @@ def _pipelines(name):
 
 
 MAIN = _pipelines("config-pymavlink.json")
+SDK = _pipelines("config-uavsdk.json")
 REALSENSE = _pipelines("config-pymavlink-realsense.json")
 PIPELINES = set(MAIN)
 
@@ -255,7 +256,7 @@ class LiveCameras(unittest.TestCase):
         self.assertFalse({"device", "camera_width", "camera_height"} & set(params))
 
     def test_video_and_device_are_exclusive(self):
-        with self.assertRaisesRegex(cc.ConfigError, "either 'video'"):
+        with self.assertRaisesRegex(cc.ConfigError, "only one of"):
             config(self.live(video="uav_sample_front.avi"))
 
     def test_size_needs_a_device(self):
@@ -343,6 +344,72 @@ class LiveCameras(unittest.TestCase):
             cc.build_plan(config({"id": "f", "detection": {"device": "cpu"}, "captioning": {"enabled": True, "device": "cpu"}}),
                           check_files=False, pipelines={"uav_object_detection_cpu"})
         cc.build_plan(config(self.live(detection={"device": "gpu"})), check_files=False)      # not checked without a list
+
+
+class RtspCameras(unittest.TestCase):
+    URL = "rtsp://host.docker.internal:8554/{uav_id}/nadir"
+
+    def rtsp(self, **extra):
+        return {"id": "nadir_camera", "rtsp": self.URL, **extra}
+
+    def test_uav_id_is_a_parameter_with_the_default_uav_1(self):
+        os.environ.pop("UAV_ID", None)
+        params = plan_of(self.rtsp()).request["parameters"]
+        self.assertEqual(params["rtsp_url"], "rtsp://host.docker.internal:8554/uav-1/nadir")
+        self.assertNotIn("video", params)
+        os.environ["UAV_ID"] = "uav-7"
+        try:
+            self.assertEqual(plan_of(self.rtsp()).request["parameters"]["rtsp_url"], "rtsp://host.docker.internal:8554/uav-7/nadir")
+            self.assertEqual(plan_of(self.rtsp()).source_url, "rtsp://host.docker.internal:8554/uav-7/nadir")
+            os.environ["UAV_ID"] = "uav 7; x"
+            with self.assertRaisesRegex(cc.ConfigError, "UAV_ID"):
+                plan_of(self.rtsp())
+        finally:
+            os.environ.pop("UAV_ID", None)
+
+    def test_same_pipeline_names_as_the_video_cameras(self):
+        self.assertEqual(plan_of(self.rtsp(detection={"device": "gpu"})).pipeline, "uav_object_detection_gpu")
+        self.assertEqual(plan_of(self.rtsp(captioning={"enabled": True})).pipeline, "uav_object_detection_npu_gpu")
+
+    def test_only_one_source(self):
+        for other in ({"video": "a.avi"}, {"device": "/dev/video0"}):
+            with self.assertRaisesRegex(cc.ConfigError, "only one of"):
+                config(self.rtsp(**other))
+        with self.assertRaisesRegex(cc.ConfigError, "live camera"):
+            config(self.rtsp(width=640))
+
+    def test_urls(self):
+        config(self.rtsp(rtsp="rtsp://10.1.2.3:8554/uav-1/forward"))
+        for bad in ("http://x/a", "rtsp://user:pw@host/a", "rtsp://host/a b", "rtsp://host:8554/{other}/x", "rtsp://host/{uav_id", "rtsp://host", "file:///etc/passwd"):
+            with self.assertRaises(cc.ConfigError, msg=bad):
+                config(self.rtsp(rtsp=bad))
+
+    def test_the_sdk_pipelines_are_the_same_names_with_an_rtsp_source(self):
+        self.assertEqual(set(SDK), {n for n in MAIN if n.startswith("uav_object_detection_")})
+        for name, pipeline in SDK.items():
+            text = pipeline["pipeline"].replace("{% raw %}", "").replace("{% endraw %}", "")
+            self.assertTrue(text.startswith("rtspsrc location={parameters[rtsp_url]}"), name)
+            self.assertNotIn("{%", text)
+            self.assertIn("telemetry-overlay-uavsdk.py", text)
+            self.assertNotIn("pymavlink", text)
+            props = pipeline["parameters"]["properties"]
+            self.assertIn("rtsp_url", props)
+            self.assertNotIn("video", props)
+            twin = MAIN[name]["pipeline"].replace("{% raw %}", "").replace("{% endraw %}", "")
+            twin = twin.split(" ! identity sync=true", 1)[1].replace("telemetry-overlay-pymavlink.py", "telemetry-overlay-uavsdk.py")
+            tail = text.split(" ! decodebin3", 1)[1]
+            # the SDK's H.264 (4:4:4 from its raw-video encoder) must be converted to NV12 before the analytics elements
+            self.assertTrue(tail.startswith(" ! videoconvert ! video/x-raw,format=NV12"), name)
+            self.assertEqual(tail[len(" ! videoconvert ! video/x-raw,format=NV12"):], twin, name)
+
+    def test_the_shipped_sdk_cameras_satisfy_the_sdk_pipelines(self):
+        cfg = cc.load_config(os.path.join(REPO, "configs", "cameras-uavsdk.yaml"))
+        plans = cc.build_plan(cfg, check_files=False, pipelines=set(SDK))
+        self.assertEqual([p.camera_id for p in plans], ["nadir_camera", "forward_camera", "rear_camera"])
+        self.assertEqual([p.pipeline for p in plans], ["uav_object_detection_cpu", "uav_object_detection_gpu", "uav_object_detection_npu"])
+        for plan in plans:
+            jsonschema.validate(plan.request["parameters"], SDK[plan.pipeline]["parameters"])
+            self.assertTrue(plan.source_url.startswith("rtsp://host.docker.internal:8554/uav-1/"))
 
 
 if __name__ == "__main__":

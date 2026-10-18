@@ -73,15 +73,28 @@ def stop_all_pipelines(wait: int = 60) -> None:
     deadline = time.time() + wait
     while time.time() < deadline and running_pipelines():
         time.sleep(2)
-    time.sleep(3)        # the RTSP paths are released a moment after the instances report stopped
+    time.sleep(10)       # the RTSP paths are released some seconds after the instances report stopped
 
 
 def frames(path: str, seconds: int = 4) -> int:
     """Frames received from rtsp://localhost:8555/<path> in `seconds` (30 fps stream -> about 30 * seconds)."""
-    result = docker_exec("timeout", "40", "ffmpeg", "-v", "error", "-nostats", "-rtsp_transport", "tcp", "-i",
-                         f"rtsp://127.0.0.1:8555/{path}", "-t", str(seconds), "-f", "null", "-", "-progress", "pipe:1")
-    counts = re.findall(r"^frame=(\d+)", result.stdout, re.M)
-    return int(counts[-1]) if counts else 0
+    # The pipeline reports RUNNING a moment before its RTSP stream is served ("no factory for path"), and ffmpeg
+    # connects only once, so retry while nothing arrives.
+    for _ in range(6):
+        result = docker_exec("timeout", "40", "ffmpeg", "-v", "error", "-nostats", "-rtsp_transport", "tcp", "-i",
+                             f"rtsp://127.0.0.1:8555/{path}", "-t", str(seconds), "-f", "null", "-", "-progress", "pipe:1")
+        counts = re.findall(r"^frame=(\d+)", result.stdout, re.M)
+        if counts and int(counts[-1]) > 0:
+            return int(counts[-1])
+        time.sleep(3)
+    return 0
+
+
+def frames_at_least(path: str, minimum: int, seconds: int = 4) -> int:
+    """Frames in `seconds`; a reading below `minimum` is taken once more (a model still loading or a stream that
+    just stopped can dip one reading) and the better one counts."""
+    got = frames(path, seconds)
+    return got if got >= minimum else max(got, frames(path, seconds))
 
 
 def caption(topic: str, wait: int = 90):

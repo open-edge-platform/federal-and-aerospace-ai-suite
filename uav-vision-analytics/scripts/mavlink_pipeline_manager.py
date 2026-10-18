@@ -5,6 +5,10 @@ Starts and stops the DL Streamer pipelines of the configured cameras when the UA
   - ARMED    -> read cameras.yaml and start one pipeline per enabled camera (one after the other)
   - DISARMED -> delete the pipelines that were started
 
+The vehicle's armed state comes from MAVLink (default) or, in the UAV Mission Compute SDK stack (ARM_SOURCE=mqtt), from
+the SDK's MQTT telemetry topic uav/<UAV_ID>/telemetry/status ({"armed": true|false}). Cameras whose source is an RTSP
+stream (rtsp: in the file) are only started once that stream can be read.
+
 The cameras come from a YAML file (default /home/pipeline-server/configs/cameras.yaml, see configs/cameras.yaml and
 camera_config.py). The file is re-read every time the vehicle is armed; an edit made while the vehicle is armed
 applies at the next arming. A file with errors never replaces a working configuration.
@@ -17,8 +21,11 @@ Usage:
 """
 
 import argparse
+import json
 import os
+import queue
 import signal
+import subprocess
 import sys
 import time
 
@@ -46,10 +53,16 @@ START_READY_TIMEOUT   = 180
 # DELETE returns before the pipeline has fully stopped, and its RTSP stream path stays registered until then.
 # A new pipeline on that path fails with "RTSP Stream ... already exists", so wait for the stop and retry.
 STOP_WAIT_TIMEOUT     = 45
+STREAM_RELEASE_DELAY = 8      # the RTSP stream paths are released some seconds after the pipelines report stopped
 START_ATTEMPTS        = 4
 START_RETRY_DELAY     = 6
 # Detection-box line thickness (1-10, gvawatermark's own default is 2).
 BBOX_THICKNESS = os.getenv("BBOX_THICKNESS", "6").strip()
+ARM_SOURCE     = os.getenv("ARM_SOURCE", "mavlink").lower()          # mavlink | mqtt
+MQTT_BROKER    = os.getenv("MQTT_BROKER_HOST", "host.docker.internal")
+MQTT_PORT      = int(os.getenv("MQTT_BROKER_PORT", "1884"))
+RTSP_PROBE_RETRIES = 3
+RTSP_PROBE_TIMEOUT = 5
 HOST_IP        = os.getenv("HOST_IP", "127.0.0.1")
 RTSP_PORT      = os.getenv("RTSP_PORT", "8555")
 
@@ -173,6 +186,22 @@ def _start_one(plan) -> bool:
     return False
 
 
+def rtsp_available(url: str) -> bool:
+    """True if ffprobe can read a video stream from the RTSP url (retried a few times)."""
+    cmd = ["ffprobe", "-v", "error", "-rtsp_transport", "tcp", "-select_streams", "v:0", "-show_entries", "stream=codec_type",
+           "-of", "default=noprint_wrappers=1", "-timeout", str(RTSP_PROBE_TIMEOUT * 1_000_000), url]
+    for attempt in range(1, RTSP_PROBE_RETRIES + 1):
+        try:
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=RTSP_PROBE_TIMEOUT + 2, check=False)
+            if result.returncode == 0 and b"codec_type" in result.stdout:
+                return True
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            log(f"[rtsp-check] Error probing {url}: {exc}")
+        if attempt < RTSP_PROBE_RETRIES:
+            time.sleep(2)
+    return False
+
+
 def start_cameras(plans: list) -> None:
     """Start the pipeline of every planned camera, one after the other."""
     running_instances.clear()
@@ -180,6 +209,9 @@ def start_cameras(plans: list) -> None:
     for plan in plans:
         if plan.pipeline.startswith("uav_object_detection_npu") and npu_device == "/dev/null":
             log(f"[pipeline] Skipping camera '{plan.camera_id}': NPU_DEVICE not available.")
+            continue
+        if plan.source_url and not rtsp_available(plan.source_url):
+            log(f"[pipeline] Skipping camera '{plan.camera_id}': its RTSP source {plan.source_url} is not available.")
             continue
         _start_one(plan)
 
@@ -220,6 +252,7 @@ def stop_cameras() -> None:
         if not _wait_until_stopped(instance_id):
             log(f"[pipeline] Camera '{camera_id}' did not report stopped within {STOP_WAIT_TIMEOUT}s")
     running_instances.clear()
+    time.sleep(STREAM_RELEASE_DELAY)
 
 
 def print_stream_urls(plans: list) -> None:
@@ -333,6 +366,54 @@ def monitor_vehicle(active: ActiveConfig) -> None:
         _shutdown()
 
 
+def armed_from_payload(payload) -> "bool | None":
+    """The armed flag of an SDK status message ({"armed": true}), or None if it is not usable."""
+    try:
+        data = json.loads(payload)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(data, dict) or "armed" not in data:
+        return None
+    return bool(data["armed"])
+
+
+def monitor_mqtt(active: ActiveConfig) -> None:
+    """Arm trigger of the UAV Mission Compute SDK stack: its status topic on the SDK's MQTT broker."""
+    import paho.mqtt.client as mqtt  # pylint: disable=import-outside-toplevel
+
+    topic = os.getenv("MQTT_ARM_TOPIC") or f"uav/{camera_config.uav_id()}/telemetry/status"
+    states: "queue.Queue[bool]" = queue.Queue()
+    client = mqtt.Client()
+    client.on_connect = lambda c, userdata, flags, rc: (log(f"Connected to {MQTT_BROKER}:{MQTT_PORT} (result {rc}), watching {topic}"), c.subscribe(topic))
+    client.on_message = lambda c, userdata, msg: (lambda armed: armed is None or states.put(armed))(armed_from_payload(msg.payload))
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_start()     # the pipelines start in this thread, so the network loop must not depend on it
+    last_armed_state = None
+    log("Monitoring ARMED/DISARMED status. Press Ctrl+C to stop.\n")
+    try:
+        while True:
+            try:
+                is_armed = states.get(timeout=1)
+            except queue.Empty:
+                if active.refresh() and last_armed_state:
+                    log("[config] changed while armed: it applies the next time the vehicle is armed")
+                continue
+            if is_armed == last_armed_state:
+                continue
+            if is_armed:
+                log("Vehicle Status: ARMED → starting cameras")
+                active.refresh(force=True, quiet=True)
+                start_cameras(active.plans)
+                print_stream_urls(active.plans)
+            else:
+                log("Vehicle Status: DISARMED → stopping cameras")
+                stop_cameras()
+            last_armed_state = is_armed
+    except KeyboardInterrupt:
+        client.loop_stop()
+        _shutdown()
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -363,7 +444,7 @@ def main() -> int:
             _shutdown()
         return 0
 
-    monitor_vehicle(active)
+    (monitor_mqtt if ARM_SOURCE == "mqtt" else monitor_vehicle)(active)
     return 0
 
 

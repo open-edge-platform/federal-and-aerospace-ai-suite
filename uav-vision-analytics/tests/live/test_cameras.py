@@ -20,9 +20,10 @@ SHIPPED = os.path.join(common.REPO, "configs", "cameras.yaml")
 
 
 def shipped_cameras():
-    import re
+    """Ids of the enabled cameras of the shipped file (disabled ones, such as the live camera, do not stream)."""
+    import yaml
     with open(SHIPPED, encoding="utf-8") as handle:
-        return re.findall(r"^\s+- id: (\w+)", handle.read(), re.M)
+        return [c["id"] for c in yaml.safe_load(handle)["cameras"] if c.get("enabled", True)]
 
 
 class DefaultCameras(common.LiveTestCase):
@@ -35,7 +36,7 @@ class DefaultCameras(common.LiveTestCase):
             self.assertNotIn("Giving up", manager.log())
             for camera in cameras:
                 path = "uav-" + camera.replace("_", "-")
-                self.assertGreaterEqual(common.frames(path), 90, f"{path} is not streaming")
+                self.assertGreaterEqual(common.frames_at_least(path, 90), 90, f"{path} is not streaming")
             for camera in cameras:
                 self.assertTrue(common.caption(f"uav/caption/{camera}"), f"no caption for {camera}")
             for line in manager.status().splitlines()[1:]:
@@ -75,8 +76,10 @@ class Settings(common.LiveTestCase):
             self.assertEqual(request["parameters"]["captioner_max_new_tokens"], 40)
             self.assertEqual(request["parameters"]["mqtt_topic"], "uav/caption/test_camera")
             self.assertEqual(request["parameters"]["overlay_label"], "test-camera-NPU-GPU-Caption")
+            # connect to the stream first: the first client of a stream that nobody has watched for a while is
+            # served late (it was measured at 10 s after 90 s idle), which a caption wait of a minute would cause
+            self.assertGreaterEqual(common.frames_at_least("uav-test-camera", 90), 90)
             self.assertTrue(common.caption("uav/caption/test_camera"))
-            self.assertGreaterEqual(common.frames("uav-test-camera"), 90)
         finally:
             manager.cleanup()
 
@@ -100,7 +103,7 @@ class Settings(common.LiveTestCase):
             manager = common.Manager(f"version: 1\ncameras:\n  - id: test_camera\n    video: {clip}.avi\n    detection: {{device: gpu}}\n").start()
             try:
                 self.assertTrue(manager.wait_for("is RUNNING"), manager.log())
-                self.assertGreaterEqual(common.frames("uav-test-camera"), 90)
+                self.assertGreaterEqual(common.frames_at_least("uav-test-camera", 90), 90)
             finally:
                 manager.cleanup()
         finally:

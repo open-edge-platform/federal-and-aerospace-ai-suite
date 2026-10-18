@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cameras of the UAV Mission Compute SDK stack (make uavsdk-up): the manager starts them when the SDK reports the
+# vehicle as armed (MQTT uav/<UAV_ID>/telemetry/status). Same format and tools as configs/cameras.yaml
+# (see docs/user-guide/how-to-guides/cameras.md): make check-cameras, make start-rtsp, make cameras-status.
+#
+# The source is an RTSP stream (rtsp:) instead of a video file. {uav_id} is replaced by UAV_ID from .env (default uav-1).
+# The pipelines are the ones of the pymavlink stack (same names), with an RTSP source; see configs/config-uavsdk.json.
+
+version: 1
+
+cameras:
+  - id: nadir_camera
+    rtsp: rtsp://host.docker.internal:8554/{uav_id}/nadir
+    detection:
+      device: cpu                    # cpu | gpu | npu
+    captioning:
+      enabled: false                 # true adds VLM captions (uav/caption/nadir_camera)
+
+  - id: forward_camera
+    rtsp: rtsp://host.docker.internal:8554/{uav_id}/forward
+    detection:
+      device: gpu
+
+  - id: rear_camera
+    rtsp: rtsp://host.docker.internal:8554/{uav_id}/rear
+    detection:
+      device: npu                    # skipped when the host has no NPU (NPU_DEVICE not set)

@@ -24,13 +24,20 @@ services:
       - ZE_ENABLE_ALT_DRIVERS=libze_intel_npu.so
       # UAV Mission Compute SDK related environment variables
       - UAV_ID=${UAV_ID:-uav-1}
+      # the camera manager is the one of the pymavlink stack; here the SDK's MQTT status topic arms it and
+      # the cameras are RTSP streams (configs/cameras-uavsdk.yaml)
+      - ARM_SOURCE=mqtt
+      - CAMERAS_CONFIG=/home/pipeline-server/configs/cameras-uavsdk.yaml
       - NPU_DEVICE=${NPU_DEVICE:-/dev/null}
     volumes:
       - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999
       - "./resources:/home/pipeline-server/resources"
       - "./configs/config-uavsdk.json:/home/pipeline-server/config.json"
       - "./gvapython/telemetry-overlay-uavsdk.py:/home/pipeline-server/gvapython/telemetry-overlay-uavsdk.py"
-      - "./scripts/uavsdk_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+      - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+      - "./scripts/camera_config.py:/home/pipeline-server/scripts/camera_config.py:ro"
+      # the folder, not the file: editors replace files and a file mount would keep showing the old one
+      - "./configs:/home/pipeline-server/configs:rw"
       - "/run/udev:/run/udev:ro"
       - "/tmp:/tmp"
     group_add:

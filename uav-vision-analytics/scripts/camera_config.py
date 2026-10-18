@@ -3,7 +3,7 @@
 """Camera configuration for the pipeline manager: load, validate and turn it into pipeline start requests.
 
 One entry per camera says where its images come from (a video file, or a live camera such as an Intel
-RealSense or a USB webcam, through its /dev/video node), which device and model detect objects, whether the VLM
+RealSense or a USB webcam, through its /dev/video node, or an RTSP stream), which device and model detect objects, whether the VLM
 captions it (and on which device, with which model and prompt) and whether detections are drawn on the
 stream. From that the manager picks one of the eighteen pipelines in ``configs/config-pymavlink.json``:
 
@@ -43,6 +43,8 @@ _VIDEO = re.compile(r"^[A-Za-z0-9_.-]+\.(avi|mp4|mkv|ts)$")
 _REL_MODEL = re.compile(r"^[A-Za-z0-9_./-]+\.xml$")
 _VLM_MODEL = re.compile(r"^[A-Za-z0-9_.-]+$")
 _PROMPT = re.compile(r"^[A-Za-z0-9 ,.?'-]+$")
+_RTSP = re.compile(r"^rtsp://[A-Za-z0-9_.-]{1,128}(:[0-9]{1,5})?/[A-Za-z0-9_./{}-]{1,128}$")
+_UAV_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 _DEVICE = re.compile(r"^/dev/(video[0-9]{1,3}|v4l/by-(id|path)/[A-Za-z0-9_.:+-]{1,128})$")
 _PATH = re.compile(r"^[A-Za-z0-9_-]{1,48}$")
 _TOPIC = re.compile(r"^uav/caption/[A-Za-z0-9_-]+$")
@@ -99,6 +101,7 @@ class Camera(_Strict):
     enabled: bool = True
     # exactly one source: a video file below <resources>/videos (default uav_sample_front.avi) or a live camera
     video: Optional[str] = None
+    rtsp: Optional[str] = None                        # an RTSP stream, e.g. from the UAV Mission Compute SDK; {uav_id} = env UAV_ID
     device: Optional[str] = None                      # /dev/videoN, or /dev/v4l/by-id|by-path/<name> (stable across reboots)
     width: Optional[int] = Field(default=None, ge=16, le=7680)     # live camera only; default 1280
     height: Optional[int] = Field(default=None, ge=16, le=4320)    # live camera only; default 720
@@ -129,14 +132,23 @@ class Camera(_Strict):
             raise ValueError("must be /dev/videoN or /dev/v4l/by-id/<name> or /dev/v4l/by-path/<name>")
         return value
 
+    @field_validator("rtsp")
+    @classmethod
+    def _rtsp(cls, value):
+        if value is None:
+            return value
+        if not _RTSP.match(value) or any(token != "{uav_id}" for token in re.findall(r"\{[^}]*\}|[{}]", value)):
+            raise ValueError("must look like rtsp://host:8554/uav-1/nadir (no user or password; {uav_id} stands for the UAV id)")
+        return value
+
     @model_validator(mode="after")
     def _source(self):
-        if self.video is not None and self.device is not None:
-            raise ValueError("set either 'video' (a file) or 'device' (a live camera), not both")
+        if sum(value is not None for value in (self.video, self.device, self.rtsp)) > 1:
+            raise ValueError("set only one of 'video' (a file), 'device' (a live camera) and 'rtsp' (a stream)")
         if self.device is None:
             if self.width is not None or self.height is not None:
                 raise ValueError("'width' and 'height' apply to a live camera ('device') only")
-            if self.video is None:
+            if self.video is None and self.rtsp is None:
                 self.video = "uav_sample_front.avi"
         return self
 
@@ -199,9 +211,17 @@ class CameraPlan:
     pipeline: str
     rtsp_path: str
     mqtt_topic: Optional[str]
+    source_url: Optional[str]     # RTSP source to probe before starting (None for files and local cameras)
     overlay: bool
     summary: str
     request: dict           # body of POST /pipelines/user_defined_pipelines/<pipeline>
+
+
+def uav_id() -> str:
+    value = os.getenv("UAV_ID", "uav-1")
+    if not _UAV_ID.match(value):
+        raise ConfigError(f"UAV_ID '{value}' must be letters, digits, _ and - (max 32)")
+    return value
 
 
 def _device_problem(device: str) -> Optional[str]:
@@ -230,9 +250,11 @@ def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, che
         det, cap = camera.detection, camera.captioning
         model_path = f"{resources_dir}/models/{det.model}"
         label = f"{camera.id.replace('_', '-')}-{det.device.upper()}" + (f"-{cap.device.upper()}-Caption" if cap.enabled else "")
+        rtsp_url = camera.rtsp.replace("{uav_id}", uav_id()) if camera.rtsp else None
         parameters = {
+            **({"rtsp_url": rtsp_url} if rtsp_url else {}),
             **({"device": camera.device, "camera_width": camera.width or 1280, "camera_height": camera.height or 720}
-               if camera.device else {"video": camera.video}),
+               if camera.device else {} if rtsp_url else {"video": camera.video}),
             "detection_model": model_path,
             # cameras sharing device and model share one loaded model; a different model gets its own instance
             "detection_instance_id": re.sub(r"[^a-z0-9_]", "_", f"inst{det.device}_{os.path.splitext(os.path.basename(det.model))[0]}".lower()),
@@ -263,9 +285,9 @@ def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, che
                                *((("captioning model", vlm_path),) if cap.enabled else ())):
                 if not os.path.exists(path):
                     problems.append(f"cameras[{camera.id}]: {what} not found: {path}")
-        source = camera.device or camera.video
+        source = camera.device or rtsp_url or camera.video
         summary = f"{source}: {det.device.upper()} {os.path.basename(det.model)}" + (f" + {cap.device.upper()} {cap.model}" if cap.enabled else " (no captions)")
-        plans.append(CameraPlan(camera.id, pipeline_name(camera), stream_path(camera), topic, camera.overlay, summary,
+        plans.append(CameraPlan(camera.id, pipeline_name(camera), stream_path(camera), topic, rtsp_url, camera.overlay, summary,
                                 {"destination": {"frame": frame}, "parameters": parameters}))
     if problems:
         raise ConfigError("\n".join(problems))

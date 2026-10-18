@@ -11,4 +11,4 @@ if [[ -z "${PYMAVLINK_IMAGE:-}" ]]; then
   PYMAVLINK_IMAGE="$(grep -E '^DLSTREAMER_PIPELINE_SERVER_IMAGE=' "${REPO_ROOT}/.env" | cut -d= -f2-)-pymavlink"
 fi
 docker run --rm -e REPO_DIR=/repo -v "${REPO_ROOT}/scripts:/repo/scripts:ro" -v "${REPO_ROOT}/configs:/repo/configs:ro" \
-  -v "${HERE}:/work:ro" --entrypoint python3 "${PYMAVLINK_IMAGE}" -B /work/test_camera_config.py
+  -v "${HERE}:/work:ro" --entrypoint python3 "${PYMAVLINK_IMAGE}" -B -m unittest discover -s /work -p "test_*.py"

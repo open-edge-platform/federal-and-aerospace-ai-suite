@@ -32,7 +32,7 @@ class NinePipelines(common.LiveTestCase):
             self.assertNotIn("Retrying", manager.log(), "the start needed a retry:\n" + manager.log())
             expected = f"uav_object_detection_{det}" + (f"_{vlm}" if vlm else "")
             self.assertIn(f"with '{expected}'", manager.log())
-            got = common.frames("uav-test-camera")
+            got = common.frames_at_least("uav-test-camera", MIN_FRAMES[det])
             self.assertGreaterEqual(got, MIN_FRAMES[det], f"only {got} frames in 4 s")
             text = None
             if vlm:

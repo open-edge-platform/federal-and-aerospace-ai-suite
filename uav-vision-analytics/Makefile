@@ -209,7 +209,7 @@ start-rtsp: ## Start the cameras in configs/cameras.yaml when the vehicle is arm
 	  "python3 /home/pipeline-server/scripts/pipeline_manager.py $(if $(CAMERAS),--config $(CAMERAS))"
 
 check-cameras: ## Validate configs/cameras.yaml and show what would run (nothing is started). CAMERAS=<file> checks another file.
-	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/camera_config.py check $(if $(CAMERAS),$(CAMERAS),/home/pipeline-server/configs/cameras.yaml)
+	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/camera_config.py check $(CAMERAS)
 
 cameras-status: ## Compare configs/cameras.yaml with the pipelines that are running
 	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/pipeline_manager.py --status $(if $(CAMERAS),--config $(CAMERAS))
