@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+# Use case 1: latency dashboard. Independent of the scene stack in ../docker-compose.yml:
+# own compose project, own broker on port ${MQTT_PORT} (1884), dashboard on the lab address.
+name: tsn-usecase1
+
+services:
+  broker:
+    image: docker.io/library/eclipse-mosquitto:2.0.22
+    ports:
+      - "${MQTT_PORT:-1884}:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        UID: ${LOCAL_UID:-1000}
+        GID: ${LOCAL_GID:-1000}
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
+    image: tsn-usecase1-backend
+    # Host networking: the iperf3 server binds the VLAN 5 address, and the dashboard binds the
+    # lab address. Nothing here passes through a Docker bridge/NAT.
+    network_mode: host
+    depends_on:
+      - broker
+    environment:
+      MQTT_HOST: 127.0.0.1
+      MQTT_PORT: ${MQTT_PORT:-1884}
+      DASHBOARD_BIND: ${DASHBOARD_BIND:-0.0.0.0}
+      DASHBOARD_PORT: ${DASHBOARD_PORT:-8080}
+      TRAFFIC_MODE: ${TRAFFIC_MODE:-iperf}
+      TRAFFIC_MAX_MBPS: ${TRAFFIC_MAX_MBPS:-900}
+      SWITCH_MODE: ${SWITCH_MODE:-moxa}
+      SWITCH_ALLOW_WRITE: ${SWITCH_ALLOW_WRITE:-0}
+    volumes:
+      - ${HOME}/.ssh:/home/app/.ssh:ro
+    restart: unless-stopped

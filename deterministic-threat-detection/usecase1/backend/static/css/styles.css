@@ -1,0 +1,66 @@
+/* SPDX-FileCopyrightText: (C) 2026 Intel Corporation */
+/* SPDX-License-Identifier: Apache-2.0 */
+:root {
+  --bg: #0b0f14; --panel: #121820; --panel-border: #212b36;
+  --text: #e6edf3; --muted: #8b98a7; --accent: #1a73e8;
+  --ok: #3ecf8e; --warn: #f5a623; --bad: #ef5b5b;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+h1 { font-size: 18px; margin: 0; font-weight: 600; }
+h2 { font-size: 13px; margin: 18px 0 4px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+h2:first-child { margin-top: 0; }
+.hidden { display: none !important; }
+
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;
+  background: var(--panel); border-bottom: 1px solid var(--panel-border); }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 14px; height: 14px; border-radius: 3px; background: var(--accent); }
+.sub { color: var(--muted); }
+.chips { display: flex; gap: 8px; }
+.chip { padding: 3px 10px; border-radius: 999px; font-size: 12px; border: 1px solid var(--panel-border); }
+.chip-ok { color: var(--ok); border-color: var(--ok); }
+.chip-warn { color: var(--warn); border-color: var(--warn); }
+.chip-bad { color: var(--bad); border-color: var(--bad); }
+
+.layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px 20px; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 16px; }
+.hint { color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+
+.slider-row { display: flex; align-items: center; gap: 12px; }
+input[type=range] { flex: 1; accent-color: var(--accent); }
+output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums; }
+.msg { margin-top: 6px; font-size: 12px; color: var(--warn); }
+
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; }
+.track { width: 44px; height: 24px; border-radius: 999px; background: #2a3441; position: relative; transition: background .2s; }
+.track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; transition: transform .2s; }
+.switch input:checked + .track { background: var(--ok); }
+.switch input:checked + .track::after { transform: translateX(20px); }
+.switch input:disabled + .track { opacity: .5; }
+.switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check { display: block; margin: 4px 0 10px; }
+.btn { background: transparent; color: var(--text); border: 1px solid var(--panel-border);
+  border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+
+.main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.kpi { background: var(--panel); border: 1px solid var(--panel-border); border-left: 4px solid var(--c, var(--accent));
+  border-radius: 8px; padding: 12px 14px; }
+.kpi-name { color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; }
+.kpi-value { font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi-value small { font-size: 13px; color: var(--muted); font-weight: 400; }
+.kpi-row { display: flex; gap: 14px; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.kpi.stalled .kpi-value { color: var(--bad); }
+.tag-stalled { color: var(--bad); }
+
+.chart-card { position: relative; }
+.chart-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.chart-head h2 { margin: 0; }
+.chart-wrap { position: relative; height: 420px; margin-top: 8px; }
+.empty { position: absolute; inset: 60px 0 0 0; display: flex; align-items: center; justify-content: center; color: var(--muted); pointer-events: none; }

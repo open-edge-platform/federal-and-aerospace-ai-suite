@@ -1,0 +1,67 @@
+<!doctype html>
+<!-- SPDX-FileCopyrightText: (C) 2026 Intel Corporation -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deterministic Threat Detection</title>
+  <link rel="stylesheet" href="css/styles.css?v=1">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <h1>Deterministic Threat Detection</h1>
+      <span class="sub">TSN latency demo</span>
+    </div>
+    <div class="chips">
+      <span id="chip-mqtt" class="chip chip-bad">MQTT: connecting</span>
+      <span id="chip-mode" class="chip chip-warn hidden"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel controls" aria-label="Controls">
+      <h2>Network load</h2>
+      <p class="hint">Background traffic from machine-4 to machine-1 over VLAN 5.</p>
+      <div class="slider-row">
+        <input id="traffic" type="range" min="0" max="1000" step="10" value="0">
+        <output id="traffic-value">0 Mbit/s</output>
+      </div>
+      <div id="traffic-measured" class="hint"></div>
+      <div id="traffic-msg" class="msg hidden"></div>
+
+      <h2>Time-aware Shaper (Qbv)</h2>
+      <p class="hint">Gate schedule on switch <span id="qbv-port">port 1</span> that protects the camera stream.</p>
+      <label class="switch">
+        <input id="qbv" type="checkbox">
+        <span class="track"></span>
+        <span id="qbv-label" class="switch-label">Off</span>
+      </label>
+      <div id="qbv-schedule" class="hint"></div>
+      <div id="qbv-msg" class="msg hidden"></div>
+
+      <h2>Chart</h2>
+      <label class="check"><input id="log-scale" type="checkbox"> Logarithmic scale</label>
+      <label class="check"><input id="include-proc" type="checkbox"> Add processing time (end-to-end)</label>
+      <button id="clear" class="btn" type="button">Clear history</button>
+    </section>
+
+    <section class="main">
+      <div id="kpis" class="kpis"></div>
+      <div class="panel chart-card">
+        <div class="chart-head">
+          <h2>Network latency</h2>
+          <span class="hint">MQTT publish on machine-2/3 to arrival on machine-1 (PTP-synchronised clocks); processing time is shown on each card</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chart"></canvas></div>
+        <div id="empty" class="empty">Waiting for inference messages…</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/vendor/chart.umd.js"></script>
+  <script src="js/app.js?v=1"></script>
+</body>
+</html>

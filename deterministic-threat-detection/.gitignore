@@ -5,3 +5,9 @@ src/nginx/ssl/
 .env
 .venv-test/
 tests/artifacts/
+
+__pycache__/
+.pytest_cache/
+.venv/
+usecase1/.env
+usecase1/.venv-test/
