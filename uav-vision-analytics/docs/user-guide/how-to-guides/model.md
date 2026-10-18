@@ -91,7 +91,6 @@ update the model path in every file that references it:
 
 - `Makefile` (`MODEL_DIR`, `MODEL_XML`)
 - `scripts/mavlink_pipeline_manager.py` (`MODEL_PATH`)
-- `scripts/uavsdk_pipeline_manager.py` (`MODEL_PATH`)
 - `benchmark/benchmark_app_payload.json` (all `model` fields)
 
 ## Using a Custom / Fine-Tuned Model

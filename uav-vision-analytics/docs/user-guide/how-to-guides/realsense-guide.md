@@ -5,143 +5,54 @@ SPDX-License-Identifier: Apache-2.0
 
 # Intel RealSense — UAV Vision Analytics
 
+A RealSense (or any UVC webcam) is a live camera in [`configs/cameras.yaml`](../../../configs/cameras.yaml): the camera has a
+`device` instead of a `video` file. The settings are described in [Configure the cameras](./cameras.md#live-cameras-realsense-usb-webcams);
+this page is the short walk-through.
+
 ## Prerequisites
 
-See [System Requirements](../get-started/system-requirements.md) for the full
-list of software and hardware prerequisites.
+See [System Requirements](../get-started/system-requirements.md) for the full list of software and hardware prerequisites.
 
-## Testing the camera streams
+## Steps
 
-List connected USB devices and enumerate available video devices:
+1. **Find the colour node.** List the cameras and check the formats of the nodes:
 
-```bash
-lsusb
-v4l2-ctl --list-devices
-```
+   ```bash
+   lsusb
+   v4l2-ctl --list-devices
+   v4l2-ctl -d /dev/video4 --list-formats-ext     # the colour node offers YUYV or UYVY; depth is Z16, infrared GREY
+   ls -l /dev/v4l/by-id/                           # stable names; prefer them over /dev/videoN
+   ```
 
-### View the RGB video stream
+2. **Make it visible to the container.** Put the path in `.env` (`make init` fills `CAMERA_DEVICE_1` with the first USB camera;
+   up to `CAMERA_DEVICE_4`) and recreate the container:
 
-```bash
-# ffplay is part of the ffmpeg package
-ffplay -f v4l2 -input_format yuyv422 -video_size 1280x720 /dev/video4
-```
+   ```bash
+   CAMERA_DEVICE_1=/dev/v4l/by-id/usb-Intel_R__RealSense_TM__Depth_Camera_435_..._<serial>-video-index0
+   make pymav-up
+   ```
 
-> [!NOTE]
-> The device file may vary depending on your system. Use
-> `v4l2-ctl --list-devices` to find the correct device file.
+3. **Enable the camera** in `configs/cameras.yaml` (it ships as `realsense_camera`, disabled), with the same path as `device:`,
+   then check and start:
 
-### View the depth stream
+   ```bash
+   make check-cameras
+   make start-rtsp          # the cameras start when the vehicle is armed
+   ```
 
-```bash
-ffplay -f v4l2 -input_format Z16 -video_size 848x480 /dev/video0
-```
+   Without a vehicle: `docker exec -it dlstreamer-pipeline-server python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now`.
 
-> [!NOTE]
-> The device file may vary depending on your system. Use
-> `v4l2-ctl --list-devices` to find the correct device file. The `Z16` format
-> is a 16-bit depth value per pixel. `ffplay` will render it as a greyscale image.
+4. **View the stream** at `rtsp://<HOST_IP>:8555/uav-realsense-camera` (`ffplay`, VLC or the ground-station dashboard, where the
+   card has a `LIVE` badge).
 
-## DLStreamer pipelines
+## Pipelines
 
-Three inference pipelines are available. Only one can be active at a time because
-they each access the video device directly:
+Live cameras use `uav_camera_<det>` and `uav_camera_<det>_<vlm>`. `configs/config-pymavlink.json` has `uav_camera_npu` and
+`uav_camera_npu_gpu`; for a CPU or GPU camera copy the pipeline you need from
+[`configs/config-pymavlink-realsense.json`](../../../configs/config-pymavlink-realsense.json) (all nine) into it and recreate the
+container. `make check-cameras` says which pipeline is missing.
 
-| Pipeline | Inference device | `device` value |
-| --- | --- | --- |
-| `uav_realsense_cpu` | CPU | `CPU` |
-| `uav_realsense_gpu` | GPU | `GPU` |
-| `uav_realsense_npu` | NPU | `NPU` |
+## UAV Mission Compute SDK stack
 
-### Starting a pipeline
-
-> [!NOTE]
->
-> - Currently the realsense pipelines are only available in standalone
->   mode (pymavlink). The UAV Mission Compute SDK mode does not support the
->   RealSense camera. Adding support should be straightforward by copying the
->   existing pipelines from `config-pymavlink.json` into `config-uavsdk.json`.
->
-> - The device file `/dev/video4` may vary depending on your system. Use
->   `v4l2-ctl --list-devices` to find the correct device file and update
->   `config-pymavlink.json` accordingly for the above pipelines before
->   proceeding with the following steps.
-
-Use the Pipeline Server REST API to start a pipeline. The POST response body is
-the UUID of the running instance — save it to stop the pipeline later.
-
-Replace `<pipeline-name>` with one of the pipeline names from the table above,
-`<rtsp-stream-name>` with the desired RTSP path (e.g. `realsense`), `device` with the
-matching value, and `<device-suffix>` in the JSONL log path with the matching lowercase
-device name (`cpu` / `gpu` / `npu`) — each device pipeline must log to its own file so
-detection events from concurrently-running pipelines are never mixed together.
-
-```bash
-INSTANCE_ID=$(curl -k -s -X POST \
-  https://<HOST_IP>/pipelines/user_defined_pipelines/<pipeline-name> \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "destination": {
-      "metadata": {
-        "type": "file",
-        "path": "/tmp/results_<device-suffix>.jsonl",
-        "format": "json-lines"
-      },
-      "frame": {
-        "type": "rtsp",
-        "path": "<rtsp-stream-name>"
-      }
-    },
-    "parameters": {
-      "detection-properties": {
-        "model": "/home/pipeline-server/resources/models/yolo11s/yolo11s_openvino_model/yolo11s.xml",
-        "device": "<CPU|GPU|NPU>"
-      }
-    }
-  }' | tr -d '"')
-echo "Instance ID: $INSTANCE_ID"
-```
-
-**Example** — start the CPU pipeline and publish the stream at `rtsp://<HOST_IP>:8555/realsense`:
-
-```bash
-INSTANCE_ID=$(curl -k -s -X POST \
-  https://<HOST_IP>/pipelines/user_defined_pipelines/uav_realsense_cpu \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "destination": {
-      "metadata": {
-        "type": "file",
-        "path": "/tmp/results_cpu.jsonl",
-        "format": "json-lines"
-      },
-      "frame": {
-        "type": "rtsp",
-        "path": "realsense"
-      }
-    },
-    "parameters": {
-      "detection-properties": {
-        "model": "/home/pipeline-server/resources/models/yolo11s/yolo11s_openvino_model/yolo11s.xml",
-        "device": "CPU"
-      }
-    }
-  }' | tr -d '"')
-echo "Instance ID: $INSTANCE_ID"
-```
-
-View the annotated stream:
-
-```bash
-ffplay rtsp://<HOST_IP>:8555/realsense
-```
-View the detection log (GPS/telemetry-enriched, this device only):
-
-```bash
-tail -f /tmp/results_cpu.jsonl
-```
-
-To stop the pipeline:
-
-```bash
-curl -k -X DELETE https://<HOST_IP>/pipelines/${INSTANCE_ID}
-```
+The SDK stack streams its cameras over RTSP and uses `configs/cameras-uavsdk.yaml`; see
+[Get started with the UAV Mission Compute SDK](../get-started/get-started-uavsdk.md).

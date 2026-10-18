@@ -220,7 +220,9 @@ dlstreamer-pipeline-server:
 **For UAVSDK mode** mount the UAVSDK overlay and manager instead:
 ```yaml
     - "./gvapython/telemetry-overlay-uavsdk.py:/home/pipeline-server/gvapython/telemetry-overlay-uavsdk.py"
-    - "./scripts/uavsdk_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+    - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+    - "./scripts/camera_config.py:/home/pipeline-server/scripts/camera_config.py:ro"
+    - "./configs:/home/pipeline-server/configs:rw"          # cameras-uavsdk.yaml (CAMERAS_CONFIG), ARM_SOURCE=mqtt
 ```
 And set `UAV_ID` env var (default `uav-1`).
 

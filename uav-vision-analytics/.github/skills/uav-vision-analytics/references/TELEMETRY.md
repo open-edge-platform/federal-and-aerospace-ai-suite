@@ -105,7 +105,7 @@ companion bridge.
 ```yaml
 volumes:
   - "./gvapython/telemetry-overlay-uavsdk.py:/home/pipeline-server/gvapython/telemetry-overlay-uavsdk.py"
-  - "./scripts/uavsdk_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+  - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
 ```
 
 ---
@@ -140,25 +140,18 @@ python3 /home/pipeline-server/scripts/pipeline_manager.py --status     # file ve
 make start-rtsp      # docker exec -it dlstreamer-pipeline-server bash -c "python3 ..."
 ```
 
-### uavsdk_pipeline_manager.py (uavsdk mode)
+### mavlink_pipeline_manager.py with ARM_SOURCE=mqtt (uavsdk mode)
 
-Subscribes to MQTT broker at `host.docker.internal:1883` on topic
-`uav/{{UAV_ID}}/telemetry/status`. Parses `armed` boolean from JSON payload.
+The same manager as the pymavlink stack; `docker-compose-uavsdk.yml` sets `ARM_SOURCE=mqtt` and
+`CAMERAS_CONFIG=/home/pipeline-server/configs/cameras-uavsdk.yaml`. It subscribes to the SDK's MQTT broker
+(`MQTT_BROKER_HOST:MQTT_BROKER_PORT`, default `host.docker.internal:1884`) on `uav/<UAV_ID>/telemetry/status` and parses the
+`armed` boolean of the JSON payload.
 
-**On ARMED:** calls `wait_for_rtsp_stream()` with `ffprobe` for each camera RTSP URL
-before POSTing pipelines (retries 3× with 2 s delay).
+**On ARMED:** re-reads the cameras file and, for each camera whose source is an RTSP stream, probes it with `ffprobe`
+(3 tries, 2 s apart) before starting its pipeline; unavailable cameras are skipped. The source URL
+`rtsp://host.docker.internal:8554/{uav_id}/<camera>` takes `{uav_id}` from `UAV_ID` (default `uav-1`).
 
 **On DISARMED:** DELETEs all running pipeline instances.
-
-**RTSP source URLs probed:**
-```python
-RTSP_BASE_URL = f"rtsp://host.docker.internal:8554/uav-1"
-PIPELINES = [
-    {"name": "nadir_camera_rtsp_cpu",    "rtsp_url": f"{RTSP_BASE_URL}/nadir",   "device": "CPU"},
-    {"name": "forward_camera_rtsp_gpu",  "rtsp_url": f"{RTSP_BASE_URL}/forward", "device": "GPU"},
-    {"name": "rear_camera_rtsp_npu",     "rtsp_url": f"{RTSP_BASE_URL}/rear",    "device": "NPU"},
-]
-```
 
 **Only RTSP sink is supported** in UAVSDK mode.
 

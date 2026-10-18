@@ -39,7 +39,7 @@ unless `enabled: true`).
 | --- | --- |
 | `id` | Camera name: lowercase letters, digits and `_`. Also names the RTSP stream (`uav-<id>` with `_` replaced by `-`) and the caption topic. |
 | `enabled` | `false` leaves the camera out. |
-| `video` / `device` | The source: either `video`, or `device` for a live camera ([below](#live-cameras-realsense-usb-webcams)), never both. `video` is a file in `resources/videos` (`.avi`, `.mp4`, `.mkv` or `.ts`, no folders). Prepare your own with [`scripts/convert_video.sh`](./convert-videos.md). |
+| `video` / `device` / `rtsp` | The source: one of `video`, `device` for a live camera ([below](#live-cameras-realsense-usb-webcams)) or `rtsp` for an RTSP stream ([below](#rtsp-streams-uav-mission-compute-sdk)), never two. `video` is a file in `resources/videos` (`.avi`, `.mp4`, `.mkv` or `.ts`, no folders). Prepare your own with [`scripts/convert_video.sh`](./convert-videos.md). |
 | `overlay` | `false` removes the detection boxes and the telemetry text from the stream. |
 | `detection.device` / `.model` | Where and with which model objects are detected. The model path is relative to `resources/models`. Cameras with the same device and model share one loaded model. |
 | `captioning.enabled` | `true` adds captions. They are published on MQTT `uav/caption/<id>`. |
@@ -141,6 +141,26 @@ The shipped `configs/cameras.yaml` has such a camera, `realsense_camera`, disabl
 
 Each device can be used by one camera only, and the images must be raw video (not MJPEG) at the requested size. Several
 cameras on one USB controller can exceed its bandwidth; spread them over different ports.
+
+## RTSP streams (UAV Mission Compute SDK)
+
+A camera can read an RTSP stream instead of a file or a device. The UAV Mission Compute SDK stack (`make uavsdk-up`) does
+this: it mounts [`configs/cameras-uavsdk.yaml`](../../../configs/cameras-uavsdk.yaml) (`CAMERAS_CONFIG`) with the same format and the
+same tools (`make check-cameras`, `make start-rtsp`, `make cameras-status`):
+
+```yaml
+  - id: nadir_camera
+    rtsp: rtsp://host.docker.internal:8554/{uav_id}/nadir     # H.264 over RTSP, no user or password
+    detection: {device: cpu}
+```
+
+* `{uav_id}` is replaced by `UAV_ID` from `.env` (default `uav-1`), so the file works for any vehicle ID.
+* The pipelines have the same names as for video files (`uav_object_detection_<det>[_<vlm>]`); `config-uavsdk.json` defines them
+  with an RTSP source, so the dashboard and the tools do not care where the images come from.
+* The manager is armed by the SDK's MQTT status topic `uav/<UAV_ID>/telemetry/status` (`{"armed": true}`) instead of MAVLink,
+  and starts a camera only when its stream can be read (`ffprobe`); a camera whose stream is missing is skipped.
+* The shipped file has the nadir camera on the CPU, the forward camera on the GPU and the rear camera on the NPU (skipped on a host
+  without an NPU).
 
 ## Examples
 
