@@ -70,7 +70,7 @@
 
   // camera (RTSP stream path) -> { wrap, videoContainer, video, chipTtft, chipTpot, chipThroughput, chipLag,
   //             captionStatus, captionTimeline, captionHistory,
-  //             lastCaptionReceivedAt, captionsSource, titleEl, metaEl }
+  //             lastCaptionReceivedAt, captionsSource, titleEl, infoEl }
   const cards = new Map();
 
 
@@ -215,24 +215,16 @@
     const badges = document.createElement("span");
     badges.className = "device-badges";
     title.appendChild(cameraName);
-    title.appendChild(badges);
-    const meta = document.createElement("div");
-    meta.className = "device-card-meta";
-    meta.textContent = "—";
-    // Expands the live video to the whole screen (Esc returns). Fullscreens
-    // our own container rather than relying on the remote viewer page's
-    // controls.
-    const expandBtn = document.createElement("button");
-    expandBtn.type = "button";
-    expandBtn.className = "btn btn-ghost btn-icon-only device-expand-btn";
-    expandBtn.title = "Full screen";
-    expandBtn.setAttribute("aria-label", `View ${cam.title || cam.camera} video full screen`);
-    expandBtn.disabled = true;
-    expandBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+    const infoBtn = document.createElement("button");
+    infoBtn.type = "button";
+    infoBtn.className = "btn btn-ghost btn-icon-only device-info-btn";
+    infoBtn.title = "Loading pipeline details";
+    infoBtn.setAttribute("aria-label", `${cam.title || cam.camera}: loading pipeline details`);
+    infoBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg>';
     const headerRight = document.createElement("div");
     headerRight.className = "device-card-header-right";
-    headerRight.appendChild(meta);
-    headerRight.appendChild(expandBtn);
+    headerRight.appendChild(badges);
+    headerRight.appendChild(infoBtn);
     header.appendChild(title);
     header.appendChild(headerRight);
 
@@ -241,24 +233,9 @@
     // by syncVideoMode() below.
     const videoContainer = document.createElement("div");
     videoContainer.className = "device-video-container";
-    // Enabled only while a live video iframe is mounted (not a placeholder).
-    new MutationObserver(() => {
-      expandBtn.disabled = !videoContainer.querySelector("iframe");
-    }).observe(videoContainer, { childList: true });
-    // videoContainer's children are replaced on every mode switch, so the
-    // full-screen target is a stable wrapper that also holds the exit button.
     const videoStage = document.createElement("div");
     videoStage.className = "device-video-stage";
-    const exitBtn = document.createElement("button");
-    exitBtn.type = "button";
-    exitBtn.className = "btn btn-ghost device-exit-fullscreen";
-    exitBtn.textContent = `${cam.title || cam.camera} \u2022 Exit full screen (Esc)`;
-    exitBtn.addEventListener("click", () => document.exitFullscreen().catch(() => {}));
     videoStage.appendChild(videoContainer);
-    videoStage.appendChild(exitBtn);
-    expandBtn.addEventListener("click", () => {
-      if (videoStage.requestFullscreen) videoStage.requestFullscreen().catch(() => {});
-    });
 
     const captionPanel = document.createElement("div");
     captionPanel.className = "caption-panel";
@@ -311,7 +288,7 @@
       cameraNameEl: cameraName,
       wrap,
       titleEl: title,
-      metaEl: meta,
+      infoEl: infoBtn,
       videoContainer,
       captionStatus,
       captionTimeline,
@@ -419,7 +396,7 @@
     card.videoContainer.appendChild(placeholder);
   }
 
-  // --- Pipeline/model info (shown compactly in the card header) ------------
+  // --- Pipeline/model info (available from the header's information icon) ---
   async function refreshPipelineInfo(host, card) {
     try {
       const res = await fetch(`/api/pipeline-info?host=${encodeURIComponent(host)}&camera=${encodeURIComponent(card.camera)}`);
@@ -427,7 +404,6 @@
       const state = info.reachable ? (info.state || "unknown") : "unreachable";
       const parts = [state];
       if (info.pipeline_name) parts.push(info.pipeline_name);
-      // Header shows only state + pipeline; the rest stays available on hover.
       const details = [];
       if (info.detection_device) details.push(`detection ${info.detection_device.toUpperCase()}${info.detection_model ? ` ${info.detection_model}` : ""}`);
       details.push(info.captioning
@@ -440,8 +416,8 @@
       if (info.device) details.push(`live camera ${info.device}${info.camera_size ? ` ${info.camera_size}` : ""}`);
       if (info.frame_rate !== null && info.frame_rate !== undefined) details.push(`${info.frame_rate} fps`);
       details.push(info.rtsp_available ? "H.264 Relay" : "no video stream");
-      card.metaEl.textContent = parts.join(" • ");
-      card.metaEl.title = [...parts, ...details].join(" • ");
+      card.infoEl.title = [...parts, ...details].join(" • ");
+      card.infoEl.setAttribute("aria-label", `${card.cameraNameEl.textContent}: ${card.infoEl.title}`);
       card.rtspPath = info.rtsp_path || card.camera;
       if (info.rtsp_available) {
         renderBadges(card, info);
@@ -451,7 +427,8 @@
       }
       syncVideoMode(host, card, info.rtsp_available);
     } catch (err) {
-      card.metaEl.textContent = "error";
+      card.infoEl.title = "Unable to load pipeline details";
+      card.infoEl.setAttribute("aria-label", `${card.cameraNameEl.textContent}: ${card.infoEl.title}`);
     }
   }
 
