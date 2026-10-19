@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 | Folder | What it tests | Needs |
 | --- | --- | --- |
 | `camera_config/` | `scripts/camera_config.py`: schema, validation, pipeline choice, the start requests, and that every request satisfies the parameter schema of the pipelines in `configs/config-pymavlink.json` | Docker and the built image only |
-| `live/` | The running stack: the nine video pipelines, the cameras of `configs/cameras.yaml`, shutdown, settings, bad files, the arm cycle | `make pymav-up`, an idle stack |
+| `live/` | The running stack: the nine video pipelines, the cameras of `configs/cameras-pymavlink.yaml`, shutdown, settings, bad files, the arm cycle | `make pymav-up`, an idle stack |
 
 ```bash
 tests/run_tests.sh                  # offline unit tests
@@ -32,6 +32,6 @@ Run one live module or test directly: `cd tests/live && python3 -m unittest -v t
 
 ## Writing a camera test
 
-`common.Manager(yaml_text).start()` runs the manager on a temporary `cameras.yaml`; `wait_for("is RUNNING")`, `status()`,
+`common.Manager(yaml_text).start()` runs the manager on a temporary `cameras-pymavlink.yaml`; `wait_for("is RUNNING")`, `status()`,
 `write()` (edit the file) and `cleanup()` cover the usual steps; `common.frames(path)`, `common.caption(topic)` and
 `common.pipeline_request(id)` check the result.

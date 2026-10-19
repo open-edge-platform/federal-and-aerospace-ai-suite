@@ -39,7 +39,7 @@ def plan_of(camera: dict) -> cc.CameraPlan:
 
 class DefaultsAndNames(unittest.TestCase):
     def test_shipped_file_is_valid(self):
-        cfg = cc.load_config(os.path.join(REPO, "configs", "cameras.yaml"))
+        cfg = cc.load_config(os.path.join(REPO, "configs", "cameras-pymavlink.yaml"))
         self.assertEqual([c.id for c in cfg.cameras], ["front_camera", "bottom_camera", "back_camera", "realsense_camera"])
         self.assertFalse(cfg.cameras[3].enabled, "the live camera ships disabled")
         for plan in cc.build_plan(cfg, check_files=False, pipelines=PIPELINES):
@@ -181,7 +181,7 @@ class Loading(unittest.TestCase):
 
     def test_unreadable_and_broken_files(self):
         with self.assertRaises(cc.ConfigError) as ctx:
-            cc.load_config("/nonexistent/cameras.yaml")
+            cc.load_config("/nonexistent/cameras-pymavlink.yaml")
         self.assertIn("cannot read", str(ctx.exception))
         with self.assertRaises(cc.ConfigError) as ctx:
             cc.load_config(self.write("cameras: [ {"))
@@ -406,7 +406,9 @@ class RtspCameras(unittest.TestCase):
         cfg = cc.load_config(os.path.join(REPO, "configs", "cameras-uavsdk.yaml"))
         plans = cc.build_plan(cfg, check_files=False, pipelines=set(SDK))
         self.assertEqual([p.camera_id for p in plans], ["nadir_camera", "forward_camera", "rear_camera"])
-        self.assertEqual([p.pipeline for p in plans], ["uav_object_detection_cpu", "uav_object_detection_gpu", "uav_object_detection_npu"])
+        expected = [f"uav_object_detection_{c.detection.device}" + (f"_{c.captioning.device}" if c.captioning.enabled else "") for c in cfg.cameras]
+        self.assertEqual([p.pipeline for p in plans], expected)       # whichever of the cameras have captions switched on
+        self.assertEqual([c.detection.device for c in cfg.cameras], ["cpu", "gpu", "npu"])
         for plan in plans:
             jsonschema.validate(plan.request["parameters"], SDK[plan.pipeline]["parameters"])
             self.assertTrue(plan.source_url.startswith("rtsp://host.docker.internal:8554/uav-1/"))

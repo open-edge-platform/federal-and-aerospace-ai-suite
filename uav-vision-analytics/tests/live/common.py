@@ -116,7 +116,7 @@ class Manager:
     def __init__(self, yaml_text: str, start_now: bool = True):
         self.dir = tempfile.mkdtemp(prefix="uavtest_", dir="/tmp")
         os.chmod(self.dir, 0o777)
-        self.config = os.path.join(self.dir, "cameras.yaml")
+        self.config = os.path.join(self.dir, "cameras-pymavlink.yaml")
         self.log_path = os.path.join(self.dir, "manager.log")
         self.start_now = start_now
         self.write(yaml_text)

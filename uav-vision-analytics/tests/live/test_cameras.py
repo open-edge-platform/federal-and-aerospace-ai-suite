@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-"""The cameras of configs/cameras.yaml through the manager, without a vehicle (--start-now).
+"""The cameras of configs/cameras-pymavlink.yaml through the manager, without a vehicle (--start-now).
 
   * all shipped cameras start one after the other and stream at the same time, each with its own caption topic
   * --status agrees with the file, and notices when the file asks for something else
@@ -16,7 +16,7 @@ import unittest
 
 import common
 
-SHIPPED = os.path.join(common.REPO, "configs", "cameras.yaml")
+SHIPPED = os.path.join(common.REPO, "configs", "cameras-pymavlink.yaml")
 
 
 def shipped_cameras():
