@@ -133,6 +133,15 @@ async function main() {
   check("video cameras have no LIVE badge", !badges(card("front camera")).includes("LIVE"));
   check("a live camera without captions has no caption subscription", card("realsense camera").querySelector(".caption-panel").hidden && live("uav/caption/realsense_camera").length === 0);
 
+  console.log("== a live camera with captions (uav_camera_npu_gpu)");
+  cameras = [cameras[0], camera("realsense", { video: null, device: "/dev/video4", camera_size: "1280x720", pipeline_name: "uav_camera_npu_gpu", detection_device: "npu", mqtt_topic: "uav/caption/realsense_camera" }), cameras[2]];
+  await pollTimer();
+  await tick(150);
+  const rsc = card("realsense camera");
+  check("captioned live camera shows NPU, VLM GPU and LIVE badges", rsc && JSON.stringify(badges(rsc)) === JSON.stringify(["NPU", "VLM GPU", "LIVE"]), rsc && badges(rsc).join(" + "));
+  check("its caption panel is visible", rsc && !rsc.querySelector(".caption-panel").hidden);
+  check("it listens to its own caption topic", live("uav/caption/realsense_camera").length === 1);
+
   console.log("== host unreachable keeps the cards");
   reachable = false;
   await pollTimer();

@@ -19,11 +19,20 @@ import common
 SHIPPED = os.path.join(common.REPO, "configs", "cameras-pymavlink.yaml")
 
 
-def shipped_cameras():
-    """Ids of the enabled cameras of the shipped file (disabled ones, such as the live camera, do not stream)."""
+def _shipped():
     import yaml
     with open(SHIPPED, encoding="utf-8") as handle:
-        return [c["id"] for c in yaml.safe_load(handle)["cameras"] if c.get("enabled", True)]
+        return [c for c in yaml.safe_load(handle)["cameras"] if c.get("enabled", True)]
+
+
+def shipped_cameras():
+    """Ids of the enabled cameras of the shipped file (a disabled one, such as the live camera, does not stream)."""
+    return [c["id"] for c in _shipped()]
+
+
+def shipped_captioning_cameras():
+    """Ids of the enabled cameras that have captioning switched on."""
+    return [c["id"] for c in _shipped() if (c.get("captioning") or {}).get("enabled", False)]
 
 
 class DefaultCameras(common.LiveTestCase):
@@ -37,7 +46,7 @@ class DefaultCameras(common.LiveTestCase):
             for camera in cameras:
                 path = "uav-" + camera.replace("_", "-")
                 self.assertGreaterEqual(common.frames_at_least(path, 90), 90, f"{path} is not streaming")
-            for camera in cameras:
+            for camera in shipped_captioning_cameras():
                 self.assertTrue(common.caption(f"uav/caption/{camera}"), f"no caption for {camera}")
             for line in manager.status().splitlines()[1:]:
                 self.assertTrue(line.rstrip().endswith("yes"), line)

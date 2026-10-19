@@ -41,9 +41,13 @@ class DefaultsAndNames(unittest.TestCase):
     def test_shipped_file_is_valid(self):
         cfg = cc.load_config(os.path.join(REPO, "configs", "cameras-pymavlink.yaml"))
         self.assertEqual([c.id for c in cfg.cameras], ["front_camera", "bottom_camera", "back_camera", "realsense_camera"])
-        self.assertFalse(cfg.cameras[3].enabled, "the live camera ships disabled")
-        for plan in cc.build_plan(cfg, check_files=False, pipelines=PIPELINES):
-            self.assertEqual(plan.pipeline, "uav_object_detection_npu_gpu")
+        plans = {p.camera_id: p for p in cc.build_plan(cfg, check_files=False, pipelines=PIPELINES)}
+        for name in ("front_camera", "bottom_camera", "back_camera"):
+            self.assertEqual(plans[name].pipeline, "uav_object_detection_npu_gpu")
+        live = cfg.cameras[3]                                     # the live camera (enabled or not, depending on the host)
+        self.assertTrue(live.device and live.video is None)
+        if live.enabled:
+            self.assertTrue(plans["realsense_camera"].pipeline.startswith("uav_camera_"))
 
     def test_pipeline_name_for_every_combination(self):
         for det in ("cpu", "gpu", "npu"):
@@ -243,17 +247,26 @@ class LiveCameras(unittest.TestCase):
 
     def test_device_replaces_video_in_the_request(self):
         params = plan_of(self.live()).request["parameters"]
-        self.assertEqual((params["device"], params["camera_width"], params["camera_height"]), (self.DEV, 1280, 720))
+        self.assertEqual((params["device"], params["camera_width"], params["camera_height"], params["camera_fps"]), (self.DEV, 1280, 720, 30))
         self.assertNotIn("video", params)
 
     def test_size_can_be_set(self):
         params = plan_of(self.live(width=640, height=480)).request["parameters"]
         self.assertEqual((params["camera_width"], params["camera_height"]), (640, 480))
 
+    def test_frame_rate_can_be_set_and_is_always_sent(self):
+        # without a framerate in the camera caps, v4l2src settled on 5 fps once a captioning branch was added
+        self.assertEqual(plan_of(self.live(fps=15)).request["parameters"]["camera_fps"], 15)
+        for name, pipeline in {**MAIN, **REALSENSE}.items():
+            if name.startswith("uav_camera_"):
+                self.assertIn("framerate={parameters[camera_fps]}/1", pipeline["pipeline"], name)
+        with self.assertRaisesRegex(cc.ConfigError, "live camera"):
+            config({"id": "f", "fps": 15})
+
     def test_a_file_camera_sends_no_device(self):
         params = plan_of({"id": "f"}).request["parameters"]
         self.assertEqual(params["video"], "uav_sample_front.avi")
-        self.assertFalse({"device", "camera_width", "camera_height"} & set(params))
+        self.assertFalse({"device", "camera_width", "camera_height", "camera_fps"} & set(params))
 
     def test_video_and_device_are_exclusive(self):
         with self.assertRaisesRegex(cc.ConfigError, "only one of"):
