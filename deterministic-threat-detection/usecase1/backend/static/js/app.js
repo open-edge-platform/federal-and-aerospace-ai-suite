@@ -47,6 +47,8 @@
 
   function addHotaPoints(points) {
     for (const [t, hota, det, ass] of points) {
+      const have = hotaChart.data.datasets[0].data;
+      if (have.length && t <= have[have.length - 1].x) continue;  // already drawn (the stream resends a few)
       hotaChart.data.datasets[0].data.push({ x: t, y: hota });
       hotaChart.data.datasets[1].data.push({ x: t, y: det });
       hotaChart.data.datasets[2].data.push({ x: t, y: ass });
@@ -305,9 +307,25 @@
       $('hota-window').textContent = h.window_s;
     } catch (e) { /* use case 2 disabled */ }
     showTab(location.hash.replace('#', ''));
-    const es = new EventSource('/api/stream');
-    es.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
+    window.__dash = { state, chart, hotaChart, es: null, msgs: 0, lastMsg: Date.now(), reconnects: 0 };  // also a hook for browser tests
+    const connect = () => {
+      const es = new EventSource('/api/stream');
+      window.__dash.es = es;
+      es.onmessage = (ev) => onStream(JSON.parse(ev.data));
+      es.onerror = () => {
+        $('chip-mqtt').textContent = 'Backend: reconnecting';
+        $('chip-mqtt').className = 'chip chip-bad';
+      };
+    };
+    // A silently stalled stream (a proxy or a saturated link) never raises an error, so the charts would
+    // just stop until the page is reloaded. No message for 6 s: reopen the stream.
+    setInterval(() => {
+      if (Date.now() - window.__dash.lastMsg > 6000) {
+        window.__dash.es.close(); window.__dash.reconnects += 1; window.__dash.lastMsg = Date.now(); connect();
+      }
+    }, 2000);
+    const onStream = (msg) => {
+      window.__dash.msgs += 1; window.__dash.lastMsg = Date.now();
       state.lastNow = msg.now;
       addPoints(msg.points, state.cfg.history_s);
       addHotaPoints(msg.hota_points || []);
@@ -316,10 +334,7 @@
       renderControls(msg);
       render(msg.now);
     };
-    es.onerror = () => {
-      $('chip-mqtt').textContent = 'Backend: reconnecting';
-      $('chip-mqtt').className = 'chip chip-bad';
-    };
+    connect();
   }
   start();
 })();

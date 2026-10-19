@@ -180,13 +180,17 @@ def create_app(start_mqtt=True):
     async def stream():
         async def events():
             last = time.time()
+            hota_seq = max(0, scene.latest_seq - 5) if scene else 0  # resend the last few; the page ignores duplicates
             while True:
                 now = time.time()
+                hota_points = []
+                if scene:
+                    hota_points, hota_seq = scene.points_after(hota_seq)
                 body = {
                     "now": now,
                     "points": tracker.points_since(last),
                     "sources": tracker.snapshot(now),
-                    "hota_points": scene.points_since(last) if scene else [],
+                    "hota_points": hota_points,
                     **status(),
                 }
                 last = now

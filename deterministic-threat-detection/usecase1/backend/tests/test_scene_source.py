@@ -26,6 +26,7 @@ def make_source():
     src.connected = False
     src.camera_msgs = src.scene_msgs = src.bad_msgs = 0
     src.last_camera = src.last_scene = src.latest = None
+    src._seq = 0
     src.history = deque(maxlen=100)
     src._lock = threading.Lock()
     src._rates = {"camera": deque(maxlen=120), "scene": deque(maxlen=120)}
@@ -92,3 +93,19 @@ def test_decoded_frames_are_stored_and_requested_only_while_watched():
     src.viewers = 1
     assert src.request_frames() == 2
     assert sent == [("scenescape/cmd/camera/Cam_x1_0", "getimage"), ("scenescape/cmd/camera/Cam_x2_0", "getimage")]
+
+
+def test_stream_cursor_never_skips_a_score_that_finishes_late():
+    """A score is stamped when scoring starts and stored when it ends. A time-based cursor loses a score
+    stored after the stream already passed its timestamp; the sequence cursor must not."""
+    src = make_source()
+    src.history.append({"t": 100.0, "seq": 1, "HOTA": 0.5, "DetA": 0.5, "AssA": 0.5, "covered": 1.0})
+    src._seq = 1
+    pts, cursor = src.points_after(0)
+    assert len(pts) == 1 and cursor == 1
+    # score 2 started at t=100.9 but is stored only now, after the stream polled at t=101.0
+    src.history.append({"t": 100.9, "seq": 2, "HOTA": 0.6, "DetA": 0.6, "AssA": 0.6, "covered": 1.0})
+    src._seq = 2
+    pts, cursor = src.points_after(cursor)
+    assert [p[1] for p in pts] == [0.6] and cursor == 2   # delivered although its time is older than the last poll
+    assert src.points_after(cursor) == ([], 2)

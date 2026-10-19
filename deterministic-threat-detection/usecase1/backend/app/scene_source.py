@@ -35,7 +35,8 @@ class SceneSource:
         self.connected = False
         self.camera_msgs = self.scene_msgs = self.bad_msgs = 0
         self.last_camera = self.last_scene = None  # receive times
-        self.latest = None  # newest score dict (with 't')
+        self.latest = None  # newest score dict (with 't' and 'seq')
+        self._seq = 0  # numbers the scores; stream cursors use it, never timestamps (see points_after)
         self.history = deque(maxlen=int(history_s / score_interval_s))
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -146,7 +147,8 @@ class SceneSource:
             log.exception("HOTA scoring failed")
             return None
         if result is not None:
-            result = {"t": now, **result}
+            self._seq += 1
+            result = {"t": now, "seq": self._seq, **result}
             self.latest = result
             self.history.append(result)
         return result
@@ -179,6 +181,20 @@ class SceneSource:
             "scene_age_s": age(self.last_scene),
             "bad": self.bad_msgs,
         }
+
+    @property
+    def latest_seq(self):
+        return self._seq
+
+    def points_after(self, seq):
+        """(points, newest seq) for scores numbered after 'seq'.
+
+        A score is stamped when scoring STARTS but stored when it ENDS, so a cursor based on time can
+        pass a score that is not stored yet and lose it for good (about one in ten at idle, far more under
+        load). The sequence number is only assigned at storing time, so nothing is skipped."""
+        fresh = [p for p in list(self.history) if p["seq"] > seq]
+        return ([(p["t"], p["HOTA"], p["DetA"], p["AssA"], p["covered"]) for p in fresh],
+                fresh[-1]["seq"] if fresh else seq)
 
     def points_since(self, since):
         return [(p["t"], p["HOTA"], p["DetA"], p["AssA"], p["covered"]) for p in list(self.history) if p["t"] > since]
