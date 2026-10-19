@@ -85,3 +85,17 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 .videos figcaption { color: var(--muted); font-size: 12px; margin-top: 4px; }
 
 .videos img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; border: 1px solid var(--panel-border); border-radius: 6px; background: #000; display: block; }
+
+/* use case 2: charts and numbers on the left, the two decoded videos stacked on the right, no page scroll */
+.uc2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 34%); gap: 16px; align-items: start; }
+.uc2-left { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.uc2-left .kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.chart-wrap.compact { height: 250px; }
+.uc2-right { padding: 12px; }
+.uc2-right h2 { margin-top: 0; }
+.uc2-right .hint { margin-bottom: 6px; }
+.uc2-right figure { margin: 0 0 8px; }
+.uc2-right img { width: 100%; height: calc((100vh - 270px) / 2 - 22px); min-height: 120px; object-fit: contain;
+  border: 1px solid var(--panel-border); border-radius: 6px; background: #000; display: block; aspect-ratio: auto; }
+.uc2-right figcaption { color: var(--muted); font-size: 12px; margin-top: 2px; }
+@media (max-width: 1000px) { .uc2 { grid-template-columns: 1fr; } .uc2-right img { height: 240px; } }

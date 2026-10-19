@@ -101,18 +101,9 @@
     setVideo(activeTab === 'uc2');
   }
 
-  // The player pages come from mediamtx on this machine (port 8889). They are only loaded while the
-  // tab is open, so a hidden tab does not keep two WebRTC streams running.
-  const VIDEO_PORT = 8889;
+  // Motion-JPEG of the frames the pipelines decoded (served by this backend). Only streamed while the
+  // tab is open: opening makes the backend request frames, a blank src stops the requests.
   function setVideo(on) {
-    const frames = { 'video-cam1': 'Cam_x1_0', 'video-cam2': 'Cam_x2_0' };
-    for (const [id, cam] of Object.entries(frames)) {
-      const el = $(id);
-      const url = on ? `http://${location.hostname}:${VIDEO_PORT}/${cam}/?controls=false` : 'about:blank';
-      if (el.getAttribute('src') !== url) el.setAttribute('src', url);
-    }
-    // Motion-JPEG of the frames the pipelines decoded (served by this backend). Opening it makes the
-    // backend request frames; closing it (blank src) stops the requests.
     const decoded = { 'decoded-cam1': 'Cam_x1_0', 'decoded-cam2': 'Cam_x2_0' };
     for (const [id, cam] of Object.entries(decoded)) {
       const el = $(id);
