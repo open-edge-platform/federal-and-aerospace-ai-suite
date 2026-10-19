@@ -43,6 +43,7 @@ sequenceDiagram
 | Service | Image | Ports | Role |
 | --- | --- | --- | --- |
 | `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server` | `8081`, `8555` | AI inference, RTSP output |
+| `metrics-manager` (container `uav-metrics-manager`) | `intel/metrics-manager` | `9090` (internal; through nginx at `/metrics/stream` and `/api/v1/metrics/latest`) | CPU, GPU, NPU and memory metrics for the ground-station dashboard (the container is not named `metrics-manager`, which the SDK's observability profile uses) |
 | `nginx` | `nginx:1.27-alpine` | `80` (redirects to 443), `443` (HTTPS, self-signed cert), `8555` (RTSP passthrough) — published to `HOST_IP` | Reverse proxy / TLS termination — the only service that publishes ports to the host |
 
 > `dlstreamer-pipeline-server` no longer publishes ports directly — it is reachable only
@@ -189,6 +190,12 @@ make check-cameras      # validate cameras-uavsdk.yaml and show what would run
 make start-rtsp         # wait for the drone to arm, then start the cameras
 make cameras-status     # compare the file with what is running
 ```
+
+**Captions.** With `captioning.enabled: true` on a camera, the captions are published to MQTT topic `uav/caption/<camera id>` on the
+**SDK's broker** (`mqtt-broker`, host port `1884`), not on a broker of this stack: the compose file points the pipelines'
+`MQTT_HOST`/`MQTT_PORT` at `host.docker.internal:1884`. Watch them with
+`docker exec mqtt-broker mosquitto_sub -t 'uav/caption/#'`. The ground-station dashboard must use that port too
+(`VIZ_REMOTE_MQTT_PORT=1884` in its `.env`; the default `1883` is the pymavlink stack's broker).
 
 The streams are available only after the drone arms — see [Step 7 — View the output stream](#7-view-the-output-stream) for the RTSP URLs.
 
