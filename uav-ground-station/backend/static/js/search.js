@@ -78,8 +78,19 @@
   }
 
   function displayName(r) {
-    if (r.source === "live") return r.stream_name || `Stream ${String(r.video_id || "").slice(0, 8)}`;
+    // Prefer the plain camera name the backend resolved for this result (set
+    // whenever it's a live clip from a camera this feature currently
+    // manages) over the raw, host-qualified VSS stream_name -- much more
+    // readable once multiple UAVs are connected.
+    if (r.source === "live") return r.camera || r.stream_name || `Stream ${String(r.video_id || "").slice(0, 8)}`;
     return r.filename || r.video_id || "Unknown video";
+  }
+
+  // "which camera did this clip come from" -- only meaningful for live
+  // results whose stream this feature currently manages; null otherwise.
+  function sourceLabel(r) {
+    if (r.source !== "live" || !r.camera) return null;
+    return r.host ? `${r.camera} \u00b7 ${r.host}` : r.camera;
   }
 
   function whenText(r) {
@@ -287,6 +298,7 @@
       facts.appendChild(el("dd", null, v));
     };
     if (r.source === "live") addFact("Captured", r.captured_at ? formatCaptured(r.captured_at) : null);
+    if (r.source === "live") addFact("Camera", sourceLabel(r));
     if (r.segment_start != null && r.segment_end != null) {
       addFact(r.source === "live" ? "Within segment" : "Clip", `${formatTime(r.segment_start)} – ${formatTime(r.segment_end)}`);
     }
@@ -352,7 +364,8 @@
     title.title = displayName(r);
     titleRow.appendChild(title);
     text.appendChild(titleRow);
-    text.appendChild(el("div", "result-when muted", whenText(r)));
+    const whenLine = sourceLabel(r) ? `${whenText(r)} \u00b7 ${sourceLabel(r)}` : whenText(r);
+    text.appendChild(el("div", "result-when muted", whenLine));
 
     const pct = scorePct(r);
     if (pct != null) {
@@ -484,10 +497,16 @@
     submitBtn.textContent = "Searching…";
     renderMessage("loading", `Searching for “${query}”…`, "Ranking matching video segments.");
     try {
+      // Scope results to the currently connected UAV when one is known, so a
+      // second UAV's (or someone else's, on a shared VSS deployment) footage
+      // doesn't show up mixed in
+      const hostInput = document.getElementById("host-input");
+      const host = hostInput && hostInput.value.trim();
+      const body = host ? { query, host } : { query };
       const resp = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
       let data = null;
@@ -567,16 +586,32 @@
   const liveSummary = document.getElementById("live-index-summary");
   const liveList = document.getElementById("live-index-list");
   let livePollTimer = null;
+  // Which host's live-sync state to display -- with multiple UAVs connected
+  // (one per tab), tracks all of them independently; this panel only ever
+  // shows the currently active tab's host, set from the uav:connected event detail.
+  let liveSyncHost = null;
 
-  function renderLiveSync(data) {
+  // `data` is the full /api/search/live-sync response: { hosts: {host: {...}}, ... }
+  // plus a legacy top-level mirror of one host for callers not yet updated.
+  // Pick out `liveSyncHost`'s own state when known; fall back to the legacy
+  // mirror (single-UAV deployments, or before any host is known here).
+  function stateFor(data) {
+    if (data && data.hosts && liveSyncHost && data.hosts[liveSyncHost]) return data.hosts[liveSyncHost];
+    return data;
+  }
+
+  function renderLiveSync(payload) {
     if (!liveSummary || !liveList) return;
+    const data = stateFor(payload);
     const streams = (data && data.streams) || [];
     liveList.replaceChildren(...streams.map((st) => {
       const li = document.createElement("li");
       li.className = "live-index-item";
       const state = String(st.state || "unknown");
       const name = document.createElement("span");
-      name.textContent = String(st.stream_name || st.camera || "feed").replace(/^uav-/, "").replace(/-/g, " ").toUpperCase();
+      // Prefer the plain camera name the backend already resolved over the
+      // host-qualified stream_name, which is not meant to be read directly.
+      name.textContent = String(st.camera || st.stream_name || "feed").replace(/^uav-/, "").replace(/-/g, " ").toUpperCase();
       const badge = document.createElement("span");
       badge.className = `live-state live-state-${state.replace(/[^a-z]/g, "")}`;
       badge.textContent = state;
@@ -608,14 +643,22 @@
   document.addEventListener("uav:connected", async (e) => {
     if (!(await availability)) return;
     clearInterval(livePollTimer);
+    liveSyncHost = e.detail.host;
     await liveSync("POST", { host: e.detail.host });
     livePollTimer = setInterval(() => liveSync("GET"), 10000);
   });
-  document.addEventListener("uav:disconnected", async () => {
+  document.addEventListener("uav:disconnected", async (e) => {
     if (!(await availability)) return;
-    clearInterval(livePollTimer);
-    livePollTimer = null;
-    await liveSync("DELETE");
+    // Scope the stop to this host only -- with the multi-host-capable
+    // backend, omitting it would stop *every* tracked UAV's indexing,
+    // not just the one being disconnected here.
+    const host = e && e.detail && e.detail.host;
+    await liveSync("DELETE", host ? { host } : undefined);
+    if (!host || host === liveSyncHost) {
+      clearInterval(livePollTimer);
+      livePollTimer = null;
+      liveSyncHost = null;
+    }
   });
   closeBtn.addEventListener("click", closeModal);
   modal.addEventListener("mousedown", (e) => {

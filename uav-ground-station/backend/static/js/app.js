@@ -3,15 +3,66 @@
 
 (() => {
   const hostInput = document.getElementById("host-input");
-  const connectBtn = document.getElementById("connect-btn");
   const refreshBtn = document.getElementById("refresh-btn");
-  const connStatus = document.getElementById("conn-status");
   const cardsContainer = document.getElementById("cards-container");
+  const tabsEl = document.getElementById("uav-tabs");
+  const tabsListEl = document.getElementById("uav-tabs-list");
+  const addUavBtn = document.getElementById("add-uav-tab-btn");
+  const connectModal = document.getElementById("connect-modal");
+  const connectModalClose = document.getElementById("connect-modal-close");
+  const connectForm = document.getElementById("connect-form");
+  const connectHostInput = document.getElementById("connect-host-input");
+  const connectLabelInput = document.getElementById("connect-label-input");
+  const connectErrorEl = document.getElementById("connect-form-error");
+
+  // --- Multi-UAV tabs ---------------------------------------------------
+  // One tab per host that's been connected to in this browser session.
+  // Only one host's cards/metrics are shown at a time (switching tabs tears
+  // down and rebuilds the visible dashboard for the newly active host, same
+  // as a fresh connect), but a host's VSS live-sync indexing is NOT stopped
+  // just because its tab isn't the active one -- see switchToTab()/closeTab()
+  // below. The backend already tracks and reconciles every host it's been
+  // told to sync independently, so this is purely a viewing convenience
+  // on top of an already multi-host-capable backend.
+  const sessions = new Map(); // host -> { connectedAt, label }
+
+  function renderTabs() {
+    tabsEl.classList.toggle("hidden", sessions.size === 0);
+    tabsListEl.replaceChildren();
+    for (const [host, session] of sessions) {
+      const tab = document.createElement("div");
+      tab.className = `uav-tab${host === currentHost ? " active" : ""}`;
+      tab.setAttribute("role", "tab");
+      const dot = document.createElement("span");
+      // Active tab reflects the live connection state; a background tab is
+      // assumed healthy (its VSS live-sync keeps being reconciled server-side
+      // for as long as it's in `sessions`, regardless of whether its view is
+      // rendered -- there's no cheap client-side signal for its own health
+      // without re-polling a host we're not currently showing).
+      dot.className = `uav-tab-dot uav-tab-dot-${host === currentHost ? currentConnState : "connected"}`;
+      const label = document.createElement("button");
+      label.type = "button";
+      label.className = "uav-tab-label";
+      label.textContent = session.label || host;
+      label.title = session.label ? `${session.label} (${host})` : `Switch to ${host}`;
+      label.addEventListener("click", () => { if (host !== currentHost) switchToTab(host); });
+      const close = document.createElement("button");
+      close.type = "button";
+      close.className = "uav-tab-close";
+      close.setAttribute("aria-label", `Disconnect ${host}`);
+      close.title = `Disconnect ${host} (stops its background indexing too)`;
+      close.textContent = "\u00d7";
+      close.addEventListener("click", (e) => { e.stopPropagation(); closeTab(host); });
+      tab.append(dot, label, close);
+      tabsListEl.appendChild(tab);
+    }
+  }
 
   let metricsSource = null;
   let localMetricsSource = null;
   let pipelinePollTimer = null;
   let currentHost = null;
+  let currentConnState = "off"; // "connected" | "connecting" | "off" -- active tab's dot color
   let isConnected = false; // true once at least one camera card is live
   let remoteHttpsPort = 443; // overwritten by /api/runtime-config
   let mediamtxWebrtcHost = "127.0.0.1"; // overwritten by /api/runtime-config
@@ -24,21 +75,9 @@
 
 
   function setStatus(state) {
-    connStatus.classList.remove("pill-off", "pill-on", "pill-pending");
-    if (state === "connected") {
-      connStatus.classList.add("pill-on");
-      connStatus.textContent = "connected";
-      isConnected = true;
-      connectBtn.textContent = "Disconnect";
-    } else if (state === "connecting") {
-      connStatus.classList.add("pill-pending");
-      connStatus.textContent = "connecting…";
-    } else {
-      connStatus.classList.add("pill-off");
-      connStatus.textContent = "disconnected";
-      isConnected = false;
-      connectBtn.textContent = "Connect";
-    }
+    currentConnState = state;
+    isConnected = state === "connected";
+    renderTabs();
   }
 
   function renderEmptyState(message) {
@@ -149,14 +188,14 @@
     try {
       const res = await fetch("/api/runtime-config");
       const cfg = await res.json();
-      hostInput.value = cfg.defaultHost || "127.0.0.1";
-      hostInput.placeholder = cfg.defaultHost || "127.0.0.1";
+      connectHostInput.value = cfg.defaultHost || "127.0.0.1";
+      connectHostInput.placeholder = cfg.defaultHost || "127.0.0.1";
       if (cfg.remoteHttpsPort) remoteHttpsPort = cfg.remoteHttpsPort;
       if (cfg.mediamtxWebrtcHost) mediamtxWebrtcHost = cfg.mediamtxWebrtcHost;
       if (cfg.mediamtxWebrtcPort) mediamtxWebrtcPort = cfg.mediamtxWebrtcPort;
       return cfg;
     } catch (err) {
-      hostInput.value = "127.0.0.1";
+      connectHostInput.value = "127.0.0.1";
       return {};
     }
   }
@@ -671,7 +710,7 @@
     syncCards(host, detected.cameras || []);
   }
 
-  async function connectNow() {
+  async function connectNow(label) {
     const host = (hostInput.value || "127.0.0.1").trim();
     currentHost = host;
     stopAllStreams();
@@ -687,25 +726,111 @@
       syncCards(host, detected.cameras || []);
     }
     pipelinePollTimer = setInterval(() => pollAndReconcile(host), 5000);
-    // search.js registers this host's running pipelines for VSS live search.
+    // Switching back to an already-connected tab calls connectNow() too
+    // -- keep its existing label rather than clearing it.
+    const existingLabel = sessions.get(host)?.label;
+    sessions.set(host, { connectedAt: Date.now(), label: label ?? existingLabel });
+    renderTabs();
     document.dispatchEvent(new CustomEvent("uav:connected", { detail: { host } }));
   }
 
-  function disconnectNow() {
+  // Tear down only the *foreground* dashboard view (cards/metrics/SSE) --
+  // does not touch VSS live-sync for `host`, so its indexing keeps running.
+  // Used when switching away from a tab, not when closing one.
+  function teardownView() {
     stopAllStreams();
     ChartManager.resetChart();
     resetMetricsHeader();
     renderEmptyState(null);
     setStatus("off");
-    document.dispatchEvent(new CustomEvent("uav:disconnected"));
   }
 
-  connectBtn.addEventListener("click", () => {
-    if (isConnected) {
-      disconnectNow();
-    } else {
-      connectNow();
+  function disconnectNow() {
+    const host = currentHost;
+    teardownView();
+    if (host) {
+      sessions.delete(host);
+      renderTabs();
+      // Fully stop: pause this host's VSS live-sync indexing too (it won't
+      // be reconciled again until something reconnects to this host).
+      document.dispatchEvent(new CustomEvent("uav:disconnected", { detail: { host } }));
     }
+    currentHost = null;
+    // No UAVs left to show -- the connect modal is the only way back in, so
+    // open it rather than leaving an empty dashboard with no obvious action.
+    if (sessions.size === 0) openConnectModal();
+  }
+
+  // Switch the visible dashboard to an already-connected host's tab, without
+  // stopping VSS indexing for the host being switched away from.
+  async function switchToTab(host) {
+    teardownView();
+    hostInput.value = host;
+    await connectNow();
+  }
+
+  // Fully disconnect one host (closing its tab): if it's the active tab,
+  // tear down the view too; either way its background indexing is stopped.
+  function closeTab(host) {
+    if (host === currentHost) {
+      disconnectNow();
+      hostInput.value = "";
+      return;
+    }
+    sessions.delete(host);
+    renderTabs();
+    document.dispatchEvent(new CustomEvent("uav:disconnected", { detail: { host } }));
+    if (sessions.size === 0) openConnectModal();
+  }
+
+  // --- Connect modal ("Add UAV") -----------------------------------------
+  let connectModalLastFocus = null;
+
+  function openConnectModal() {
+    connectModalLastFocus = document.activeElement;
+    connectErrorEl.textContent = "";
+    connectLabelInput.value = "";
+    connectModal.classList.remove("hidden");
+    connectHostInput.focus();
+    connectHostInput.select();
+  }
+
+  function closeConnectModal() {
+    // Closing without ever having connected a UAV would leave a dead-end,
+    // empty dashboard with no way back in -- keep the modal open in that case.
+    if (sessions.size === 0) return;
+    connectModal.classList.add("hidden");
+    if (connectModalLastFocus) connectModalLastFocus.focus();
+  }
+
+  connectModalClose.addEventListener("click", closeConnectModal);
+  connectModal.addEventListener("click", (e) => { if (e.target === connectModal) closeConnectModal(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !connectModal.classList.contains("hidden")) closeConnectModal();
+  });
+  addUavBtn.addEventListener("click", openConnectModal);
+
+  connectForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const host = connectHostInput.value.trim();
+    const label = connectLabelInput.value.trim();
+    if (!host) {
+      connectErrorEl.textContent = "Enter a host IP or hostname.";
+      return;
+    }
+    connectErrorEl.textContent = "";
+    if (sessions.has(host)) {
+      // Already connected -- just bring its tab forward instead of
+      // reconnecting (which would needlessly restart its video/metrics
+      // streams).
+      connectModal.classList.add("hidden");
+      if (host !== currentHost) await switchToTab(host);
+      return;
+    }
+    teardownView();
+    hostInput.value = host;
+    connectModal.classList.add("hidden");
+    await connectNow(label || undefined);
   });
 
   refreshBtn.addEventListener("click", () => {
@@ -713,6 +838,11 @@
     pollAndReconcile(currentHost);
   });
 
-  loadRuntimeConfig();
+  loadRuntimeConfig().then(() => {
+    // No UAVs connected yet on a fresh page load -- the connect modal is the
+    // only way to get a dashboard going, so open it immediately.
+    if (sessions.size === 0) openConnectModal();
+  });
   startLocalMetricsStream();
 })();
+

@@ -404,7 +404,9 @@
     const groups = { npu: [], gpu: [], cpu: [] };
     const note = [];
     const host = (document.getElementById("host-input") || {}).value;
-    const connected = /disconnect/i.test((document.getElementById("connect-btn") || {}).textContent || "");
+    // #host-input is a hidden mirror of the active UAV tab's host;
+    // non-empty means at least one UAV is connected.
+    const connected = Boolean(host);
     let running = [];
     if (host && connected) {
       try {

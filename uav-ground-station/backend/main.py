@@ -50,8 +50,10 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+import caption_log
 import vss_live_sync
 from vss_search import router as vss_search_router
+from vss_summary import router as vss_summary_router
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("viz-backend")
@@ -271,6 +273,12 @@ async def pipeline_info(host: str = Query(...), camera: str = Query(..., pattern
             info.update(record)
             info["caption_topic"] = record["mqtt_topic"]
             info["rtsp_available"] = True
+            if record.get("captioning") and record.get("mqtt_topic"):
+                # Keep the Flight Summary feature's caption history warm for
+                # this (host, camera) -- cheap to call on every poll; it's a
+                # no-op unless the subscriber doesn't exist yet or the topic
+                # changed.
+                asyncio.ensure_future(caption_log.note_active(host, camera, record["mqtt_topic"]))
     except (httpx.HTTPError, ValueError) as exc:
         logger.warning("pipeline-info lookup failed for host=%s camera=%s: %s", host, camera, exc)
     return info
@@ -430,6 +438,9 @@ async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CA
 vss_live_sync.configure(_detect_running_cameras, REMOTE_RTSP_PORT)
 app.include_router(vss_search_router)
 app.include_router(vss_live_sync.router)
+# Flight Summary report -- built from the caption history, keeps
+# warm via the note_active() call in pipeline_info() above.
+app.include_router(vss_summary_router)
 
 
 class RevalidateStaticAssets:

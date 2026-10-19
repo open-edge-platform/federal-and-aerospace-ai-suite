@@ -46,6 +46,8 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 
+import uav_naming
+
 logger = logging.getLogger("viz-backend.vss-search")
 
 VSS_ENABLED = os.environ.get("VSS_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
@@ -105,6 +107,9 @@ _thumbnail_cache: "OrderedDict[tuple, bytes]" = OrderedDict()
 SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9._-]+$")
 MAX_QUERY_LENGTH = 500
 TIME_UNITS = ("minutes", "hours", "days", "weeks")
+# IPv4 address or DNS hostname; mirrors vss_live_sync.HOST_PATTERN (duplicated
+# rather than imported, since vss_live_sync.py already imports this module).
+HOST_PATTERN = r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$"
 
 # Upstream headers forwarded to the browser for video playback/seeking.
 _PASSTHROUGH_VIDEO_HEADERS = ("content-length", "content-range", "accept-ranges", "etag", "last-modified")
@@ -206,6 +211,42 @@ def _live_captured_at(media_path: Any, offset: Optional[float]) -> Optional[str]
     return datetime.fromtimestamp(int(match.group(1)) + (offset or 0.0), tz=timezone.utc).isoformat()
 
 
+def _camera_and_host(stream_name: Optional[str]) -> tuple:
+    """(camera, host) for a result's VSS stream_name, using uav_naming's
+    registry of currently-managed live streams. None, None for uploaded
+    videos (no stream_name) or a stream this feature doesn't recognize
+    (e.g. hand-registered, or indexed before this container last restarted --
+    the registry is in-memory only)."""
+    if not stream_name:
+        return None, None
+    info = uav_naming.info_for(stream_name)
+    if info:
+        return info[1], info[0]
+    if uav_naming.LEGACY_NAME.fullmatch(stream_name):
+        # Pre-multi-UAV stream name (bare camera, no embedded host) -- the
+        # camera is still known, just not which host it came from.
+        return stream_name[4:], None
+    return None, None
+
+
+def _belongs_to_host(result: dict, host: str) -> bool:
+    """True if `result` should be shown when scoping search to `host`.
+
+    Only live results are scoped at all -- a result from an uploaded/
+    recorded video has no "owning" UAV host to filter by, so it's always
+    kept. A live result with a stream_name this feature doesn't recognize
+    (not currently managed -- e.g. hand-registered in VSS, or indexed before
+    a container restart cleared the in-memory registry) is also kept rather
+    than hidden, since we cannot prove it belongs to a *different* host.
+    """
+    if result.get("source") != "live":
+        return True
+    result_host = result.get("host")
+    if result_host is None:
+        return True
+    return result_host == host
+
+
 def _flatten_results(payload: Any) -> list:
     """VSS wraps hits as {"results": [{"query_id", "results": [...]}]}."""
     groups = payload.get("results", []) if isinstance(payload, dict) else payload
@@ -225,6 +266,11 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=MAX_QUERY_LENGTH)
     tags: Optional[str] = Field(None, max_length=500)
     timeFilter: Optional[TimeFilter] = None
+    # Optional: scope results to one UAV's own footage (multi-UAV dashboards
+    # keep a tab per connected host). Only affects *live* results -- a result
+    # from an uploaded/recorded video that isn't tied to any host's live
+    # stream is never filtered out, since it isn't "someone else's drone".
+    host: Optional[str] = Field(None, min_length=1, max_length=253, pattern=HOST_PATTERN)
 
 
 @router.get("/api/search/status")
@@ -314,11 +360,19 @@ async def search(req: SearchRequest):
         frame = _frame_params(metadata)
         best = metadata.get("best_frame_info") if isinstance(metadata.get("best_frame_info"), dict) else {}
         is_live = bool(best.get("is_live")) or stream is not None
+        stream_name = (stream or {}).get("stream_name")
+        camera, result_host = _camera_and_host(stream_name)
         results.append({
             "video_id": video_id,
             "source": "live" if is_live else "upload",
             "filename": ((video or {}).get("dataStore") or {}).get("fileName") or (video or {}).get("name"),
-            "stream_name": (stream or {}).get("stream_name"),
+            "stream_name": stream_name,
+            # Which UAV/camera this clip came from, if it's a live result
+            # from a camera this feature currently manages (multi-UAV
+            # dashboards use this to show/filter "which drone" a result is
+            # from); None for uploaded videos or unrecognized streams.
+            "camera": camera,
+            "host": result_host,
             "captured_at": _live_captured_at(frame.get("media_path"), frame.get("timestamp")) if frame else None,
             "score": _as_float(metadata.get("relevance_score")),
             "peak_score": _peak_score(metadata),
@@ -329,6 +383,9 @@ async def search(req: SearchRequest):
             "video_proxy_url": f"/api/search-video?path={quote(object_path, safe='/')}" if object_path else None,
             "thumbnail_url": f"/api/search-frame?{urlencode(frame)}" if frame else None,
         })
+
+    if req.host:
+        results = [r for r in results if _belongs_to_host(r, req.host)]
 
     results, raw_count = _filter_and_score(results)
     _prewarm_previews(results)

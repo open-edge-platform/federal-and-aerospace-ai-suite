@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UAV Ground Station</title>
-  <link rel="stylesheet" href="css/styles.css?v=32" />
+  <link rel="stylesheet" href="css/styles.css?v=35" />
 </head>
 <body>
   <header class="topbar">
@@ -17,18 +17,57 @@ SPDX-License-Identifier: Apache-2.0
       <button id="topbar-search-btn" class="btn btn-primary btn-icon hidden" type="button" title="Search indexed video (press /)">
         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search Videos</span>
       </button>
+      <button id="topbar-summary-btn" class="btn btn-primary btn-icon" type="button" title="Build a flight summary report from captured scene captions">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M9.5 13h5M9.5 16.5h5M9.5 9.5h2"/></svg><span>Flight Summary</span>
+      </button>
       <button id="toggle-arch" class="btn btn-ghost" type="button">Architecture</button>
     </div>
   </header>
 
-  <section id="connect-bar" class="panel connect-bar">
-    <label for="host-input">UAV Companion Compute IP</label>
-    <input id="host-input" type="text" placeholder="127.0.0.1" autocomplete="off" />
+  <!-- Multi-UAV tabs: one tab per UAV host the dashboard has connected to in
+       this session. Switching tabs swaps which host's cards/metrics are shown
+       in the panels below; a host's VSS live-sync indexing keeps running in the
+       background regardless of which tab is active, and only stops when its tab
+       is explicitly closed. -->
+  <nav id="uav-tabs" class="uav-tabs hidden" aria-label="Connected UAVs">
+    <div id="uav-tabs-list" class="uav-tabs-list" role="tablist"></div>
+    <div class="uav-tabs-toolbar">
+      <button id="refresh-btn" class="btn btn-ghost btn-icon-only" type="button" title="Re-check running pipelines on the active tab now">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11A8 8 0 1 0 18.3 16"/><path d="M20 5v6h-6"/></svg>
+      </button>
+      <button id="add-uav-tab-btn" class="btn btn-primary btn-icon uav-tab-add" type="button">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add UAV</span>
+      </button>
+    </div>
+  </nav>
 
-    <button id="connect-btn" class="btn btn-primary" type="button">Connect</button>
-    <button id="refresh-btn" class="btn btn-ghost" type="button" title="Re-check running pipelines now">Refresh</button>
-    <span id="conn-status" class="pill pill-off">disconnected</span>
-  </section>
+  <input id="host-input" type="hidden" />
+
+  <div id="connect-modal" class="modal-overlay hidden">
+    <div class="modal-dialog connect-dialog" role="dialog" aria-modal="true" aria-labelledby="connect-modal-title">
+      <header class="modal-header">
+        <div class="modal-title">
+          <h2 id="connect-modal-title">Connect a UAV</h2>
+          <span class="muted">Point this dashboard at a UAV Companion Compute board's IP</span>
+        </div>
+        <button id="connect-modal-close" class="btn btn-ghost modal-close" type="button" aria-label="Close connect UAV">&times;</button>
+      </header>
+      <form id="connect-form" class="connect-form">
+        <div class="connect-form-row">
+          <label for="connect-host-input">UAV Companion Compute IP</label>
+          <input id="connect-host-input" type="text" placeholder="127.0.0.1" autocomplete="off" required />
+        </div>
+        <div class="connect-form-row">
+          <label for="connect-label-input">Tab label <span class="muted">(optional)</span></label>
+          <input id="connect-label-input" type="text" placeholder="e.g. North drone" maxlength="24" autocomplete="off" />
+        </div>
+        <div id="connect-form-error" class="connect-form-error" aria-live="polite"></div>
+        <div class="connect-form-actions">
+          <button id="connect-submit-btn" class="btn btn-primary" type="submit">Connect</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <main class="layout">
     <section id="cards-container" class="cards-container"></section>
@@ -108,6 +147,43 @@ SPDX-License-Identifier: Apache-2.0
     </div>
   </div>
 
+  <div id="summary-modal" class="modal-overlay hidden">
+    <div class="modal-dialog summary-dialog" role="dialog" aria-modal="true" aria-labelledby="summary-modal-title">
+      <header class="modal-header">
+        <div class="modal-title">
+          <h2 id="summary-modal-title">Flight Summary</h2>
+          <span class="muted">Extractive report built from live scene captions &middot;</span>
+        </div>
+        <button id="summary-modal-close" class="btn btn-ghost modal-close" type="button" aria-label="Close flight summary">&times;</button>
+      </header>
+
+      <form id="summary-form" class="summary-form">
+        <div class="summary-form-row">
+          <label for="summary-host-input">UAV Companion Compute IP</label>
+          <input id="summary-host-input" type="text" placeholder="127.0.0.1" autocomplete="off" />
+        </div>
+        <div class="summary-form-row">
+          <span class="summary-form-label">Cameras</span>
+          <div id="summary-camera-checks" class="summary-device-checks">
+            <span class="muted">Connect to a UAV to list its cameras&hellip;</span>
+          </div>
+        </div>
+        <div class="summary-form-row">
+          <label for="summary-window-input">Window (minutes)</label>
+          <input id="summary-window-input" type="number" min="1" max="1440" value="15" />
+          <label for="summary-highlights-input">Max highlights</label>
+          <input id="summary-highlights-input" type="number" min="1" max="100" value="20" />
+        </div>
+        <div class="summary-form-actions">
+          <button id="summary-generate-btn" class="btn btn-primary" type="submit">Generate</button>
+          <a id="summary-download-btn" class="btn btn-ghost hidden" href="#" download>Download PDF</a>
+        </div>
+      </form>
+
+      <div id="summary-body" class="summary-body" aria-live="polite"></div>
+    </div>
+  </div>
+
   <div id="arch-modal" class="modal-overlay hidden">
     <div class="modal-dialog arch-dialog" role="dialog" aria-modal="true" aria-labelledby="arch-modal-title">
       <header class="modal-header">
@@ -156,9 +232,10 @@ SPDX-License-Identifier: Apache-2.0
   </div>
 
   <script src="js/vendor/chart.js"></script>
-  <script src="js/utils/charts.js?v=32"></script>
-  <script src="js/app.js?v=32"></script>
-  <script src="js/search.js?v=32"></script>
-  <script src="js/arch.js?v=32"></script>
+  <script src="js/utils/charts.js?v=35"></script>
+  <script src="js/app.js?v=35"></script>
+  <script src="js/search.js?v=35"></script>
+  <script src="js/summary.js?v=35"></script>
+  <script src="js/arch.js?v=35"></script>
 </body>
 </html>
