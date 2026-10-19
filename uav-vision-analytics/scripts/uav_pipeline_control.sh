@@ -4,9 +4,9 @@
 #
 # Manually start/stop/check ONE pipeline per detection device on the DL Streamer
 # Pipeline Server fronted by nginx in the pymavlink stack (docker-compose-pymavlink.yml),
-# without needing to arm the drone via MAVLink and without cameras.yaml: ad-hoc testing
+# without needing to arm the drone via MAVLink and without cameras-pymavlink.yaml: ad-hoc testing
 # of 'make pymav-up' stacks with the pipelines' default video, models and prompt.
-# The cameras of configs/cameras.yaml, started when the vehicle is armed by
+# The cameras of configs/cameras-pymavlink.yaml, started when the vehicle is armed by
 # scripts/mavlink_pipeline_manager.py ('make start-rtsp'), remain the normal way to run
 # this app end to end ('make start-rtsp' also has --start-now to run them without a vehicle).
 #

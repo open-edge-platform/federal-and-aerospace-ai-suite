@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Cameras of the UAV Mission Compute SDK stack (make uavsdk-up): the manager starts them when the SDK reports the
-# vehicle as armed (MQTT uav/<UAV_ID>/telemetry/status). Same format and tools as configs/cameras.yaml
+# vehicle as armed (MQTT uav/<UAV_ID>/telemetry/status). Same format and tools as configs/cameras-pymavlink.yaml
 # (see docs/user-guide/how-to-guides/cameras.md): make check-cameras, make start-rtsp, make cameras-status.
 #
 # The source is an RTSP stream (rtsp:) instead of a video file. {uav_id} is replaced by UAV_ID from .env (default uav-1).

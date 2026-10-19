@@ -86,7 +86,7 @@ services:
       - "./gvapython/telemetry-overlay-pymavlink.py:/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py"
       - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
       - "./scripts/camera_config.py:/home/pipeline-server/scripts/camera_config.py:ro"
-      # The folder with cameras.yaml is mounted, not the file: editors save by replacing the file, and a
+      # The folder with cameras-pymavlink.yaml is mounted, not the file: editors save by replacing the file, and a
       # single-file mount would keep showing the old one inside the container.
       - "./configs:/home/pipeline-server/configs:rw"
       - "/run/udev:/run/udev:ro"
@@ -109,7 +109,7 @@ services:
       - ${GPU_RENDER_DEVICE:-/dev/dri/renderD128}:${GPU_RENDER_DEVICE:-/dev/dri/renderD128}
       - ${NPU_DEVICE:-/dev/null}:${NPU_DEVICE:-/dev/null}
       # live cameras (RealSense, USB webcams): each one set in .env appears under the same path in the
-      # container, so the path in configs/cameras.yaml is the host path
+      # container, so the path in configs/cameras-pymavlink.yaml is the host path
       - ${CAMERA_DEVICE_1:-/dev/null}:${CAMERA_DEVICE_1:-/dev/null}
       - ${CAMERA_DEVICE_2:-/dev/null}:${CAMERA_DEVICE_2:-/dev/null}
       - ${CAMERA_DEVICE_3:-/dev/null}:${CAMERA_DEVICE_3:-/dev/null}

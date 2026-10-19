@@ -2,21 +2,21 @@
 # SPDX-License-Identifier: Apache-2.0
 """
 Starts and stops the DL Streamer pipelines of the configured cameras when the UAV is armed:
-  - ARMED    -> read cameras.yaml and start one pipeline per enabled camera (one after the other)
+  - ARMED    -> read cameras-pymavlink.yaml and start one pipeline per enabled camera (one after the other)
   - DISARMED -> delete the pipelines that were started
 
 The vehicle's armed state comes from MAVLink (default) or, in the UAV Mission Compute SDK stack (ARM_SOURCE=mqtt), from
 the SDK's MQTT telemetry topic uav/<UAV_ID>/telemetry/status ({"armed": true|false}). Cameras whose source is an RTSP
 stream (rtsp: in the file) are only started once that stream can be read.
 
-The cameras come from a YAML file (default /home/pipeline-server/configs/cameras.yaml, see configs/cameras.yaml and
+The cameras come from a YAML file (default /home/pipeline-server/configs/cameras-pymavlink.yaml, see configs/cameras-pymavlink.yaml and
 camera_config.py). The file is re-read every time the vehicle is armed; an edit made while the vehicle is armed
 applies at the next arming. A file with errors never replaces a working configuration.
 
 Usage:
   python3 pipeline_manager.py                 wait for the vehicle, start the cameras on ARM
   python3 pipeline_manager.py --start-now     start the cameras immediately, no vehicle needed (Ctrl+C stops them)
-  python3 pipeline_manager.py --status        show what cameras.yaml asks for next to what is running
+  python3 pipeline_manager.py --status        show what cameras-pymavlink.yaml asks for next to what is running
   python3 pipeline_manager.py --config FILE   use another configuration file
 """
 

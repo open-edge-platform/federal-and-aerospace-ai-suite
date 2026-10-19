@@ -94,7 +94,7 @@ init: ## Create .env from template, auto-detect the host IP, and auto-detect GPU
                                 && echo "$$dev" && break; \
                         done); \
                 if [ -n "$$RS_DEV" ]; then \
-                        echo "✅ USB camera detected: $$RS_DEV (CAMERA_DEVICE_1; use it as device: in configs/cameras.yaml)"; \
+                        echo "✅ USB camera detected: $$RS_DEV (CAMERA_DEVICE_1; use it as device: in configs/cameras-pymavlink.yaml)"; \
                         if grep -q "^CAMERA_DEVICE_1=" .env; then \
                                 sed -i "s|^CAMERA_DEVICE_1=.*|CAMERA_DEVICE_1=$$RS_DEV|" .env; \
                         else \
@@ -202,16 +202,16 @@ uavsdk-down: ## Stop and remove UAV Mission Compute SDK stack (includes volumes)
 
 # ── Pipeline management ───────────────────────────────────────────────────────
 
-start-rtsp: ## Start the cameras in configs/cameras.yaml when the vehicle is armed (the file is re-read at every arming). CAMERAS=<file> uses another file.
+start-rtsp: ## Start the cameras in configs/cameras-pymavlink.yaml when the vehicle is armed (the file is re-read at every arming). CAMERAS=<file> uses another file.
 	-docker exec -it \
 	  -e HOST_IP=$(HOST_IP) \
 	  $(DLSPS) bash -c \
 	  "python3 /home/pipeline-server/scripts/pipeline_manager.py $(if $(CAMERAS),--config $(CAMERAS))"
 
-check-cameras: ## Validate configs/cameras.yaml and show what would run (nothing is started). CAMERAS=<file> checks another file.
+check-cameras: ## Validate configs/cameras-pymavlink.yaml and show what would run (nothing is started). CAMERAS=<file> checks another file.
 	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/camera_config.py check $(CAMERAS)
 
-cameras-status: ## Compare configs/cameras.yaml with the pipelines that are running
+cameras-status: ## Compare configs/cameras-pymavlink.yaml with the pipelines that are running
 	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/pipeline_manager.py --status $(if $(CAMERAS),--config $(CAMERAS))
 
 # ── Convenience alias ─────────────────────────────────────────────────────────

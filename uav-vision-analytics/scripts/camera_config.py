@@ -34,7 +34,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 SCHEMA_VERSION = 1
 RESOURCES_DIR = os.getenv("PIPELINE_RESOURCES_DIR", "/home/pipeline-server/resources")
-DEFAULT_FILE = os.getenv("CAMERAS_CONFIG", "/home/pipeline-server/configs/cameras.yaml")
+DEFAULT_FILE = os.getenv("CAMERAS_CONFIG", "/home/pipeline-server/configs/cameras-pymavlink.yaml")
 PIPELINES_FILE = os.getenv("PIPELINES_CONFIG", "/home/pipeline-server/config.json")
 
 # The pipelines accept these values only through schema patterns, so keep the same rules here.

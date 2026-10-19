@@ -51,7 +51,7 @@
       kind: "Video source", role: "Simulated (or real) drone camera feeding the vision pipelines; MAVLink telemetry is burned into the overlay." },
     dlsps: { p: "oep", x: 36, y: 146, w: 250, h: 146, icon: "chip", t: "DL Streamer", s: ["Pipeline Server", "detect · overlay · caption"],
       ep: ["REST /pipelines", "RTSP :8555 uav-<camera>"], chips: [["pipe", "YOLO11s"], ["pipe", "InternVL2-1B"]],
-      kind: "Vision pipeline service", role: "One pipeline per camera, chosen from cameras.yaml: decode, YOLO11s detection on cpu/gpu/npu, telemetry overlay and, when captioning is on, VLM scene captions on cpu/gpu.",
+      kind: "Vision pipeline service", role: "One pipeline per camera, chosen from cameras-pymavlink.yaml: decode, YOLO11s detection on cpu/gpu/npu, telemetry overlay and, when captioning is on, VLM scene captions on cpu/gpu.",
       runs: "YOLO11s and InternVL2-1B (gvagenai) on the devices each camera is configured for",
       image: "intel/dlstreamer-pipeline-server (+ pymavlink / uavsdk)",
       apis: ["GET /pipelines/status — which cameras are RUNNING (dashboard + live sync)", "GET /pipelines/{id} — model and destination info",
