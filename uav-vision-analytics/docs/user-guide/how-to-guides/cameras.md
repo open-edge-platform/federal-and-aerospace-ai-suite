@@ -125,6 +125,7 @@ The shipped `configs/cameras-pymavlink.yaml` has such a camera, `realsense_camer
     device: /dev/v4l/by-id/usb-Intel_R__RealSense_TM__Depth_Camera_435_Intel_R__RealSense_TM__Depth_Camera_435-video-index0
     width: 1280                      # optional, default 1280
     height: 720                      # optional, default 720
+    fps: 30                          # optional, default 30
     detection: {device: npu}
 ```
 
