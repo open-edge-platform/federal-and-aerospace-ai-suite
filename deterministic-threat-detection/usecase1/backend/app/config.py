@@ -49,3 +49,18 @@ TRAFFIC_CLIENT_TARGET = os.environ.get("TRAFFIC_CLIENT_TARGET", "tsndemo@10.106.
 TRAFFIC_CLIENT_IP = os.environ.get("TRAFFIC_CLIENT_IP", "192.168.5.14")
 IPERF3_BIN = os.environ.get("IPERF3_BIN", "iperf3")
 TRAFFIC_GUARD_S = _int("TRAFFIC_GUARD_S", 3600)
+
+# --- use case 2: live HOTA from the SceneScape stack on this machine ---
+SCENE_ENABLED = os.environ.get("SCENE_ENABLED", "1") == "1"
+SCENE_MQTT_HOST = os.environ.get("SCENE_MQTT_HOST", "127.0.0.1")
+SCENE_MQTT_PORT = _int("SCENE_MQTT_PORT", 1883)
+SCENE_CA = os.environ.get("SCENE_CA", "/certs/scenescape-ca.pem")
+GT_PATH = os.environ.get("GT_PATH", "/data/gtLoc.json")
+HOTA_WINDOW_S = _float("HOTA_WINDOW_S", 10)
+# Camera message -> tracker update delay used to pair them (position error vs the ground truth is flat for 0-200 ms)
+HOTA_LAG_S = _float("HOTA_LAG_S", 0.08)
+
+# Restarts a camera's pipeline when its instance ended (e.g. after the relay's RTSP connection reset).
+WATCHDOG_ENABLED = os.environ.get("WATCHDOG_ENABLED", "1") == "1"
+DLSPS_URL = os.environ.get("DLSPS_URL", "http://127.0.0.1:8082")
+WATCHDOG_CAMERAS = {"Cam_x1_0": "hota-cam1", "Cam_x2_0": "hota-cam2"}

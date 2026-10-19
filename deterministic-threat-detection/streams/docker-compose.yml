@@ -21,8 +21,10 @@ services:
       START_AT: ${START_AT:-0}
       RTSP_PORT: ${RTSP_PORT:-8554}
       BIND_IP: ${BIND_IP:-}
-      # mediamtx: RTSP over TCP only, every other listener off (avoids port clashes on the host)
-      MTX_RTSPTRANSPORTS: tcp
+      # mediamtx: RTSP over UDP and TCP, every other listener off (avoids port clashes on the host).
+      # UDP is what GStreamer's rtspsrc tries first (the old demo's behaviour): lost packets are not
+      # resent, so congestion shows up as damaged pictures. Set RTSP_TRANSPORTS=tcp for a lossless pull.
+      MTX_RTSPTRANSPORTS: ${RTSP_TRANSPORTS:-udp,tcp}
       MTX_RTSPADDRESS: ${BIND_IP:-}:${RTSP_PORT:-8554}
       MTX_RTMP: "no"
       MTX_HLS: "no"

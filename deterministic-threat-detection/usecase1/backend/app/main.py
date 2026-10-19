@@ -10,15 +10,18 @@ import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import config
 from .controllers.switch import create_switch
 from .controllers.traffic import IperfServer, TrafficController
+from .hota import LiveHota, load_ground_truth
 from .latency import LatencyTracker
 from .mqtt_source import MqttSource
+from .pipeline_watchdog import PipelineWatchdog
+from .scene_source import SceneSource
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("main")
@@ -54,6 +57,16 @@ def create_app(start_mqtt=True):
     )
     switch = create_switch(config)
     source = MqttSource(tracker, config.MQTT_HOST, config.MQTT_PORT, config.MQTT_TOPIC)
+    scene = None
+    if config.SCENE_ENABLED and start_mqtt:
+        try:
+            hota = LiveHota(load_ground_truth(config.GT_PATH), window_s=config.HOTA_WINDOW_S, lag_s=config.HOTA_LAG_S)
+            scene = SceneSource(hota, config.SCENE_MQTT_HOST, config.SCENE_MQTT_PORT, config.SCENE_CA)
+            scene.frame_cameras = tuple(config.WATCHDOG_CAMERAS)
+            if config.WATCHDOG_ENABLED:
+                scene.watchdog = PipelineWatchdog(config.DLSPS_URL, config.WATCHDOG_CAMERAS)
+        except (OSError, ValueError, ImportError) as exc:  # use case 1 keeps working without use case 2
+            log.warning("use case 2 (HOTA) disabled: %s", exc)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -61,15 +74,23 @@ def create_app(start_mqtt=True):
             source.start()
         switch.start()
         traffic.start()
+        if scene:
+            scene.start()
+            if scene.watchdog:
+                scene.watchdog.start()
         yield
         traffic.shutdown()
         switch.stop()
+        if scene:
+            scene.stop()
+            if scene.watchdog:
+                scene.watchdog.stop()
         if start_mqtt:
             source.stop()
 
     app = FastAPI(title="Deterministic Threat Detection", lifespan=lifespan)
     app.state.tracker, app.state.traffic = tracker, traffic
-    app.state.switch, app.state.source = switch, source
+    app.state.switch, app.state.source, app.state.scene = switch, source, scene
 
     def status():
         return {
@@ -77,6 +98,8 @@ def create_app(start_mqtt=True):
             "bad_messages": source.bad_messages,
             "traffic": traffic.state(),
             "qbv": switch.state(),
+            "scene": scene.status() if scene else None,
+            "hota": scene.latest if scene else None,
         }
 
     @app.get("/api/config")
@@ -102,6 +125,37 @@ def create_app(start_mqtt=True):
     def set_traffic(req: TrafficRequest):
         traffic.set_rate(req.rate_mbps)
         return traffic.state()
+
+    @app.get("/api/hota")
+    def get_hota():
+        if scene is None:
+            raise HTTPException(status_code=404, detail="use case 2 (HOTA) is not enabled")
+        return {"now": time.time(), "window_s": config.HOTA_WINDOW_S, "latest": scene.latest,
+                "status": scene.status(), "points": scene.points_since(0)}
+
+    @app.get("/api/frames/{cam}.mjpg")
+    async def frames(cam: str):
+        """The pipeline's own decoded + annotated frames as a motion-JPEG stream. Unlike the browser's
+        WebRTC decoder, this shows what the tracker sees, including damage from lost packets."""
+        if scene is None or cam not in config.WATCHDOG_CAMERAS:
+            raise HTTPException(status_code=404, detail="unknown camera or use case 2 disabled")
+
+        async def stream():
+            scene.viewers += 1
+            last = 0.0
+            try:
+                while True:
+                    item = scene.latest_frame(cam)
+                    if item and item[0] > last:
+                        last, jpeg = item
+                        yield (b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: "
+                               + str(len(jpeg)).encode() + b"\r\n\r\n" + jpeg + b"\r\n")
+                    await asyncio.sleep(0.04)
+            finally:
+                scene.viewers -= 1
+
+        return StreamingResponse(stream(), media_type="multipart/x-mixed-replace; boundary=frame",
+                                 headers={"Cache-Control": "no-cache"})
 
     @app.get("/api/qbv")
     def get_qbv():
@@ -132,6 +186,7 @@ def create_app(start_mqtt=True):
                     "now": now,
                     "points": tracker.points_since(last),
                     "sources": tracker.snapshot(now),
+                    "hota_points": scene.points_since(last) if scene else [],
                     **status(),
                 }
                 last = now

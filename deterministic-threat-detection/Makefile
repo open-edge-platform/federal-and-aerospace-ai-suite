@@ -16,6 +16,8 @@ SHELL := /bin/bash
 TSN_IFACE ?= tsn0.1
 HOST_IP ?= $(or $(shell ip -4 -o addr show dev $(TSN_IFACE) 2>/dev/null | awk '{split($$4,a,"/"); print a[1]; exit}'),$(shell hostname -I | cut -f1 -d' '))
 SVC ?=
+# Address of this machine on the lab network (default route), advertised for WebRTC
+LAB_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($$i=="src") print $$(i+1)}')
 # Remote RTSP cameras (host:camera pairs), started in lockstep over ssh by streams/start-synced-streams.sh
 STREAMS ?= 1
 STREAM_HOSTS ?= tsn-machine-2:Cam_x1_0 tsn-machine-3:Cam_x2_0
@@ -55,6 +57,8 @@ env: secrets
 	@[ -f .env ] || cp .env.example .env
 	sed -i "s#^SUPASS=.*#SUPASS=$$(cat $(SECRETS_DIR)/supass)#" .env
 	sed -i "s#^HOST_IP=.*#HOST_IP=$(HOST_IP)#" .env
+	grep -q "^LAB_IP=" .env || echo "LAB_IP=" >> .env
+	sed -i "s#^LAB_IP=.*#LAB_IP=$(LAB_IP)#" .env
 	sed -i "s#^UID=.*#UID=#; s#^GID=.*#GID=#" .env
 	sed -i "s#^ALLOWED_HOSTS=.*#ALLOWED_HOSTS=$(ALLOWED_HOSTS)#" .env
 

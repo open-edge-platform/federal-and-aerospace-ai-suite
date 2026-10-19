@@ -24,6 +24,103 @@
     },
   });
 
+  // ---- use case 2: HOTA chart ------------------------------------------------------------------
+  const hotaChart = new Chart($('hota-chart'), {
+    type: 'line',
+    data: { datasets: [
+      { label: 'HOTA', data: [], borderColor: '#3ecf8e', backgroundColor: '#3ecf8e', borderWidth: 2.2 },
+      { label: 'DetA (detection)', data: [], borderColor: '#4da3ff', backgroundColor: '#4da3ff', borderDash: [5, 4] },
+      { label: 'AssA (association)', data: [], borderColor: '#f5a623', backgroundColor: '#f5a623', borderDash: [5, 4] },
+    ] },
+    options: {
+      animation: false, parsing: false, normalized: true, maintainAspectRatio: false,
+      elements: { point: { radius: 0 }, line: { borderWidth: 1.6, tension: 0.15 } },
+      scales: {
+        x: { type: 'linear', ticks: { color: '#8b98a7', maxTicksLimit: 8, callback: (v) => `${Math.round(v - state.lastNow)} s` },
+             grid: { color: '#212b36' } },
+        y: { min: 0, max: 1, ticks: { color: '#8b98a7' }, grid: { color: '#212b36' } },
+      },
+      plugins: { legend: { labels: { color: '#e6edf3' } } },
+    },
+  });
+  const HOTA_HISTORY_S = 300;
+
+  function addHotaPoints(points) {
+    for (const [t, hota, det, ass] of points) {
+      hotaChart.data.datasets[0].data.push({ x: t, y: hota });
+      hotaChart.data.datasets[1].data.push({ x: t, y: det });
+      hotaChart.data.datasets[2].data.push({ x: t, y: ass });
+    }
+    const cutoff = state.lastNow - HOTA_HISTORY_S;
+    for (const ds of hotaChart.data.datasets) while (ds.data.length && ds.data[0].x < cutoff) ds.data.shift();
+  }
+
+  function renderHota(msg) {
+    const sc = msg.scene, h = msg.hota;
+    const off = $('uc2-offline');
+    if (!sc) {
+      off.textContent = 'Use case 2 is not enabled in this dashboard (SCENE_ENABLED=0 or the ground truth is missing).';
+    } else if (!sc.connected) {
+      off.textContent = 'The SceneScape stack is not reachable on this machine. Start use case 2 (make up) to see tracking quality.';
+    } else if (sc.scene_age_s === null || sc.scene_age_s > 5) {
+      off.textContent = 'No tracked output from SceneScape for the last few seconds - the cameras or the pipelines are stalled.';
+    } else {
+      off.textContent = '';
+    }
+    off.classList.toggle('hidden', !off.textContent);
+    if (sc) {
+      $('scene-rate').innerHTML = `${sc.scene_hz}<small> tracker updates/s</small>`;
+      const cams = Object.entries(sc.cameras || {}).map(([c, v]) => `${c.replace('Cam_', '')} ${v.fps}/s${v.age_s > 3 ? ' (stalled)' : ''}`);
+      const rs = sc.pipelines ? Object.values(sc.pipelines.restarts).reduce((a, b) => a + b, 0) : 0;
+      $('scene-cam').textContent = `camera frames: ${cams.join(' · ') || '–'}` + (rs ? ` · pipeline restarts: ${rs}` : '');
+    }
+    if (h) {
+      $('hota-value').textContent = h.HOTA.toFixed(2);
+      $('hota-det').textContent = `DetA ${h.DetA.toFixed(2)}`;
+      $('hota-ass').textContent = `AssA ${h.AssA.toFixed(2)}`;
+      $('hota-covered').textContent = `${Math.round(h.covered * 100)} %`;
+      $('hota-frames').textContent = `${h.frames} frames scored`;
+    } else {
+      $('hota-value').textContent = '–';
+      $('hota-covered').textContent = '–';
+    }
+    if (activeTab === 'uc2') { hotaChart.options.scales.x.min = state.lastNow - 120; hotaChart.options.scales.x.max = state.lastNow; hotaChart.update('none'); }
+  }
+
+  // ---- tabs ------------------------------------------------------------------------------------
+  let activeTab = 'uc1';
+  function showTab(name) {
+    activeTab = name === 'uc2' ? 'uc2' : 'uc1';
+    for (const t of document.querySelectorAll('.tab')) t.setAttribute('aria-selected', String(t.dataset.tab === activeTab));
+    $('view-uc1').classList.toggle('hidden', activeTab !== 'uc1');
+    $('view-uc2').classList.toggle('hidden', activeTab !== 'uc2');
+    location.hash = activeTab;
+    chart.resize(); hotaChart.resize();
+    setVideo(activeTab === 'uc2');
+  }
+
+  // The player pages come from mediamtx on this machine (port 8889). They are only loaded while the
+  // tab is open, so a hidden tab does not keep two WebRTC streams running.
+  const VIDEO_PORT = 8889;
+  function setVideo(on) {
+    const frames = { 'video-cam1': 'Cam_x1_0', 'video-cam2': 'Cam_x2_0' };
+    for (const [id, cam] of Object.entries(frames)) {
+      const el = $(id);
+      const url = on ? `http://${location.hostname}:${VIDEO_PORT}/${cam}/?controls=false` : 'about:blank';
+      if (el.getAttribute('src') !== url) el.setAttribute('src', url);
+    }
+    // Motion-JPEG of the frames the pipelines decoded (served by this backend). Opening it makes the
+    // backend request frames; closing it (blank src) stops the requests.
+    const decoded = { 'decoded-cam1': 'Cam_x1_0', 'decoded-cam2': 'Cam_x2_0' };
+    for (const [id, cam] of Object.entries(decoded)) {
+      const el = $(id);
+      if (on) { if (!el.getAttribute('src')) el.setAttribute('src', `/api/frames/${cam}.mjpg`); }
+      else el.removeAttribute('src');
+    }
+  }
+  for (const t of document.querySelectorAll('.tab')) t.addEventListener('click', () => showTab(t.dataset.tab));
+  window.addEventListener('hashchange', () => showTab(location.hash.replace('#', '')));
+
   function series(name) {
     if (!state.series[name]) {
       const color = COLORS[state.colorIdx++ % COLORS.length];
@@ -202,11 +299,19 @@
     const hist = await (await fetch('/api/history')).json();
     state.lastNow = hist.now;
     addPoints(hist.points, state.cfg.history_s);
+    try {
+      const h = await (await fetch('/api/hota')).json();
+      state.lastNow = h.now; addHotaPoints(h.points);
+      $('hota-window').textContent = h.window_s;
+    } catch (e) { /* use case 2 disabled */ }
+    showTab(location.hash.replace('#', ''));
     const es = new EventSource('/api/stream');
     es.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
       state.lastNow = msg.now;
       addPoints(msg.points, state.cfg.history_s);
+      addHotaPoints(msg.hota_points || []);
+      renderHota(msg);
       renderKpis(msg.sources);
       renderControls(msg);
       render(msg.now);

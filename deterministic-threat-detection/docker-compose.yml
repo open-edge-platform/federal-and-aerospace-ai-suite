@@ -202,15 +202,37 @@ services:
 
   # Two HOTA pipelines (hota-cam1 / hota-cam2): RTSP -> SEI frame number ->
   # person detection -> MQTT. CPU only; start them via config.json autostart.
+  # Pulls each camera stream once over the TSN VLAN and serves it as local RTSP (for the pipelines)
+  # and as WebRTC (for the dashboard in the browser).
+  mediamtx:
+    image: docker.io/bluenviron/mediamtx:1.19.2
+    networks:
+      scenescape:
+        aliases:
+          - mediamtx
+    ports:
+      - "8889:8889"
+      - "8189:8189/udp"
+    environment:
+      # address of this host as the browser sees it, advertised in the WebRTC ICE candidates
+      MTX_WEBRTCADDITIONALHOSTS: ${LAB_IP:-}
+    volumes:
+      - ./src/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+    restart: on-failure:5
+
   dlstreamer-pipeline-server:
     image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE}
     networks:
       - scenescape
+    ports:
+      # REST API on loopback only: the dashboard's watchdog restarts ended pipelines through it
+      - "127.0.0.1:8082:8080"
     tty: true
     entrypoint: ["./run.sh"]
     depends_on:
       - broker
       - ntpserver
+      - mediamtx
     healthcheck:
       test: ["CMD", "curl", "-I", "-s", "http://localhost:8080/pipelines"]
       interval: 10s
@@ -228,8 +250,8 @@ services:
       - MQTT_PORT=1883
       - http_proxy=${http_proxy:-}
       - https_proxy=${https_proxy:-}
-      - no_proxy=.scenescape.intel.com,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
-      - NO_PROXY=.scenescape.intel.com,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
+      - no_proxy=.scenescape.intel.com,mediamtx,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
+      - NO_PROXY=.scenescape.intel.com,mediamtx,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
     volumes:
       - ./src/dlstreamer-pipeline-server/config.json:/home/pipeline-server/config.json:ro
       - ./src/dlstreamer-pipeline-server/gstplugins:/home/sscape/python:ro

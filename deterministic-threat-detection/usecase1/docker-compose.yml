@@ -36,6 +36,11 @@ services:
       TRAFFIC_MAX_MBPS: ${TRAFFIC_MAX_MBPS:-1000}
       SWITCH_MODE: ${SWITCH_MODE:-moxa}
       SWITCH_ALLOW_WRITE: ${SWITCH_ALLOW_WRITE:-0}
+      SCENE_ENABLED: ${SCENE_ENABLED:-1}
+      HOTA_WINDOW_S: ${HOTA_WINDOW_S:-10}
     volumes:
       - ${HOME}/.ssh:/home/app/.ssh:ro
+      # use case 2: ground truth for the live HOTA and the SceneScape broker CA (TLS)
+      - ../usecase2/data:/data:ro
+      - ../src/secrets/certs/scenescape-ca.pem:/certs/scenescape-ca.pem:ro
     restart: unless-stopped
