@@ -139,11 +139,7 @@ code { color: var(--accent); }
   gap: 8px;
   font-weight: 600;
   font-size: 13px;
-}
-.device-card-meta {
-  color: var(--muted);
-  font-size: 12px;
-  text-align: right;
+  min-width: 0;
 }
 .device-video {
   width: 100%;
@@ -722,23 +718,9 @@ code { color: var(--accent); }
   .arch-devices { grid-template-columns: 1fr; }
 }
 
-/* Per-card full-screen video */
-.device-card-header-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.device-expand-btn { padding: 3px 5px; line-height: 0; flex-shrink: 0; }
-.device-expand-btn:disabled { opacity: 0.35; cursor: default; }
+.device-card-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
+.device-info-btn { padding: 3px 5px; line-height: 0; flex-shrink: 0; cursor: help; }
 .device-video-stage { position: relative; flex-shrink: 0; width: 100%; aspect-ratio: 16 / 9; }
-.device-exit-fullscreen { display: none; }
-.device-video-stage:fullscreen { background: #000; aspect-ratio: auto; }
-.device-video-stage:fullscreen .device-video-container { width: 100%; height: 100%; }
-.device-video-stage:fullscreen .device-video,
-.device-video-stage:fullscreen .device-video-webrtc,
-.device-video-stage:fullscreen .device-video-placeholder { width: 100%; height: 100%; max-height: none; border: 0; }
-.device-video-stage:fullscreen .device-exit-fullscreen {
-  display: block; position: absolute; top: 16px; right: 16px; z-index: 1;
-  background: rgba(11, 15, 20, 0.7); backdrop-filter: blur(4px); color: var(--text);
-  opacity: 0.6; transition: opacity 0.15s;
-}
-.device-video-stage:fullscreen .device-exit-fullscreen:hover { opacity: 1; }
 
 /* Utilization panel headings: drone vs ground-station icon badges */
 .panel-title { display: flex; align-items: center; gap: 10px; }
@@ -755,7 +737,7 @@ code { color: var(--accent); }
   display: inline-block; padding: 2px 9px; border-radius: 6px; border: 1px solid;
   font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
 }
-/* Keep the card header compact now that it holds a badge and expand button */
+/* Keep the card header compact with badges and pipeline information. */
 .device-card.panel { padding-top: 8px; }
 .device-card .device-card-header { padding-top: 6px; padding-bottom: 6px; }
 /* Same colors as the CPU / GPU-0 / NPU lines in the utilization charts (app.js, utils/charts.js) */
@@ -765,14 +747,12 @@ code { color: var(--accent); }
 .device-badge-vlm { color: #7ee8a8; background: rgba(126, 232, 168, 0.10); border-color: rgba(126, 232, 168, 0.35); }
 .device-badge-live { color: #f0b86e; background: rgba(240, 184, 110, 0.10); border-color: rgba(240, 184, 110, 0.35); }
 .device-badge-off { color: #8ca0c2; background: rgba(140, 160, 194, 0.10); border-color: rgba(140, 160, 194, 0.35); }
-.camera-name { font-weight: 600; text-transform: capitalize; margin-right: 8px; }
-.device-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; vertical-align: middle; }
+.camera-name { font-weight: 600; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.device-badges { display: inline-flex; gap: 6px; white-space: nowrap; vertical-align: middle; }
 .caption-panel[hidden] { display: none; }
-.device-card-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
 
 /* Card body rhythm: gap under the video, and header/video/captions share the
    card's 16px inner edge instead of each adding their own inset. */
 .device-card .device-card-header { padding-left: 0; padding-right: 0; border-bottom: 0; margin-bottom: 8px; }
 .device-video-stage { margin-bottom: 12px; border-radius: 6px; overflow: hidden; }
-.device-video-stage:fullscreen { border-radius: 0; }
 .device-card .caption-panel { border-top: 0; padding: 0; }

@@ -28,7 +28,8 @@ that host until you enter its IP in the dashboard and press **Connect**.
 - One card per camera (a running pipeline with an RTSP stream, shown as `uav-<name>`),
   with the devices of its pipeline as badges (detection device, VLM device, `LIVE` for
   a live camera such as a RealSense, overlay off), and the models, prompt and video or
-  camera device in the tooltip (from the DL Streamer
+  camera device in the top-right information icon's tooltip, along with the
+  pipeline state and name (from the DL Streamer
   Pipeline Server's REST API and the start request of each pipeline).
 - CPU/GPU/NPU utilization, proxied from `metrics-manager`.
 - **Live Natural Language Search**: the **Search Videos** button (top bar or side
