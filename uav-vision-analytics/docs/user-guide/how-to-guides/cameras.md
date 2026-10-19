@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Configure the Cameras
 
-`make start-rtsp` streams the cameras listed in `configs/cameras.yaml` when the vehicle is armed. For every camera you
+`make start-rtsp` streams the cameras listed in `configs/cameras-pymavlink.yaml` when the vehicle is armed. For every camera you
 choose its source (a video file or a live camera such as an Intel RealSense),  which device runs object detection, whether a vision-language model (VLM) writes scene
 captions (and on which device, with which model and prompt), and whether detections are drawn on the stream. Edit the
 file, apply it, and check the result; no pipeline definition has to be touched.
@@ -73,7 +73,7 @@ its detection device, so the file chooses a pipeline and never edits one.
    prints every problem in the file, or what would run:
 
    ```text
-   /home/pipeline-server/configs/cameras.yaml: valid, 3 camera(s) enabled
+   /home/pipeline-server/configs/cameras-pymavlink.yaml: valid, 3 camera(s) enabled
    camera         pipeline                      stream path        overlay  detection / captioning
    front_camera   uav_object_detection_npu_gpu  uav-front-camera   on       NPU yolo11s.xml + GPU InternVL2-1B
    ...
@@ -84,7 +84,7 @@ its detection device, so the file chooses a pipeline and never edits one.
 2. **Apply it.** `make start-rtsp` reads the file when it starts **and again every time the vehicle is armed**, so
    after an edit either start `make start-rtsp` again or disarm and arm. The manager prints what it found:
 
-   * an edit while disarmed is loaded immediately (`[config] cameras.yaml: 3 camera(s) enabled` and the table);
+   * an edit while disarmed is loaded immediately (`[config] cameras-pymavlink.yaml: 3 camera(s) enabled` and the table);
    * an edit that is not valid is refused and the previous configuration stays (`[config] ... has errors, keeping the
      previous configuration:` followed by the problems), so a typo never leaves the vehicle without video;
    * an edit while armed is noted (`[config] changed while armed: it applies the next time the vehicle is armed`);
@@ -118,7 +118,7 @@ its detection device, so the file chooses a pipeline and never edits one.
 A live camera is a camera whose source is `device` instead of `video`. Everything else (detection, captioning, overlay)
 is the same, and RealSense cameras and ordinary UVC webcams are treated alike. They run the `uav_camera_*` pipelines.
 
-The shipped `configs/cameras.yaml` has such a camera, `realsense_camera`, disabled; set `enabled: true` once a camera is connected.
+The shipped `configs/cameras-pymavlink.yaml` has such a camera, `realsense_camera`, disabled; set `enabled: true` once a camera is connected.
 
 ```yaml
   - id: realsense_front

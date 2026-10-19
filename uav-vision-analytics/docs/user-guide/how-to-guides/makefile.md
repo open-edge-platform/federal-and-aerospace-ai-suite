@@ -20,9 +20,9 @@ Run `make help` (or just `make`) to list all targets with descriptions.
 | `make pymav-down` | Stop and remove the pymavlink stack (includes volumes) |
 | `make uavsdk-up` | Start the uav-mission-compute-sdk stack |
 | `make uavsdk-down` | Stop and remove the uav-mission-compute-sdk stack (includes volumes) |
-| `make start-rtsp` | Start the cameras of `configs/cameras.yaml` (RTSP output) when the vehicle is armed |
-| `make check-cameras` | Validate `configs/cameras.yaml` and show what would run |
-| `make cameras-status` | Compare `configs/cameras.yaml` with the running pipelines |
+| `make start-rtsp` | Start the cameras of `configs/cameras-pymavlink.yaml` (RTSP output) when the vehicle is armed |
+| `make check-cameras` | Validate `configs/cameras-pymavlink.yaml` and show what would run |
+| `make cameras-status` | Compare `configs/cameras-pymavlink.yaml` with the running pipelines |
 | `make build` | Alias for `pymav-up` |
 
 ## Target Details
@@ -110,7 +110,7 @@ make uavsdk-up
 ### `make start-rtsp`
 
 Executes `pipeline_manager.py` inside the running `dlstreamer-pipeline-server` container. It monitors the MAVLink
-ARMED/DISARMED state and starts/stops one inference pipeline per camera of `configs/cameras.yaml`, each with
+ARMED/DISARMED state and starts/stops one inference pipeline per camera of `configs/cameras-pymavlink.yaml`, each with
 **RTSP frame output** on port `8555` (`rtsp://<HOST_IP>:8555/uav-<camera>`). The file is read when the manager starts
 and again at every arming, so after an edit you either run `make start-rtsp` again or disarm and arm. `CAMERAS=<file>`
 uses another configuration file.

@@ -127,10 +127,10 @@ Two options are available depending on your use case:
 
 Runs `pipeline_manager.py` inside the DL Streamer Pipeline Server container. It monitors the drone's ARMED/DISARMED state and automatically starts and stops inference pipelines. Annotated frames are served as RTSP on port `8555`.
 
-`make start-rtsp` starts the cameras listed in [`configs/cameras.yaml`](../../../configs/cameras.yaml): one pipeline per camera, each streaming on `rtsp://<HOST_IP>:8555/uav-<camera>`. The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`) with detection on the NPU and scene captions from the VLM on the GPU. Edit the file to choose the video, the detection and captioning devices and models, the prompt and the overlay of each camera, see [Configure the Cameras](../how-to-guides/cameras.md):
+`make start-rtsp` starts the cameras listed in [`configs/cameras-pymavlink.yaml`](../../../configs/cameras-pymavlink.yaml): one pipeline per camera, each streaming on `rtsp://<HOST_IP>:8555/uav-<camera>`. The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`) with detection on the NPU and scene captions from the VLM on the GPU. Edit the file to choose the video, the detection and captioning devices and models, the prompt and the overlay of each camera, see [Configure the Cameras](../how-to-guides/cameras.md):
 
 ```bash
-make check-cameras     # validate configs/cameras.yaml and show what would run (nothing is started)
+make check-cameras     # validate configs/cameras-pymavlink.yaml and show what would run (nothing is started)
 make start-rtsp        # start the cameras when the vehicle is armed (the file is re-read at every arming)
 make cameras-status    # compare the file with the running pipelines
 ```
@@ -168,7 +168,7 @@ Install ffmpeg first if not present using `sudo apt install ffmpeg`.
 Any of the annotated streams can be viewed with `ffplay <RTSP_PATH>`:
 
 ```bash
-ffplay rtsp://<HOST_IP>:8555/uav-front-camera   # one stream per camera of configs/cameras.yaml
+ffplay rtsp://<HOST_IP>:8555/uav-front-camera   # one stream per camera of configs/cameras-pymavlink.yaml
 ffplay rtsp://<HOST_IP>:8555/uav-bottom-camera
 ffplay rtsp://<HOST_IP>:8555/uav-back-camera
 ```
@@ -218,7 +218,7 @@ make pymav-down
 | `uav_camera_npu`, `uav_camera_npu_gpu` | `npu` | none / `gpu` | Live camera (Intel RealSense or USB webcam) |
 
 All of them publish RTSP on `:8555`. The camera pipelines for the CPU and GPU are in `configs/config-pymavlink-realsense.json`.
-`make start-rtsp` picks the pipeline for each camera in `configs/cameras.yaml`
+`make start-rtsp` picks the pipeline for each camera in `configs/cameras-pymavlink.yaml`
 ([Configure the cameras](../how-to-guides/cameras.md)).
 
 > [!NOTE]

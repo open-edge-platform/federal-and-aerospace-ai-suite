@@ -21,10 +21,10 @@ In QGroundControl, `Click on Left top Q icon` → `Settings` → `Video` → `So
 → `select "RTSP Video Stream"` in the dropdown. Then in RTSP URL enter the URL
 for the desired pipeline.
 
-URLs of the cameras (`rtsp://<HOST_IP>:8555/uav-<camera>`, one per camera of `configs/cameras.yaml`):
+URLs of the cameras (`rtsp://<HOST_IP>:8555/uav-<camera>`, one per camera of `configs/cameras-pymavlink.yaml`):
 
 ```text
-rtsp://<HOST_IP>:8555/uav-front-camera    # one stream per camera of configs/cameras.yaml
+rtsp://<HOST_IP>:8555/uav-front-camera    # one stream per camera of configs/cameras-pymavlink.yaml
 rtsp://<HOST_IP>:8555/uav-bottom-camera
 rtsp://<HOST_IP>:8555/uav-back-camera
 ```

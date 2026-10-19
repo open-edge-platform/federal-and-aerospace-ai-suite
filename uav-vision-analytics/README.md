@@ -101,11 +101,11 @@ make uavsdk-up
 ### Step 3: Start the cameras
 
 ```bash
-make check-cameras   # validate configs/cameras.yaml and show what would run (nothing is started)
+make check-cameras   # validate configs/cameras-pymavlink.yaml and show what would run (nothing is started)
 make start-rtsp      # start the cameras when the vehicle is armed
 ```
 
-The cameras come from [`configs/cameras.yaml`](configs/cameras.yaml): for each one the video, the device and model that
+The cameras come from [`configs/cameras-pymavlink.yaml`](configs/cameras-pymavlink.yaml): for each one the video, the device and model that
 detect objects, whether a VLM writes scene captions (device, model, prompt) and whether detections are drawn on the stream.
 The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`), detection on the NPU and captions from
 the VLM on the GPU, so arming the vehicle is all that is needed. After editing the file, `make check-cameras` validates
@@ -118,7 +118,7 @@ camera on MQTT `uav/caption/<camera>`. Captions need the VLM models: run `make v
 ### Using your own videos
 
 The cameras play looping `.avi` files from `resources/videos/` (`uav_sample_front.avi`,
-`uav_sample_bottom.avi`, `uav_sample_back.avi` in the shipped `configs/cameras.yaml`). To use your own footage
+`uav_sample_bottom.avi`, `uav_sample_back.avi` in the shipped `configs/cameras-pymavlink.yaml`). To use your own footage
 in any format ffmpeg can read (`.mp4`, `.mov`, `.mkv`, `.avi`, `.ts`, ...), convert it with:
 
 ```bash
@@ -135,7 +135,7 @@ required. Restart the cameras (`make start-rtsp`) after replacing a file. See
 
 ### Starting pipelines without arming the drone
 
-`make start-rtsp` waits for the vehicle to be armed. To run the cameras of `configs/cameras.yaml` right away, without
+`make start-rtsp` waits for the vehicle to be armed. To run the cameras of `configs/cameras-pymavlink.yaml` right away, without
 a vehicle (Ctrl+C stops them):
 
 ```bash
@@ -165,7 +165,7 @@ and `metrics-manager` no longer publish ports directly to the host.
 | Service | URL / Path | Notes |
 |---------|-----------|-------|
 | DL Streamer Pipeline Server REST API | `https://<HOST_IP>/` | Pipeline control and status, proxied to `dlstreamer-pipeline-server:8081` |
-| RTSP annotated streams | `rtsp://<HOST_IP>:8555/uav-<camera>` | One stream per camera of `configs/cameras.yaml`: detection + telemetry overlay output (H.264; the overlay can be switched off per camera); TCP passthrough via nginx `stream {}` |
+| RTSP annotated streams | `rtsp://<HOST_IP>:8555/uav-<camera>` | One stream per camera of `configs/cameras-pymavlink.yaml`: detection + telemetry overlay output (H.264; the overlay can be switched off per camera); TCP passthrough via nginx `stream {}` |
 | MQTT scene captions (cameras with captioning on) | `mqtt://<HOST_IP>:1883`, topic `uav/caption/<camera>` | VLM-generated natural-language scene description from the raw (non-overlaid) video; one topic per camera; TCP passthrough via nginx `stream {}` to the `broker` container (e.g. `mosquitto_sub -h <HOST_IP> -t uav/caption/cpu -v`) |
 | Metrics manager SSE stream (Standalone mode only) | `https://<HOST_IP>/metrics/stream` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |
 | Metrics manager REST snapshot (Standalone mode only) | `https://<HOST_IP>/api/v1/metrics/latest` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |
@@ -190,9 +190,9 @@ make pymav-up       Start standalone pymavlink stack (PX4 SITL + broker + DL Str
 make pymav-down     Stop and remove pymavlink stack (includes volumes)
 make uavsdk-up      Start UAV Mission Compute SDK stack (requires uav-mission-compute-sdk running first)
 make uavsdk-down    Stop and remove UAV Mission Compute SDK stack (includes volumes)
-make start-rtsp     Start the cameras of configs/cameras.yaml when the vehicle is armed (the file is re-read at every arming)
-make check-cameras  Validate configs/cameras.yaml and show what would run
-make cameras-status Compare configs/cameras.yaml with the pipelines that are running
+make start-rtsp     Start the cameras of configs/cameras-pymavlink.yaml when the vehicle is armed (the file is re-read at every arming)
+make check-cameras  Validate configs/cameras-pymavlink.yaml and show what would run
+make cameras-status Compare configs/cameras-pymavlink.yaml with the pipelines that are running
 make build          Alias: start the default pymavlink stack
 ```
 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Intel RealSense — UAV Vision Analytics
 
-A RealSense (or any UVC webcam) is a live camera in [`configs/cameras.yaml`](../../../configs/cameras.yaml): the camera has a
+A RealSense (or any UVC webcam) is a live camera in [`configs/cameras-pymavlink.yaml`](../../../configs/cameras-pymavlink.yaml): the camera has a
 `device` instead of a `video` file. The settings are described in [Configure the cameras](./cameras.md#live-cameras-realsense-usb-webcams);
 this page is the short walk-through.
 
@@ -32,7 +32,7 @@ See [System Requirements](../get-started/system-requirements.md) for the full li
    make pymav-up
    ```
 
-3. **Enable the camera** in `configs/cameras.yaml` (it ships as `realsense_camera`, disabled), with the same path as `device:`,
+3. **Enable the camera** in `configs/cameras-pymavlink.yaml` (it ships as `realsense_camera`, disabled), with the same path as `device:`,
    then check and start:
 
    ```bash

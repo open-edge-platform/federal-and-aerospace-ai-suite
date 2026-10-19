@@ -118,7 +118,7 @@ Monitors the MAVLink HEARTBEAT `base_mode` flag for `MAV_MODE_FLAG_SAFETY_ARMED`
 Only RTSP output is supported (there is no `--sink` option).
 
 **Cameras:** the pipelines are not hard-coded. `camera_config.py` (next to the manager) loads and validates
-`configs/cameras.yaml` (mounted at `/home/pipeline-server/configs/cameras.yaml`) and returns one plan per enabled camera: the
+`configs/cameras-pymavlink.yaml` (mounted at `/home/pipeline-server/configs/cameras-pymavlink.yaml`) and returns one plan per enabled camera: the
 pipeline (`uav_object_detection_<det>` or `uav_object_detection_<det>_<vlm>`), its start request and the RTSP path
 `uav-<camera>`. The manager re-reads the file at every arming and keeps the last good configuration when the file is broken.
 

@@ -8,7 +8,7 @@ Learn more about:
 - [Makefile Reference](./how-to-guides/makefile.md) — Shorthand targets for
   model setup, stack management, and pipeline control
 - [Configure the Cameras](./how-to-guides/cameras.md) — Choose each camera's video, detection and
-  captioning devices, models and prompt in `configs/cameras.yaml`
+  captioning devices, models and prompt in `configs/cameras-pymavlink.yaml`
 - [Use Your Own Videos](./how-to-guides/convert-videos.md) — Convert an mp4, mkv, avi, or other
   video into the format the pipelines use
 - [Intel RealSense Camera](./how-to-guides/realsense-guide.md) — Connect and
