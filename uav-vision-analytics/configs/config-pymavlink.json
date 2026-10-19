@@ -479,7 +479,7 @@
                 "name": "uav_camera_npu",
                 "source": "gstreamer",
                 "queue_maxsize": 50,
-                "pipeline": "v4l2src device={parameters[device]} ! video/x-raw,width={parameters[camera_width]},height={parameters[camera_height]} ! videoconvert ! video/x-raw,format=NV12 ! queue ! gvadetect device=NPU name=detection model-instance-id={parameters[detection_instance_id]} model={parameters[detection_model]} inference-region=full-frame inference-interval=1 batch-size=1 nireq=4 threshold=0.4 ! gvapython module=/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py class=DrawDynamicText function=process_frame arg=[\"{parameters[overlay_label]}\"] ! queue ! gvametaconvert add-empty-results=true name=metaconvert ! gvametapublish name=destination method=file file-path=/dev/null ! queue ! gvafpscounter ! appsink name=appsink",
+                "pipeline": "v4l2src device={parameters[device]} ! video/x-raw,width={parameters[camera_width]},height={parameters[camera_height]},framerate={parameters[camera_fps]}/1 ! videoconvert ! video/x-raw,format=NV12 ! queue ! gvadetect device=NPU name=detection model-instance-id={parameters[detection_instance_id]} model={parameters[detection_model]} inference-region=full-frame inference-interval=1 batch-size=1 nireq=4 threshold=0.4 ! gvapython module=/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py class=DrawDynamicText function=process_frame arg=[\"{parameters[overlay_label]}\"] ! queue ! gvametaconvert add-empty-results=true name=metaconvert ! gvametapublish name=destination method=file file-path=/dev/null ! queue ! gvafpscounter ! appsink name=appsink",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -514,6 +514,12 @@
                             "minimum": 16,
                             "maximum": 4320,
                             "default": 720
+                        },
+                        "camera_fps": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 120,
+                            "default": 30
                         }
                     }
                 },
@@ -523,7 +529,7 @@
                 "name": "uav_camera_npu_gpu",
                 "source": "gstreamer",
                 "queue_maxsize": 50,
-                "pipeline": "v4l2src device={parameters[device]} ! video/x-raw,width={parameters[camera_width]},height={parameters[camera_height]} ! videoconvert ! video/x-raw,format=NV12 ! tee name=split allow-not-linked=true split. ! queue ! gvadetect device=NPU name=detection model-instance-id={parameters[detection_instance_id]} model={parameters[detection_model]} inference-region=full-frame inference-interval=1 batch-size=1 nireq=4 threshold=0.4 ! gvapython module=/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py class=DrawDynamicText function=process_frame arg=[\"{parameters[overlay_label]}\"] ! queue ! gvametaconvert add-empty-results=true name=metaconvert ! gvametapublish name=destination method=file file-path=/dev/null ! queue ! gvafpscounter ! appsink name=appsink sync=false split. ! queue leaky=downstream max-size-buffers=2 ! videorate drop-only=true ! video/x-raw,framerate=1/5 ! videoscale ! videoconvert ! video/x-raw,format=BGRA,width=[1,{parameters[frame_width]}],height=[1,{parameters[frame_height]}] ! gvagenai name=captioner model-path={parameters[captioner_model_path]} device=GPU prompt=\"{parameters[captioner_prompt]}\" chunk-size=1 generation-config=\"max_new_tokens={parameters[captioner_max_new_tokens]},num_beams=1,do_sample=false,temperature=0.1,repetition_penalty=1.1\" frame-rate=0 metrics=true ! gvametaconvert add-empty-results=true name=caption_metaconvert ! gvapython class=MQTTPublisher function=process module=/home/pipeline-server/gvapython/mqtt_publisher/mqtt_publisher.py name=mqtt_publisher kwarg={% raw %}{{\"topic\":\"{% endraw %}{parameters[mqtt_topic]}{% raw %}\"}}{% endraw %} ! fakesink sync=false async=false",
+                "pipeline": "v4l2src device={parameters[device]} ! video/x-raw,width={parameters[camera_width]},height={parameters[camera_height]},framerate={parameters[camera_fps]}/1 ! videoconvert ! video/x-raw,format=NV12 ! tee name=split allow-not-linked=true split. ! queue ! gvadetect device=NPU name=detection model-instance-id={parameters[detection_instance_id]} model={parameters[detection_model]} inference-region=full-frame inference-interval=1 batch-size=1 nireq=4 threshold=0.4 ! gvapython module=/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py class=DrawDynamicText function=process_frame arg=[\"{parameters[overlay_label]}\"] ! queue ! gvametaconvert add-empty-results=true name=metaconvert ! gvametapublish name=destination method=file file-path=/dev/null ! queue ! gvafpscounter ! appsink name=appsink sync=false split. ! queue leaky=downstream max-size-buffers=2 ! videorate drop-only=true ! video/x-raw,framerate=1/5 ! videoscale ! videoconvert ! video/x-raw,format=BGRA,width=[1,{parameters[frame_width]}],height=[1,{parameters[frame_height]}] ! gvagenai name=captioner model-path={parameters[captioner_model_path]} device=GPU prompt=\"{parameters[captioner_prompt]}\" chunk-size=1 generation-config=\"max_new_tokens={parameters[captioner_max_new_tokens]},num_beams=1,do_sample=false,temperature=0.1,repetition_penalty=1.1\" frame-rate=0 metrics=true ! gvametaconvert add-empty-results=true name=caption_metaconvert ! gvapython class=MQTTPublisher function=process module=/home/pipeline-server/gvapython/mqtt_publisher/mqtt_publisher.py name=mqtt_publisher kwarg={% raw %}{{\"topic\":\"{% endraw %}{parameters[mqtt_topic]}{% raw %}\"}}{% endraw %} ! fakesink sync=false async=false",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -589,6 +595,12 @@
                             "minimum": 16,
                             "maximum": 4320,
                             "default": 720
+                        },
+                        "camera_fps": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 120,
+                            "default": 30
                         }
                     }
                 },

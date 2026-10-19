@@ -54,7 +54,7 @@ cameras:
       device: npu
       model: yolo11s/yolo11s_openvino_model/yolo11s.xml
     captioning:
-      enabled: true
+      enabled: false
       device: gpu
       model: InternVL2-1B
       prompt: Describe what you see in the scene.
@@ -67,9 +67,10 @@ cameras:
   # the pipelines you need from configs/config-pymavlink-realsense.json (all nine) into it.
   - id: realsense_camera
     enabled: false
-    device: /dev/v4l/by-id/usb-Intel_R__RealSense_TM__Depth_Camera_435_Intel_R__RealSense_TM__Depth_Camera_435-video-index0
+    device: /dev/video4
     width: 1280                      # optional, default 1280
     height: 720                      # optional, default 720
+    fps: 30                          # optional, default 30
     overlay: true
     detection:
       device: npu                    # cpu | gpu | npu (cpu and gpu need their pipeline copied, see above)
@@ -79,4 +80,4 @@ cameras:
       device: gpu
       model: InternVL2-1B
       prompt: Describe what you see in the scene.
-      max_new_tokens: 50
+      max_new_tokens: 70

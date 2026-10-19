@@ -105,6 +105,8 @@ class Camera(_Strict):
     device: Optional[str] = None                      # /dev/videoN, or /dev/v4l/by-id|by-path/<name> (stable across reboots)
     width: Optional[int] = Field(default=None, ge=16, le=7680)     # live camera only; default 1280
     height: Optional[int] = Field(default=None, ge=16, le=4320)    # live camera only; default 720
+    fps: Optional[int] = Field(default=None, ge=1, le=120)         # live camera only; default 30. Without it the camera may
+                                                                   # settle on a low frame rate (5 fps) when captions are on
     overlay: bool = True                              # False hides the detection boxes AND the telemetry text
     detection: Detection = Detection()
     captioning: Captioning = Captioning()
@@ -146,8 +148,8 @@ class Camera(_Strict):
         if sum(value is not None for value in (self.video, self.device, self.rtsp)) > 1:
             raise ValueError("set only one of 'video' (a file), 'device' (a live camera) and 'rtsp' (a stream)")
         if self.device is None:
-            if self.width is not None or self.height is not None:
-                raise ValueError("'width' and 'height' apply to a live camera ('device') only")
+            if self.width is not None or self.height is not None or self.fps is not None:
+                raise ValueError("'width', 'height' and 'fps' apply to a live camera ('device') only")
             if self.video is None and self.rtsp is None:
                 self.video = "uav_sample_front.avi"
         return self
@@ -253,7 +255,8 @@ def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, che
         rtsp_url = camera.rtsp.replace("{uav_id}", uav_id()) if camera.rtsp else None
         parameters = {
             **({"rtsp_url": rtsp_url} if rtsp_url else {}),
-            **({"device": camera.device, "camera_width": camera.width or 1280, "camera_height": camera.height or 720}
+            **({"device": camera.device, "camera_width": camera.width or 1280, "camera_height": camera.height or 720,
+                                          "camera_fps": camera.fps or 30}
                if camera.device else {} if rtsp_url else {"video": camera.video}),
             "detection_model": model_path,
             # cameras sharing device and model share one loaded model; a different model gets its own instance
