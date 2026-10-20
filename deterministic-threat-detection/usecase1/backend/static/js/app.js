@@ -71,10 +71,12 @@
     }
     off.classList.toggle('hidden', !off.textContent);
     if (sc) {
-      $('scene-rate').innerHTML = `${sc.scene_hz}<small> tracker updates/s</small>`;
-      const cams = Object.entries(sc.cameras || {}).map(([c, v]) => `${c.replace('Cam_', '')} ${v.fps}/s${v.age_s > 3 ? ' (stalled)' : ''}`);
+      $('scene-rate').innerHTML = `${sc.scene_hz}<small> updates/s</small>`;
+      const cams = Object.entries(sc.cameras || {}).map(([c, v]) => `${c.replace('Cam_', '')} ${Math.round(v.fps)}${v.age_s > 3 ? '!' : ''}`);
       const rs = sc.pipelines ? Object.values(sc.pipelines.restarts).reduce((a, b) => a + b, 0) : 0;
-      $('scene-cam').textContent = `camera frames: ${cams.join(' · ') || '–'}` + (rs ? ` · pipeline restarts: ${rs}` : '');
+      const camText = `${cams.join(' · ') || '–'} fps` + (rs ? ` · ${rs} restarts` : '');
+      $('scene-cam').textContent = camText;
+      $('scene-cam').title = `Frames per second per camera ('!' = stalled)` + (rs ? `; the pipeline watchdog restarted a camera pipeline ${rs} time(s)` : '');
     }
     if (h) {
       $('hota-value').textContent = h.HOTA.toFixed(2);

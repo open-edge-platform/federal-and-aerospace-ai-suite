@@ -127,3 +127,11 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
   .uc2-right { overflow: visible; }
   .uc2-right img { height: 240px; flex: none; }
 }
+
+/* The number cards have the same height on both tabs, so the chart card under them (Network latency on
+   tab 1, Tracking quality on tab 2) starts at the same place and ends at the same place: same height. */
+:root { --kpi-h: 124px; }
+.kpis .kpi { height: var(--kpi-h); box-sizing: border-box; overflow: hidden; }
+.kpi-name, .kpi-row { white-space: nowrap; }
+.kpi-name > span:first-child, .kpi-row > span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.kpi-value { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
