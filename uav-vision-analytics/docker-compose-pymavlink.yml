@@ -89,14 +89,6 @@ services:
       # The folder with cameras-pymavlink.yaml is mounted, not the file: editors save by replacing the file, and a
       # single-file mount would keep showing the old one inside the container.
       - "./configs:/home/pipeline-server/configs:rw"
-      # Patched WebRTC manager + RTSP server/factory/destination: upstream always
-      # hardcodes MJPEG for RTSP and defaults WebRTC to vp9enc (which MediaMTX's
-      # WHIP/WHEP rejects: "stream does not contain supported codec ..."). See
-      # pipeline-server-patches/README.md.
-      - "./pipeline-server-patches/gstreamer_webrtc_manager.py:/home/pipeline-server/src/server/webrtc/gstreamer_webrtc_manager.py"
-      - "./pipeline-server-patches/gstreamer_rtsp_server.py:/home/pipeline-server/src/server/rtsp/gstreamer_rtsp_server.py"
-      - "./pipeline-server-patches/gstreamer_rtsp_factory.py:/home/pipeline-server/src/server/rtsp/gstreamer_rtsp_factory.py"
-      - "./pipeline-server-patches/gstreamer_rtsp_destination.py:/home/pipeline-server/src/server/rtsp/gstreamer_rtsp_destination.py"
       - "/run/udev:/run/udev:ro"
       - "/tmp:/tmp"
     group_add:

@@ -28,6 +28,11 @@
   let playerEl = null;
   let listEl = null;
   let searchAvailable = false;
+  // Which UAV host the currently-displayed `results` were searched against --
+  // used to detect a tab switch and drop stale results/player state that
+  // belong to the UAV the dashboard just switched away from
+  // null until the first search runs.
+  let resultsHost = null;
 
   // ---------- helpers ----------
   function el(tag, className, text) {
@@ -517,6 +522,7 @@
         return;
       }
       results = (data && data.results) || [];
+      resultsHost = host || null;
       filteredOutCount = (data && data.filtered_out) || 0;
       if (!results.length) {
         const detail = filteredOutCount > 0
@@ -640,7 +646,21 @@
     } catch (_err) { /* panel keeps its last state */ }
   }
 
+  // The active UAV tab changed If the search modal is showing results from
+  // UAV, the dashboard just switched *away* from, drop them immediately
+  // rather than leaving the previous host's clips/camera names on screen
+  // without this, a visible search modal kept showing stale results
+  // until noticed and re-submitted a new query for the now-active host.
   document.addEventListener("uav:connected", async (e) => {
+    const newHost = e && e.detail && e.detail.host;
+    if (resultsHost && newHost && newHost !== resultsHost) {
+      if (inFlight) { inFlight.abort(); inFlight = null; }
+      results = [];
+      filteredOutCount = 0;
+      selectedIndex = -1;
+      resultsHost = null;
+      if (isOpen()) renderIdle();
+    }
     if (!(await availability)) return;
     clearInterval(livePollTimer);
     liveSyncHost = e.detail.host;

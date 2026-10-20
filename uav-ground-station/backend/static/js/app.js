@@ -26,6 +26,59 @@
   // on top of an already multi-host-capable backend.
   const sessions = new Map(); // host -> { connectedAt, label }
 
+  const SESSIONS_STORAGE_KEY = "uav-ground-station:sessions:v1";
+
+  function persistSessions() {
+    try {
+      const hosts = Array.from(sessions.entries()).map(([host, s]) => ({ host, label: s.label || null }));
+      localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify({ hosts, activeHost: currentHost }));
+    } catch (_err) { /* localStorage unavailable -- degrade silently */ }
+    if (currentHost && sessions.has(currentHost)) {
+      const label = sessions.get(currentHost).label;
+      fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ host: currentHost, label: label || null }),
+      }).catch(() => {});
+    }
+  }
+
+  async function fetchServerSessions() {
+    try {
+      const res = await fetch("/api/sessions");
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data || !Array.isArray(data.sessions) || data.sessions.length === 0) return null;
+      return {
+        hosts: data.sessions.map((s) => ({ host: s.host, label: s.label || null })),
+        activeHost: data.active_host || null,
+      };
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function readPersistedSessions() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SESSIONS_STORAGE_KEY) || "null");
+      if (!saved || !Array.isArray(saved.hosts)) return null;
+      const hosts = saved.hosts.filter((h) => h && typeof h.host === "string" && h.host);
+      if (hosts.length === 0) return null;
+      return { hosts, activeHost: saved.activeHost };
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  async function resolvePersistedSessions() {
+    const [server, local] = await Promise.all([fetchServerSessions(), Promise.resolve(readPersistedSessions())]);
+    if (!server) return local;
+    const localLabels = new Map((local?.hosts || []).map((h) => [h.host, h.label]));
+    const hosts = server.hosts.map((h) => ({ host: h.host, label: h.label || localLabels.get(h.host) || null }));
+    const activeHost = server.activeHost || local?.activeHost || hosts[0]?.host || null;
+    return { hosts, activeHost };
+  }
+
   function renderTabs() {
     tabsEl.classList.toggle("hidden", sessions.size === 0);
     tabsListEl.replaceChildren();
@@ -56,7 +109,14 @@
       tab.append(dot, label, close);
       tabsListEl.appendChild(tab);
     }
+    document.dispatchEvent(new CustomEvent("uav:sessions-changed"));
+    persistSessions();
   }
+
+  window.UavSessions = {
+    list: () => Array.from(sessions.entries()).map(([host, s]) => ({ host, label: s.label || null })),
+    current: () => currentHost,
+  };
 
   let metricsSource = null;
   let localMetricsSource = null;
@@ -678,6 +738,11 @@
 
   async function pollAndReconcile(host) {
     const detected = await detectPipelines(host);
+    // A different tab may have become active while this request was in
+    // flight -- never let a stale response from a background/previous host
+    // overwrite what's currently on screen (this was the cause of tabs
+    // appearing to "switch back" on their own).
+    if (host !== currentHost) return;
     if (!detected.reachable) {
       // Host went unreachable -- leave existing cards as-is (video/caption
       // streams will show their own connection errors) rather than tearing
@@ -685,6 +750,8 @@
       return;
     }
     syncCards(host, detected.cameras || []);
+    const existing = sessions.get(host);
+    if (existing) existing.lastCameras = detected.cameras || [];
   }
 
   async function connectNow(label) {
@@ -692,21 +759,37 @@
     currentHost = host;
     stopAllStreams();
     setStatus("connecting");
-    renderEmptyState("Detecting running pipelines…");
     startMetricsStream(host);
 
+    const cached = sessions.get(host)?.lastCameras;
+    if (cached && cached.length) {
+      syncCards(host, cached);
+    } else {
+      renderEmptyState("Detecting running pipelines…");
+    }
+
     const detected = await detectPipelines(host);
+    // Another switchToTab()/connectNow() may have taken over while this
+    // request was in flight -- don't clobber whatever host is active now.
+    if (host !== currentHost) return;
     if (!detected.reachable) {
-      renderEmptyState("Host unreachable.");
-      setStatus("off");
+      if (!cached || !cached.length) {
+        renderEmptyState("Host unreachable.");
+        setStatus("off");
+      }
+      // else: keep showing the cached cards; the next poll will retry.
     } else {
       syncCards(host, detected.cameras || []);
     }
     pipelinePollTimer = setInterval(() => pollAndReconcile(host), 5000);
-    // Switching back to an already-connected tab calls connectNow() too
-    // -- keep its existing label rather than clearing it.
-    const existingLabel = sessions.get(host)?.label;
-    sessions.set(host, { connectedAt: Date.now(), label: label ?? existingLabel });
+    // Switching back to an already-connected tab calls connectNow() too --
+    // keep its existing label/cache rather than clearing them.
+    const existing = sessions.get(host);
+    sessions.set(host, {
+      connectedAt: existing?.connectedAt ?? Date.now(),
+      label: label ?? existing?.label,
+      lastCameras: detected.reachable ? (detected.cameras || []) : (existing?.lastCameras || []),
+    });
     renderTabs();
     document.dispatchEvent(new CustomEvent("uav:connected", { detail: { host } }));
   }
@@ -729,7 +812,14 @@
       sessions.delete(host);
       renderTabs();
       // Fully stop: pause this host's VSS live-sync indexing too (it won't
-      // be reconciled again until something reconnects to this host).
+      // be reconciled again until something reconnects to this host), and
+      // drop it from the server-side registry so no other browser/window
+      // restores a tab for a UAV this one just disconnected.
+      fetch("/api/sessions", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ host }),
+      }).catch(() => {});
       document.dispatchEvent(new CustomEvent("uav:disconnected", { detail: { host } }));
     }
     currentHost = null;
@@ -756,6 +846,11 @@
     }
     sessions.delete(host);
     renderTabs();
+    fetch("/api/sessions", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ host }),
+    }).catch(() => {});
     document.dispatchEvent(new CustomEvent("uav:disconnected", { detail: { host } }));
     if (sessions.size === 0) openConnectModal();
   }
@@ -815,10 +910,53 @@
     pollAndReconcile(currentHost);
   });
 
-  loadRuntimeConfig().then(() => {
-    // No UAVs connected yet on a fresh page load -- the connect modal is the
-    // only way to get a dashboard going, so open it immediately.
-    if (sessions.size === 0) openConnectModal();
+  // Auto-reconnect to every host that was connected before the last reload
+  // (or in another tab of this browser), restoring tabs instantly from the
+  // persisted host list, then bringing each one's dashboard/VSS live-sync
+  // back up the same way a fresh connect would. Returns true if anything was
+  // restored (so the caller can skip opening the connect modal).
+  async function restorePersistedSessions() {
+    const saved = await resolvePersistedSessions();
+    if (!saved) return false;
+
+    // Pre-populate sessions so tabs render immediately, before any network
+    // round trip -- avoids a blank dashboard while each host is re-probed.
+    for (const h of saved.hosts) {
+      sessions.set(h.host, { connectedAt: Date.now(), label: h.label || undefined, lastCameras: [] });
+    }
+    renderTabs();
+
+    const activeHost = sessions.has(saved.activeHost) ? saved.activeHost : saved.hosts[0].host;
+
+    // Bring the active tab's dashboard up exactly like a normal connect.
+    hostInput.value = activeHost;
+    await connectNow(sessions.get(activeHost)?.label);
+
+    // Other restored hosts stay as background tabs: no visible dashboard
+    // switch, but still re-reconcile their camera state and re-arm VSS
+    // live-sync indexing (mirrors what a real connect does for them). Also
+    // (re-)register each with the server-side registry (active=false, so
+    // this doesn't steal "active tab" from activeHost) -- covers the
+    // localStorage-only fallback path, where the server may not have known
+    // about these hosts yet.
+    for (const h of saved.hosts) {
+      if (h.host === activeHost) continue;
+      pollAndReconcile(h.host);
+      document.dispatchEvent(new CustomEvent("uav:connected", { detail: { host: h.host } }));
+      fetch(`/api/sessions?active=false`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ host: h.host, label: h.label || null }),
+      }).catch(() => {});
+    }
+    return true;
+  }
+
+  loadRuntimeConfig().then(async () => {
+    const restored = await restorePersistedSessions();
+    // No UAVs connected/restored -- the connect modal is the only way to get
+    // a dashboard going, so open it immediately.
+    if (!restored && sessions.size === 0) openConnectModal();
   });
   startLocalMetricsStream();
 })();

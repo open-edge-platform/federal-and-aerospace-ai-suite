@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UAV Ground Station</title>
-  <link rel="stylesheet" href="css/styles.css?v=35" />
+  <link rel="stylesheet" href="css/styles.css?v=38" />
 </head>
 <body>
   <header class="topbar">
@@ -159,8 +159,9 @@ SPDX-License-Identifier: Apache-2.0
 
       <form id="summary-form" class="summary-form">
         <div class="summary-form-row">
-          <label for="summary-host-input">UAV Companion Compute IP</label>
-          <input id="summary-host-input" type="text" placeholder="127.0.0.1" autocomplete="off" />
+          <label for="summary-host-select">UAV</label>
+          <select id="summary-host-select"></select>
+          <input id="summary-host-input" type="text" placeholder="127.0.0.1" autocomplete="off" class="hidden" />
         </div>
         <div class="summary-form-row">
           <span class="summary-form-label">Cameras</span>
@@ -232,10 +233,10 @@ SPDX-License-Identifier: Apache-2.0
   </div>
 
   <script src="js/vendor/chart.js"></script>
-  <script src="js/utils/charts.js?v=35"></script>
-  <script src="js/app.js?v=35"></script>
-  <script src="js/search.js?v=35"></script>
-  <script src="js/summary.js?v=35"></script>
-  <script src="js/arch.js?v=35"></script>
+  <script src="js/utils/charts.js?v=38"></script>
+  <script src="js/app.js?v=38"></script>
+  <script src="js/search.js?v=38"></script>
+  <script src="js/summary.js?v=38"></script>
+  <script src="js/arch.js?v=38"></script>
 </body>
 </html>

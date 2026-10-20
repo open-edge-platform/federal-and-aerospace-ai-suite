@@ -17,6 +17,7 @@
   const openBtn = document.getElementById("topbar-summary-btn");
   const closeBtn = document.getElementById("summary-modal-close");
   const form = document.getElementById("summary-form");
+  const hostSelect = document.getElementById("summary-host-select");
   const hostInput = document.getElementById("summary-host-input");
   const cameraChecks = document.getElementById("summary-camera-checks");
   const windowInput = document.getElementById("summary-window-input");
@@ -40,13 +41,47 @@
     return Array.from(cameraChecks.querySelectorAll('input[name="summary-camera"]:checked')).map((cb) => cb.value);
   }
 
+  const CUSTOM_HOST_VALUE = "__custom__";
+
   function currentHost() {
-    // Prefill from the main host field, same pattern arch.js uses, but let
-    // the user override it (e.g. to summarize a different host than the one
-    // currently shown in the video cards).
-    if (hostInput.value.trim()) return hostInput.value.trim();
-    const main = document.getElementById("host-input");
-    return main ? main.value.trim() : "";
+    if (hostSelect.value && hostSelect.value !== CUSTOM_HOST_VALUE) return hostSelect.value;
+    return hostInput.value.trim();
+  }
+
+  // Already-connected UAVs are known to the app (one tab per host), so offer
+  // as a dropdown instead of asking to re-type -- showing the label if given
+  // one, otherwise the host/IP. Falls back to a free-text IP field only if
+  // nothing is connected yet, or the user explicitly wants a host that isn't
+  // one of the open tabs.
+  function populateHostSelect() {
+    const sessions = window.UavSessions ? window.UavSessions.list() : [];
+    const active = window.UavSessions ? window.UavSessions.current() : null;
+    const previousSelection = hostSelect.value;
+    hostSelect.replaceChildren();
+
+    sessions.forEach(({ host, label }) => {
+      const opt = document.createElement("option");
+      opt.value = host;
+      opt.textContent = label ? `${label} (${host})` : host;
+      hostSelect.appendChild(opt);
+    });
+    const customOpt = document.createElement("option");
+    customOpt.value = CUSTOM_HOST_VALUE;
+    customOpt.textContent = "Custom IP\u2026";
+    hostSelect.appendChild(customOpt);
+
+    let nextSelection;
+    if (sessions.some((s) => s.host === previousSelection)) {
+      nextSelection = previousSelection; // keep user's existing choice if still valid
+    } else if (active && sessions.some((s) => s.host === active)) {
+      nextSelection = active; // default to the tab currently on screen
+    } else if (sessions.length) {
+      nextSelection = sessions[0].host;
+    } else {
+      nextSelection = CUSTOM_HOST_VALUE;
+    }
+    hostSelect.value = nextSelection;
+    hostInput.classList.toggle("hidden", nextSelection !== CUSTOM_HOST_VALUE);
   }
 
   async function populateCameras(host, { force = false } = {}) {
@@ -216,15 +251,12 @@
 
   function open() {
     lastFocus = document.activeElement;
-    if (!hostInput.value.trim()) {
-      const main = document.getElementById("host-input");
-      if (main && main.value.trim()) hostInput.value = main.value.trim();
-    }
+    populateHostSelect();
     modal.classList.remove("hidden");
     renderMessage("idle", "Build a flight summary", "Pick cameras and a time window, then Generate.");
     downloadBtn.classList.add("hidden");
-    populateCameras(hostInput.value.trim());
-    hostInput.focus();
+    populateCameras(currentHost());
+    (hostSelect.value === CUSTOM_HOST_VALUE ? hostInput : hostSelect).focus();
   }
 
   function close() {
@@ -241,9 +273,21 @@
   });
   form.addEventListener("submit", (e) => { e.preventDefault(); generate(); });
   hostInput.addEventListener("change", () => populateCameras(hostInput.value.trim(), { force: true }));
+  hostSelect.addEventListener("change", () => {
+    hostInput.classList.toggle("hidden", hostSelect.value !== CUSTOM_HOST_VALUE);
+    if (hostSelect.value === CUSTOM_HOST_VALUE) {
+      hostInput.focus();
+    } else {
+      populateCameras(hostSelect.value);
+    }
+  });
   // If the main dashboard's connect/host context changes while this modal is
   // closed, drop the cached camera list so the next open re-fetches instead
-  // of showing a stale/empty one for the new host.
+  // of showing a stale/empty one for the new host, and keep the host dropdown
+  // in sync with whatever tabs are actually open.
   document.addEventListener("uav:connected", () => { camerasLoadedForHost = null; });
   document.addEventListener("uav:tab-switched", () => { camerasLoadedForHost = null; });
+  document.addEventListener("uav:sessions-changed", () => {
+    if (!modal.classList.contains("hidden")) populateHostSelect();
+  });
 })();

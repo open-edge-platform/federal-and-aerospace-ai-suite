@@ -42,6 +42,7 @@ import json
 import logging
 import os
 import re
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
@@ -49,6 +50,7 @@ import paho.mqtt.client as mqtt
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 import caption_log
 import vss_live_sync
@@ -230,6 +232,49 @@ def _camera_sort_key(camera: dict) -> tuple:
     words = _camera_title(camera["camera"]).lower().split()
     rank = next((i for i, w in enumerate(CAMERA_ORDER) if w in words), len(CAMERA_ORDER))
     return (rank, camera["camera"])
+
+
+class SessionUpsert(BaseModel):
+    host: str = Field(..., min_length=1, max_length=253)
+    label: Optional[str] = Field(None, max_length=64)
+
+
+class SessionDelete(BaseModel):
+    host: str = Field(..., min_length=1, max_length=253)
+
+
+_sessions: dict = {}  # host -> {"label": str|None, "connected_at": iso str}
+_active_host: Optional[str] = None
+
+
+@app.get("/api/sessions")
+async def list_sessions():
+    return {
+        "sessions": [{"host": h, **v} for h, v in _sessions.items()],
+        "active_host": _active_host if _active_host in _sessions else None,
+    }
+
+
+@app.post("/api/sessions")
+async def upsert_session(req: SessionUpsert, active: bool = Query(True)):
+    global _active_host
+    existing = _sessions.get(req.host)
+    _sessions[req.host] = {
+        "label": req.label if req.label is not None else (existing or {}).get("label"),
+        "connected_at": (existing or {}).get("connected_at") or datetime.now(timezone.utc).isoformat(),
+    }
+    if active:
+        _active_host = req.host
+    return {"ok": True}
+
+
+@app.delete("/api/sessions")
+async def delete_session(req: SessionDelete):
+    global _active_host
+    _sessions.pop(req.host, None)
+    if _active_host == req.host:
+        _active_host = next(iter(_sessions), None)
+    return {"ok": True}
 
 
 @app.get("/api/runtime-config")
