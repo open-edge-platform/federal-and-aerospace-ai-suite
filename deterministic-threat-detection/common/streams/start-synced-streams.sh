@@ -18,7 +18,7 @@ set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 STREAM_HOSTS=${STREAM_HOSTS:-"tsn-machine-2:Cam_x1_0 tsn-machine-3:Cam_x2_0"}
-MEDIA_DIR=${MEDIA_DIR:-$HERE/../usecases/scenescape-deterministic-inference/hota/media}
+MEDIA_DIR=${MEDIA_DIR:-$HERE/../media}
 LEAD=${LEAD:-20}
 VLAN_IF=${VLAN_IF:-tsn0.1}
 RTSP_PORT=${RTSP_PORT:-8554}

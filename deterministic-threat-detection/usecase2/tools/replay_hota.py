@@ -4,7 +4,7 @@
 """Replay a recording from record_scene.py through the live HOTA engine and print the score over time.
 
   python3 replay_hota.py recording.jsonl [--lag 0.08] [--window 10] [--hold 4] [--every 5]
-Run with the backend's python path, e.g.: PYTHONPATH=usecase1/backend python3 usecase2/tools/replay_hota.py ...
+Run with the backend's python path, e.g.: python3 usecase2/tools/replay_hota.py ...
 """
 import argparse
 import datetime as dt
@@ -12,7 +12,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "usecase1", "backend"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "dashboard", "backend"))
 from app.hota import FrameClock, SlidingHota, load_ground_truth  # noqa: E402
 
 ap = argparse.ArgumentParser()

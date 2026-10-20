@@ -25,7 +25,7 @@ MQTT_PORT=${MQTT_PORT:-1884}
 STREAMS=${STREAMS:-1}
 REMOTE_DIR=${REMOTE_DIR:-usecase1-edge}
 IMAGE=${IMAGE:-intel/dlstreamer-pipeline-server:2026.3.0-20261020-weekly-ubuntu24}
-MODELS=$ROOT/src/dlstreamer-pipeline-server/models
+MODELS=$ROOT/common/models
 
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new)
 die() { echo "error: $*" >&2; exit 1; }
@@ -34,7 +34,7 @@ each() { local fn=$1 pair; for pair in $EDGE_HOSTS; do "$fn" "${pair%:*}" "${pai
 
 streams() {
   [ "$STREAMS" = 1 ] || return 0
-  STREAM_HOSTS="$EDGE_HOSTS" "$ROOT/streams/start-synced-streams.sh" "$1"
+  STREAM_HOSTS="$EDGE_HOSTS" "$ROOT/common/streams/start-synced-streams.sh" "$1"
 }
 
 prepare() {

@@ -1,99 +1,64 @@
 # SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
-# Standalone deterministic threat detection (HOTA) application.
-#   make up [HOST_IP=x.x.x.x]   generate secrets/certs, configure .env, start the stack
-#   make down                   stop the stack (keeps volumes) and the remote streams
-#   make clean                  stop the stack and delete volumes (and stop the streams)
-#   make streams-up|streams-down|streams-status   RTSP cameras on the remote machines only
-#   STREAMS=0 skips the remote streams in up/down/clean
-#   make status | logs [SVC=name]
-#   make test                   end-to-end test through the SceneScape UI and data flow
-#   make distclean              clean + remove generated secrets and certs
+# Deterministic Threat Detection: both use cases behind one web dashboard.
+#
+#   make up        start everything: the RTSP streams on the camera machines, the dashboard (with the MQTT
+#                  broker), use case 1 (camera pipelines on the camera machines) and use case 2 (SceneScape)
+#   make down      stop everything (reverse order)
+#   make status    what is running
+#   make test      unit tests of the dashboard backend
+#   make test-e2e  end-to-end test of use case 2 through the SceneScape UI (needs the stack up)
+#   make help
+#
+# Run one part on its own with its own Makefile:
+#   common/streams/start-synced-streams.sh up|down|status    RTSP "cameras" on the camera machines
+#   make -C dashboard ...    the shared UI + backend + MQTT broker
+#   make -C usecase1 ...     use case 1: camera pipelines on the camera machines
+#   make -C usecase2 ...     use case 2: SceneScape + the mediamtx relay on this machine
+#
+# STREAMS=0 skips the RTSP publishers (they must already be running).
 
 SHELL := /bin/bash
-# Defaults to the TSN VLAN1 address on tsn0.1 (192.168.127.11); falls back to the first host IP.
-TSN_IFACE ?= tsn0.1
-HOST_IP ?= $(or $(shell ip -4 -o addr show dev $(TSN_IFACE) 2>/dev/null | awk '{split($$4,a,"/"); print a[1]; exit}'),$(shell hostname -I | cut -f1 -d' '))
-SVC ?=
-# Address of this machine on the lab network (default route), advertised for WebRTC
-LAB_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($$i=="src") print $$(i+1)}')
-# Remote RTSP cameras (host:camera pairs), started in lockstep over ssh by streams/start-synced-streams.sh
 STREAMS ?= 1
-STREAM_HOSTS ?= tsn-machine-2:Cam_x1_0 tsn-machine-3:Cam_x2_0
-export STREAM_HOSTS
-# Hosts the web UI accepts (Django ALLOWED_HOSTS). '*' = any host/IP; restrict with make up ALLOWED_HOSTS=a,b
-ALLOWED_HOSTS ?= *
+STREAMS_SCRIPT := common/streams/start-synced-streams.sh
 
-SECRETS_DIR := src/secrets
-SSL_DIR := src/nginx/ssl
+.PHONY: help up down status test test-e2e streams-up streams-down streams-status
 
-.PHONY: up down clean distclean status logs env secrets nginx-cert pull test streams-up streams-down streams-status
+help:
+	@sed -n '4,19p' Makefile | sed 's/^# \{0,1\}//'
 
-# Streams first: consumers get 404 until the publishers exist.
-up: env nginx-cert
+up:
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-up
-	docker compose up -d
-	@echo "Browse to https://localhost/ (admin / contents of $(SECRETS_DIR)/supass)."
-	@[ "$(STREAMS)" = 1 ] || echo "STREAMS=0: the RTSP streams on CAMERA1_HOST/CAMERA2_HOST (see .env) must already be running."
-
-streams-up:
-	streams/start-synced-streams.sh up
-
-streams-down:
-	streams/start-synced-streams.sh down
-
-streams-status:
-	streams/start-synced-streams.sh status
-
-secrets: $(SECRETS_DIR)/browser.auth
-
-$(SECRETS_DIR)/browser.auth:
-	bash $(SECRETS_DIR)/generate_secrets.sh
-
-# SUPASS is kept in sync with the generated secret; UID/GID stay blank because
-# the broker entrypoint copies secrets under a root-owned directory.
-env: secrets
-	@[ -f .env ] || cp .env.example .env
-	sed -i "s#^SUPASS=.*#SUPASS=$$(cat $(SECRETS_DIR)/supass)#" .env
-	sed -i "s#^HOST_IP=.*#HOST_IP=$(HOST_IP)#" .env
-	grep -q "^LAB_IP=" .env || echo "LAB_IP=" >> .env
-	sed -i "s#^LAB_IP=.*#LAB_IP=$(LAB_IP)#" .env
-	sed -i "s#^UID=.*#UID=#; s#^GID=.*#GID=#" .env
-	sed -i "s#^ALLOWED_HOSTS=.*#ALLOWED_HOSTS=$(ALLOWED_HOSTS)#" .env
-
-nginx-cert: $(SSL_DIR)/server.key
-
-$(SSL_DIR)/server.key:
-	mkdir -p $(SSL_DIR)
-	openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-		-keyout $(SSL_DIR)/server.key -out $(SSL_DIR)/server.crt \
-		-subj "/C=US/ST=CA/L=San Francisco/O=Intel/OU=Edge AI/CN=localhost"
-
-pull:
-	docker compose pull
+	# the dashboard mounts the SceneScape broker's CA certificate, which the secrets step creates
+	$(MAKE) -C usecase2 secrets
+	$(MAKE) -C dashboard up
+	$(MAKE) -C usecase1 up STREAMS=0
+	$(MAKE) -C usecase2 up STREAMS=0
+	@echo "Everything is up. Dashboard: see the address printed above; SceneScape: https://localhost/"
 
 down:
-	docker compose down
+	-$(MAKE) -C usecase2 down STREAMS=0
+	-$(MAKE) -C usecase1 down STREAMS=0
+	-$(MAKE) -C dashboard down
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-down
-
-clean:
-	docker compose down -v
-	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-down
-
-distclean: clean
-	find $(SECRETS_DIR) -mindepth 1 ! -name generate_secrets.sh ! -name openssl.cnf -delete
-	rm -rf $(SSL_DIR)
 
 status:
-	docker compose ps
+	@echo "== dashboard"; $(MAKE) -s -C dashboard status
+	@echo "== use case 1 (camera machines)"; $(MAKE) -s -C usecase1 status STREAMS=0
+	@echo "== use case 2"; $(MAKE) -s -C usecase2 status
 
-logs:
-	docker compose logs --tail=100 -f $(SVC)
-
-# Needs the stack up and the RTSP streams running. Uses a throwaway venv.
 test:
-	python3 -m venv .venv-test
-	.venv-test/bin/pip install -q playwright requests
-	.venv-test/bin/playwright install chromium
-	.venv-test/bin/python tests/e2e_test.py
+	$(MAKE) -C dashboard test
+
+test-e2e:
+	$(MAKE) -C usecase2 test
+
+streams-up:
+	$(STREAMS_SCRIPT) up
+
+streams-down:
+	$(STREAMS_SCRIPT) down
+
+streams-status:
+	$(STREAMS_SCRIPT) status

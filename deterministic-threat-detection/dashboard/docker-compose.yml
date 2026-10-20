@@ -1,8 +1,9 @@
 # SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-# Use case 1: latency dashboard. Independent of the scene stack in ../docker-compose.yml:
-# own compose project, own broker on port ${MQTT_PORT} (1884), dashboard on the lab address.
-name: tsn-usecase1
+# The shared dashboard (one web UI, a tab per use case) and the MQTT broker that receives the camera
+# machines' results (use case 1). Independent of the scene stack in ../usecase2: own compose project,
+# own broker on port ${MQTT_PORT} (1884), dashboard on the lab address.
+name: tsn-dashboard
 
 services:
   broker:
@@ -21,7 +22,7 @@ services:
         GID: ${LOCAL_GID:-1000}
         http_proxy: ${http_proxy:-}
         https_proxy: ${https_proxy:-}
-    image: tsn-usecase1-backend
+    image: tsn-dashboard-backend
     # Host networking: the iperf3 server binds the VLAN 5 address, and the dashboard binds the
     # lab address. Nothing here passes through a Docker bridge/NAT.
     network_mode: host
@@ -42,5 +43,5 @@ services:
       - ${HOME}/.ssh:/home/app/.ssh:ro
       # use case 2: ground truth for the live HOTA and the SceneScape broker CA (TLS)
       - ../usecase2/data:/data:ro
-      - ../src/secrets/certs/scenescape-ca.pem:/certs/scenescape-ca.pem:ro
+      - ../usecase2/src/secrets/certs/scenescape-ca.pem:/certs/scenescape-ca.pem:ro
     restart: unless-stopped

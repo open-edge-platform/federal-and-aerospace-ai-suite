@@ -2,7 +2,8 @@
 
 SceneScape `hota-scene` fed by two RTSP "cameras" published over the TSN VLAN
 (`rtsp://192.168.127.12:8554/Cam_x1_0`, `rtsp://192.168.127.13:8554/Cam_x2_0`).
-Self-contained: copy this folder anywhere and run `make up`.
+Part of the repository: it uses `../common` (streams, models) and the shared dashboard in `../dashboard`.
+Run on its own with `make up` here, or start everything with `make up` in the repository root.
 
 ## Services
 ntpserver, broker, pgserver, web, scene-loader (one-shot appdata import), scene (controller),
@@ -22,9 +23,9 @@ make streams-up | streams-down | streams-status   # remote streams only
 make up STREAMS=0   # skip the remote streams (also for down/clean)
 ```
 Login at https://localhost/ as `admin`; the password is in `src/secrets/supass`.
-`make up` starts the RTSP publishers (`streams/`: mediamtx + ffmpeg over ssh, same start time on both
+`make up` starts the RTSP publishers (`../common/streams/`: mediamtx + ffmpeg over ssh, same start time on both
 hosts; needs passwordless ssh and docker on `STREAM_HOSTS`, default `tsn-machine-2:Cam_x1_0 tsn-machine-3:Cam_x2_0`). Change
-camera hosts in `.env` and `src/dlstreamer-pipeline-server/config.json` if they differ.
+camera hosts in `.env` and `src/mediamtx/mediamtx.yml` if they differ.
 
 ## Notes
 - The scene comes from `src/webserver/hota-scene-appdata.tar.bz2`. 2026.3 images no longer

@@ -6,10 +6,11 @@
 Writes JSON lines {"t": <local receive time>, "topic": ..., "msg": {...}} for later replay in tests
 and for calibrating the HOTA frame alignment.
 
-  python3 record_scene.py out.jsonl [seconds] [--host 127.0.0.1] [--port 1883] [--ca src/secrets/certs/scenescape-ca.pem]
+  python3 record_scene.py out.jsonl [seconds] [--host 127.0.0.1] [--port 1883] [--ca <scenescape-ca.pem>]
 """
 import argparse
 import json
+import os
 import ssl
 import time
 
@@ -20,7 +21,7 @@ ap.add_argument("out")
 ap.add_argument("seconds", nargs="?", type=float, default=90)
 ap.add_argument("--host", default="127.0.0.1")
 ap.add_argument("--port", type=int, default=1883)
-ap.add_argument("--ca", default="src/secrets/certs/scenescape-ca.pem")
+ap.add_argument("--ca", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "secrets", "certs", "scenescape-ca.pem"))
 a = ap.parse_args()
 
 f = open(a.out, "w")

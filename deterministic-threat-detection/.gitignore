@@ -1,13 +1,11 @@
-src/secrets/*
-!src/secrets/generate_secrets.sh
-!src/secrets/openssl.cnf
-src/nginx/ssl/
+usecase2/src/secrets/*
+!usecase2/src/secrets/generate_secrets.sh
+!usecase2/src/secrets/openssl.cnf
+usecase2/src/nginx/ssl/
 .env
 .venv-test/
-tests/artifacts/
+usecase2/tests/artifacts/
 
 __pycache__/
 .pytest_cache/
 .venv/
-usecase1/.env
-usecase1/.venv-test/

@@ -6,6 +6,32 @@ The Deterministic Threat Detection with Time-Sensitive Networking (TSN) project 
 
 ---
 
+## Quick start
+
+One command starts both use cases behind a single web dashboard:
+
+```bash
+make up        # RTSP streams on the camera machines, the dashboard, use case 1, use case 2
+make status
+make down
+```
+
+The dashboard has a tab per use case, and a shared header with the network-load slider, the Qbv switch
+control and (soon) the system load. Each part can also be run on its own with its own Makefile.
+
+## Repository layout
+
+| Folder | What it holds |
+|--------|---------------|
+| `Makefile` | `make up / down / status / test` for everything |
+| `dashboard/` | The shared web UI + backend (latency, live HOTA, load and Qbv control) and the MQTT broker for the camera results |
+| `usecase1/` | Use case 1 (latency): the camera pipelines that run on the camera machines (DL Streamer, detection plus decoded frame over MQTT) |
+| `usecase2/` | Use case 2 (tracking quality): the SceneScape stack, the mediamtx relay, the ground truth and the record/replay tools |
+| `common/` | Shared by both: RTSP stream publishers (`streams/`), the detection model (`models/`), the test videos (`media/`) and the Moxa switch scripts (`moxa/`) |
+| `docs/`, `usecases/` | The earlier guides and implementation (kept until the new documentation replaces them) |
+
+---
+
 ## Overview
 
 ![Deterministic Threat Detection Architecture](./docs/user-guide/_assets/common-deterministic-threat-detection-architecture.svg)

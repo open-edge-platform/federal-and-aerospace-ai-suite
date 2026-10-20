@@ -5,7 +5,7 @@
 # machine that serves the video file, then handed to two readers:
 #   - the DL Streamer pipelines, over RTSP inside the compose network (rtsp://mediamtx:8554/<cam>)
 #   - the browser, as WebRTC on :8889 (the dashboard embeds the player page)
-# The sources must match src/dlstreamer-pipeline-server/config.json / CAMERA*_HOST in .env.
+# The sources must match CAMERA*_HOST in .env (the machines that serve the video files).
 logLevel: info
 
 rtsp: yes
