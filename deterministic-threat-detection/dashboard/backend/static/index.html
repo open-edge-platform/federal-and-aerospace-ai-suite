@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Deterministic Threat Detection</title>
-  <link rel="stylesheet" href="css/styles.css?v=1">
+  <link rel="stylesheet" href="css/styles.css?v=6">
 </head>
 <body>
   <header class="topbar">
@@ -47,15 +47,10 @@
         <div id="qbv-msg" class="msg hidden"></div>
       </section>
 
-      <section class="panel" id="card-chart" aria-labelledby="h-chart">
-        <h2 id="h-chart">Chart</h2>
-        <label class="check"><input id="log-scale" type="checkbox"> Logarithmic scale</label>
-        <label class="check"><input id="include-proc" type="checkbox"> Add processing time (end-to-end)</label>
-        <button id="clear" class="btn" type="button">Clear history</button>
-      </section>
 
       <section class="panel sysload" id="card-system" aria-labelledby="h-system">
-        <h2 id="h-system">System load</h2>
+        <div class="sys-head"><h2 id="h-system">System utilization</h2>
+          <select id="system-select" class="sys-select" aria-labelledby="h-system" hidden></select></div>
         <div id="system-rows" class="sys-rows"></div>
         <p id="system-empty" class="hint hidden">Not configured (set METRICS_SOURCES).</p>
       </section>
@@ -68,7 +63,15 @@
       </nav>
 
       <div id="view-uc1" class="view">
-      <div id="kpis" class="kpis"></div>
+      <div class="uc1-top">
+        <div id="kpis" class="kpis"></div>
+        <section class="kpi chart-options" id="card-chart" aria-labelledby="h-chart" style="--c:#8b98a7">
+          <div class="kpi-name"><span id="h-chart">Chart options</span></div>
+          <label class="check"><input id="log-scale" type="checkbox"> Logarithmic scale</label>
+          <label class="check"><input id="include-proc" type="checkbox"> Add processing time (end-to-end)</label>
+          <button id="clear" class="btn" type="button">Clear history</button>
+        </section>
+      </div>
       <div class="panel chart-card">
         <div class="chart-head">
           <h2>Network latency</h2>
@@ -110,6 +113,6 @@
   </main>
 
   <script src="js/vendor/chart.umd.js"></script>
-  <script src="js/app.js?v=1"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

@@ -142,14 +142,26 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 .side h2 { margin-top: 0; }
 .sysload { margin-top: auto; }
 .sys-rows { display: flex; flex-direction: column; gap: 8px; }
-.sys-row { display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 8px; align-items: center; font-size: 12px; }
-.sys-row.stale { opacity: .45; }
-.sys-name { color: var(--text); font-weight: 600; }
-.meter { position: relative; height: 18px; border-radius: 4px; background: #1b2430; overflow: hidden; }
-.meter > i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ok); transition: width .4s; }
-.meter.warn-level > i { background: var(--warn); }
-.meter.bad-level > i { background: var(--bad); }
-.meter > span { position: relative; display: block; padding: 0 6px; line-height: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 1px 1px #000; }
-.sys-head { display: grid; grid-template-columns: 64px 1fr 1fr 1fr; gap: 8px; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
-@media (max-width: 1000px) { .side { overflow: visible; } }
-@media (prefers-reduced-motion: reduce) { .meter > i { transition: none; } }
+.sys-machine.stale { opacity: .5; }
+.sys-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sys-name { color: var(--text); font-weight: 600; font-size: 13px; }
+.sys-note { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.sys-header { display: flex; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.sys-value > span { display: inline-block; min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums; }
+.sys-chart { position: relative; height: 120px; }
+.sys-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sys-head h2 { margin: 0; }
+.sys-select { background: var(--panel); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; padding: 2px 6px; font-size: 12px; }
+
+/* Use case 1: the chart options sit to the right of the camera cards, same height as them */
+.uc1-top { display: flex; gap: 12px; align-items: stretch; }
+.uc1-top .kpis { flex: 1; min-width: 0; }
+.chart-options { flex: 0 0 260px; display: flex; flex-direction: column; justify-content: space-between; gap: 2px; padding: 8px 14px; }
+.chart-options .check { font-size: 12px; margin: 0; }
+.chart-options .btn { align-self: flex-start; padding: 2px 10px; font-size: 12px; }
+@media (max-width: 1000px) { .uc1-top { flex-direction: column; } .chart-options { flex-basis: auto; } }
+
+/* System utilization: natural height under the other cards; the chart keeps a sensible aspect ratio
+   (a chart stretched to the whole column height is far taller than it is wide) */
+.sys-chart { height: 230px; }
+.sys-chart canvas { position: absolute; inset: 0; }

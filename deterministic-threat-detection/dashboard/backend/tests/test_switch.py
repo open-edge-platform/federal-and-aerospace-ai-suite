@@ -205,3 +205,16 @@ def test_enabling_is_refused_while_the_web_toggle_is_off():
     assert sw.busy is False
     sw.set_enabled(False)  # turning it off is always allowed
     _wait_idle(sw)
+
+
+def test_the_switch_address_is_handed_to_the_scripts(monkeypatch):
+    seen = []
+
+    class Done:
+        returncode, stdout, stderr = 0, CURRENT, ""
+
+    monkeypatch.setattr("app.controllers.switch.subprocess.run", lambda cmd, **kw: seen.append(cmd) or Done())
+    sw = MoxaSwitch(1, "user@control-host", "~/moxa", "90000:6,1,0", switch_ip="switch-mgmt")
+    sw.refresh()
+    assert seen[0][-1].endswith("tas_config.py get --port 1 --host switch-mgmt")
+    assert sw.state()["enabled"] is True

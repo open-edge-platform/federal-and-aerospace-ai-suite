@@ -31,7 +31,7 @@ def parse_sources(text):
 
 
 def parse_event(payload):
-    """One metrics-manager event -> {'cpu', 'mem', 'gpu', 'temp', 'mem_used', 'mem_total'} (missing = None)."""
+    """One metrics-manager event -> {'cpu', 'mem', 'gpu', 'npu', 'temp', 'mem_used', 'mem_total'} (missing = None)."""
     metrics = payload.get("metrics") or []
     by_name = {}
     for m in metrics:
@@ -54,6 +54,7 @@ def parse_event(payload):
         "cpu": cpu,
         "mem": first("mem_used_percent"),
         "gpu": max(gpu_engines) if gpu_engines else None,
+        "npu": first("npu_utilization"),
         "temp": first("temp_temp"),
         "mem_used": first("mem_used"),
         "mem_total": first("mem_total"),
@@ -99,6 +100,9 @@ class SystemMetrics:
 
     def ingest(self, name, payload, now=None):
         src = self._sources[name]
+        if not payload.get("metrics"):  # the manager is up but its collector delivers nothing: not a reading
+            src.error = "metrics-manager sends no metrics"
+            return
         src.latest = parse_event(payload)
         src.received = now if now is not None else time.time()
         src.error = None

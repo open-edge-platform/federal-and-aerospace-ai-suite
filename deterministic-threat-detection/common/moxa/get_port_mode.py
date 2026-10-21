@@ -132,7 +132,7 @@ def parse(output):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--host", default="192.168.127.253")
+    ap.add_argument("--host", default=os.environ.get("MOXA_HOST"), help="switch management address (or set MOXA_HOST)")
     ap.add_argument("--port", type=int, default=1, help="port number on slot 1")
     ap.add_argument("--user", default="admin")
     ap.add_argument("--password", default=os.environ.get("MOXA_PASSWORD", "moxa"))

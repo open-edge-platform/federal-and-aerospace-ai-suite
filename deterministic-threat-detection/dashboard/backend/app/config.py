@@ -13,6 +13,29 @@ def _float(name, default):
     return float(os.environ.get(name, default))
 
 
+# --- lab addresses --------------------------------------------------------------------------------
+# Every address comes from lab.env (passed in through the environment); this file contains none.
+SSH_USER = os.environ.get("SSH_USER", "")
+M1_LAB_IP = os.environ.get("M1_LAB_IP", "")
+M2_LAB_IP = os.environ.get("M2_LAB_IP", "")
+M3_LAB_IP = os.environ.get("M3_LAB_IP", "")
+M4_LAB_IP = os.environ.get("M4_LAB_IP", "")
+M1_NOISE_IP = os.environ.get("M1_NOISE_IP", "")
+M4_NOISE_IP = os.environ.get("M4_NOISE_IP", "")
+
+
+def _target(host):
+    """user@host for ssh, or '' while the lab configuration is incomplete."""
+    return f"{SSH_USER}@{host}" if SSH_USER and host else ""
+
+
+def require(mode, **needed):
+    """Fail at startup with a message that names the missing lab.env entries."""
+    missing = [name for name, value in needed.items() if not value]
+    if missing:
+        raise ValueError(f"{mode} needs {', '.join(missing)} - fill them in lab.env (see lab.env.example)")
+
+
 MQTT_HOST = os.environ.get("MQTT_HOST", "127.0.0.1")
 MQTT_PORT = _int("MQTT_PORT", 1883)
 # Topics are tsn_demo/<source>/inference; the middle part names the chart series.
@@ -36,17 +59,19 @@ TRAFFIC_MAX_MBPS = _int("TRAFFIC_MAX_MBPS", 1000)
 SWITCH_MODE = os.environ.get("SWITCH_MODE", "sim")
 SWITCH_PORT = _int("SWITCH_PORT", 1)
 # Machine-2 on the lab network: its port and NIC carry none of the injected load.
-SWITCH_SSH_TARGET = os.environ.get("SWITCH_SSH_TARGET", "tsndemo@10.106.147.105")
+SWITCH_SSH_TARGET = os.environ.get("SWITCH_SSH_TARGET") or _target(M2_LAB_IP)
+# Management address of the switch, as machine-2 reaches it (passed to the Moxa scripts as --host)
+SWITCH_IP = os.environ.get("SWITCH_IP", "")
 SWITCH_REMOTE_DIR = os.environ.get("SWITCH_REMOTE_DIR", "~/moxa")
 # Reads are always allowed; enabling/disabling the shaper needs SWITCH_ALLOW_WRITE=1.
 SWITCH_ALLOW_WRITE = os.environ.get("SWITCH_ALLOW_WRITE", "0") == "1"
 # Gate control list used for "Qbv on": INTERVAL_US:QUEUES per slot (same as port 1 today).
 SWITCH_SCHEDULE = os.environ.get("SWITCH_SCHEDULE", "90000:6,1,0 10000:5,1,0")
 
-TRAFFIC_SERVER_IP = os.environ.get("TRAFFIC_SERVER_IP", "192.168.5.11")
+TRAFFIC_SERVER_IP = os.environ.get("TRAFFIC_SERVER_IP") or M1_NOISE_IP
 # Machine-4 on the lab network (control path); the traffic itself leaves via VLAN 5.
-TRAFFIC_CLIENT_TARGET = os.environ.get("TRAFFIC_CLIENT_TARGET", "tsndemo@10.106.147.208")
-TRAFFIC_CLIENT_IP = os.environ.get("TRAFFIC_CLIENT_IP", "192.168.5.14")
+TRAFFIC_CLIENT_TARGET = os.environ.get("TRAFFIC_CLIENT_TARGET") or _target(M4_LAB_IP)
+TRAFFIC_CLIENT_IP = os.environ.get("TRAFFIC_CLIENT_IP") or M4_NOISE_IP
 IPERF3_BIN = os.environ.get("IPERF3_BIN", "iperf3")
 TRAFFIC_GUARD_S = _int("TRAFFIC_GUARD_S", 3600)
 
@@ -66,4 +91,15 @@ DLSPS_URL = os.environ.get("DLSPS_URL", "http://127.0.0.1:8082")
 WATCHDOG_CAMERAS = {"Cam_x1_0": "hota-cam1", "Cam_x2_0": "hota-cam2"}
 
 # System load: name=url pairs of the machines' metrics-manager streams (set in the local .env)
-METRICS_SOURCES = os.environ.get("METRICS_SOURCES", "")
+METRICS_PORT = _int("METRICS_PORT", 19090)
+
+
+def _default_metrics_sources():
+    parts = [f"machine-1=http://127.0.0.1:{METRICS_PORT}/metrics/stream"]  # this machine's own, on loopback
+    for name, host in (("machine-2", M2_LAB_IP), ("machine-3", M3_LAB_IP), ("machine-4", M4_LAB_IP)):  # the other machines (lab network)
+        if host:
+            parts.append(f"{name}=http://{host}:{METRICS_PORT}/metrics/stream")
+    return ",".join(parts)
+
+
+METRICS_SOURCES = os.environ.get("METRICS_SOURCES") or _default_metrics_sources()

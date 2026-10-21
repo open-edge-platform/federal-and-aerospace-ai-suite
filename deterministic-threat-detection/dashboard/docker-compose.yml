@@ -40,6 +40,8 @@ services:
     network_mode: host
     depends_on:
       - broker
+    env_file:
+      - ../lab.env  # machine addresses (SSH_USER, M*_LAB_IP, M*_NOISE_IP, SWITCH_IP)
     environment:
       MQTT_HOST: 127.0.0.1
       MQTT_PORT: ${MQTT_PORT:-1884}

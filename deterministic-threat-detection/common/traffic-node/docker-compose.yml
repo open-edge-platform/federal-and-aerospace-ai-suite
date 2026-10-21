@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
+# Machine-4 (the traffic injector): its CPU/memory/GPU load for the dashboard, and the load agent that
+# runs the iperf3 client on request. Started from machine-1 by deploy.sh (docker -H ssh://...), so
+# machine-4 itself needs no compose plugin. Host networking for both: the agent's iperf3 must leave on the
+# VLAN 5 address, and its API listens on the lab address only (never on a TSN VLAN: it must stay reachable
+# while the injected load saturates the TSN link).
+name: tsn-traffic-node
+
+services:
+  metrics-manager:
+    image: docker.io/intel/metrics-manager:2026.2.0
+    privileged: true
+    pid: host
+    volumes:
+      - /sys:/sys:ro
+    ports:
+      - "${METRICS_PORT:-19090}:9090"
+    restart: unless-stopped
+
+  load-agent:
+    image: tsn-load-agent:local  # built on machine-1 and copied over by deploy.sh
+    network_mode: host
+    environment:
+      LOAD_BIND: ${LOAD_BIND:?set LOAD_BIND (machine-4 lab address)}
+      LOAD_PORT: ${LOAD_PORT:-8099}
+      SERVER_IP: ${SERVER_IP:?set SERVER_IP (machine-1 VLAN 5 address)}
+      CLIENT_IP: ${CLIENT_IP:?set CLIENT_IP (machine-4 VLAN 5 address)}
+      MAX_MBPS: ${MAX_MBPS:-1000}
+    restart: unless-stopped

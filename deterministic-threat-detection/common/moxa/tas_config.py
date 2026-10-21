@@ -110,7 +110,7 @@ def main():
     ap.add_argument("--port", type=int, required=True)
     ap.add_argument("--slot", action="append", default=[], help="INTERVAL_US:Q,Q (repeatable)")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--host", default="192.168.127.253")
+    ap.add_argument("--host", default=os.environ.get("MOXA_HOST"), help="switch management address (or set MOXA_HOST)")
     ap.add_argument("--user", default="admin")
     ap.add_argument("--password", default=os.environ.get("MOXA_PASSWORD", "moxa"))
     a = ap.parse_args()

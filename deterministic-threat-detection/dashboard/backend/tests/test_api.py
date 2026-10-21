@@ -45,8 +45,40 @@ def test_history_shows_added_samples(client):
     assert client.get("/api/status").json()["sources"] == {}
 
 
-def test_traffic_command_uses_vlan5_addresses(client):
-    cmd = client.app.state.traffic.command(300)
-    assert cmd[0:2] == ["ssh", "-tt"] and cmd[-2] == "tsndemo@10.106.147.208"  # lab address, not VLAN 1
-    assert "-B 192.168.5.14" in cmd[-1] and "-c 192.168.5.11" in cmd[-1] and "-b 300M" in cmd[-1]
+def test_traffic_command_uses_the_noise_vlan_addresses_and_the_lab_control_path():
+    from app.controllers.traffic import TrafficController
+
+    t = TrafficController("iperf", 1000, "srv-noise", "user@injector-lab", "inj-noise")
+    cmd = t.command(300)
+    assert cmd[0:2] == ["ssh", "-tt"] and cmd[-2] == "user@injector-lab"  # control over the lab address
+    assert "-B inj-noise" in cmd[-1] and "-c srv-noise" in cmd[-1] and "-b 300M" in cmd[-1]
     assert "timeout " in cmd[-1] and "-t 3600" in cmd[-1] and "-l " not in cmd[-1]  # default packet size
+
+
+def test_missing_lab_entries_are_named_at_startup():
+    import pytest
+
+    from app import config
+
+    with pytest.raises(ValueError, match="M2_LAB_IP.*lab.env"):
+        config.require("SWITCH_MODE=moxa", SSH_USER="u", M2_LAB_IP="", SWITCH_IP="x")
+    config.require("anything", A="x")  # nothing missing: no error
+
+
+def test_metrics_sources_default_is_built_from_the_lab_entries(monkeypatch):
+    import importlib
+
+    from app import config
+
+    monkeypatch.setenv("M2_LAB_IP", "cam2-lab")
+    monkeypatch.setenv("M3_LAB_IP", "cam3-lab")
+    monkeypatch.setenv("METRICS_PORT", "12345")
+    monkeypatch.delenv("METRICS_SOURCES", raising=False)
+    try:
+        cfg = importlib.reload(config)
+        assert cfg.METRICS_SOURCES == ("machine-1=http://127.0.0.1:12345/metrics/stream,"
+                                       "machine-2=http://cam2-lab:12345/metrics/stream,"
+                                       "machine-3=http://cam3-lab:12345/metrics/stream")
+    finally:
+        monkeypatch.undo()
+        importlib.reload(config)

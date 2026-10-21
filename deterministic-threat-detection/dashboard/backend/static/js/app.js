@@ -91,29 +91,78 @@
     if (activeTab === 'uc2') { hotaChart.options.scales.x.min = state.lastNow - 120; hotaChart.options.scales.x.max = state.lastNow; hotaChart.update('none'); }
   }
 
-  // ---- system load card ----------------------------------------------------------------------
-  const level = (v) => (v >= 85 ? 'bad-level' : v >= 60 ? 'warn-level' : '');
-  function meter(label, value, title) {
-    const known = value !== null && value !== undefined;
-    const pct = known ? Math.max(0, Math.min(100, value)) : 0;
-    return `<div class="meter ${known ? level(value) : ''}" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100"` +
-      `${known ? ` aria-valuenow="${Math.round(pct)}"` : ''} title="${title}"><i style="width:${pct}%"></i>` +
-      `<span>${known ? Math.round(pct) + ' %' : '–'}</span></div>`;
+  // ---- system utilization: one CPU/RAM/GPU/NPU line chart per machine (same look as uav-ground-station) ----
+  const SERIES = [
+    { key: 'cpu', label: 'CPU %', short: 'CPU', color: '#1ad0ff' },
+    { key: 'mem', label: 'RAM %', short: 'RAM', color: '#8ca0c2' },
+    { key: 'gpu', label: 'GPU %', short: 'GPU', color: '#ffb347' },
+    { key: 'npu', label: 'NPU %', short: 'NPU', color: '#b388ff' },
+  ];
+  const SYS_MAX_POINTS = 60;
+  const sysPanels = new Map();
+  let sysSelected = null;  // machine name -> { el, chart, vals, note }
+  const fmtPct = (v) => (v === null || v === undefined ? '—' : Math.max(0, Math.min(100, v)).toFixed(0) + '%');
+
+  function makeSysPanel(name) {
+    const el = document.createElement('div');
+    el.className = 'sys-machine';
+    el.innerHTML = `<div class="sys-title"><span class="sys-name">${name}</span><span class="sys-note"></span></div>` +
+      '<div class="sys-header">' + SERIES.map((s) =>
+        `<span class="sys-value" data-key="${s.key}" style="color:${s.color}">${s.short} <span>—</span></span>`).join('') + '</div>' +
+      '<div class="sys-chart"><canvas></canvas></div>';
+    $('system-rows').appendChild(el);
+    const ctx = el.querySelector('canvas').getContext('2d');
+    const datasets = SERIES.map((s) => {
+      const g = ctx.createLinearGradient(0, 0, 0, 110);
+      g.addColorStop(0, s.color + '33'); g.addColorStop(1, s.color + '05');
+      return { label: s.label, data: [], borderColor: s.color, backgroundColor: g, tension: 0.35,
+        fill: s.key === 'cpu' || s.key === 'mem', pointRadius: 0, borderWidth: 2, spanGaps: true };
+    });
+    const chart = new Chart(ctx, { type: 'line', data: { labels: [], datasets }, options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      scales: { x: { display: false },
+        y: { suggestedMin: 0, suggestedMax: 100, grid: { color: 'rgba(230, 237, 243, 0.08)' }, ticks: { color: '#8a97a6' } } },
+      plugins: { legend: { display: false } } } });
+    const panel = { el, chart, note: el.querySelector('.sys-note'),
+      vals: Object.fromEntries(SERIES.map((s) => [s.key, el.querySelector(`[data-key="${s.key}"]`)])) };
+    sysPanels.set(name, panel);
+    const sel = $('system-select');
+    sel.add(new Option(name, name));
+    sel.hidden = sysPanels.size < 2;
+    if (sysSelected === null) sysSelected = name;  // the first machine is shown until another is picked
+    el.classList.toggle('hidden', name !== sysSelected);
+    return panel;
   }
+
+  $('system-select').addEventListener('change', (e) => {
+    sysSelected = e.target.value;
+    for (const [n, p] of sysPanels) p.el.classList.toggle('hidden', n !== sysSelected);
+    sysPanels.get(sysSelected).chart.resize();
+  });
+
   function renderSystem(system) {
-    const rows = $('system-rows');
     $('system-empty').classList.toggle('hidden', !!system && Object.keys(system).length > 0);
-    if (!system) { rows.innerHTML = ''; return; }
-    const head = '<div class="sys-head" aria-hidden="true"><span></span><span>CPU</span><span>RAM</span><span>GPU</span></div>';
-    rows.innerHTML = head + Object.entries(system).map(([name, m]) => {
-      const mem = m.mem_total ? `${(m.mem_used / 1e9).toFixed(1)} of ${(m.mem_total / 1e9).toFixed(1)} GB` : 'memory in use';
-      const temp = m.temp !== null && m.temp !== undefined ? ` · ${Math.round(m.temp)} °C` : '';
-      const note = m.ok ? '' : (m.age_s === null ? ' (no data yet)' : ' (no data for ' + Math.round(m.age_s) + ' s)');
-      return `<div class="sys-row ${m.ok ? '' : 'stale'}"><span class="sys-name" title="${name}${note}">${name.replace('machine-', 'M')}</span>` +
-        meter('CPU ' + name, m.ok ? m.cpu : null, 'CPU in use on ' + name + temp + note) +
-        meter('RAM ' + name, m.ok ? m.mem : null, mem + ' on ' + name + note) +
-        meter('GPU ' + name, m.ok ? m.gpu : null, 'busiest GPU engine on ' + name + note) + '</div>';
-    }).join('');
+    if (!system) return;
+    for (const [name, m] of Object.entries(system)) {
+      const p = sysPanels.get(name) || makeSysPanel(name);
+      const mem = m.mem_total ? `${(m.mem_used / 1e9).toFixed(1)} of ${(m.mem_total / 1e9).toFixed(1)} GB` : '';
+      const temp = m.temp !== null && m.temp !== undefined ? `${Math.round(m.temp)} °C` : '';
+      p.note.textContent = m.ok ? [mem, temp].filter(Boolean).join(' · ')
+        : (m.age_s === null ? 'no data yet' : 'no data for ' + Math.round(m.age_s) + ' s');
+      p.el.classList.toggle('stale', !m.ok);
+      const c = p.chart;
+      c.data.labels.push(new Date().toLocaleTimeString());
+      SERIES.forEach((s, i) => {
+        const v = m.ok && m[s.key] !== undefined ? m[s.key] : null;
+        c.data.datasets[i].data.push(v);
+        p.vals[s.key].lastChild.textContent = fmtPct(v);
+        // GPU and NPU are not present on every machine: hide a value that has never been reported
+        if (v !== null) p.vals[s.key].dataset.seen = '1';
+        p.vals[s.key].style.display = s.key === 'cpu' || s.key === 'mem' || p.vals[s.key].dataset.seen ? '' : 'none';
+      });
+      while (c.data.labels.length > SYS_MAX_POINTS) { c.data.labels.shift(); c.data.datasets.forEach((d) => d.data.shift()); }
+      c.update('none');
+    }
   }
 
   // ---- tabs ------------------------------------------------------------------------------------

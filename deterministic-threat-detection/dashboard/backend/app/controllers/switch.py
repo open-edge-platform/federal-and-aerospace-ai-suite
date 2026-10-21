@@ -102,12 +102,13 @@ class MoxaSwitch:
     """Reads the shaper state in the background; applies changes only when allowed."""
 
     def __init__(self, port, ssh_target, remote_dir, schedule, allow_write=False,
-                 poll_interval_s=5.0, run=None, verify_timeout_s=60.0, verify_interval_s=2.0):
+                 poll_interval_s=5.0, run=None, verify_timeout_s=60.0, verify_interval_s=2.0, switch_ip=None):
         if port in FORBIDDEN_PORTS:
             raise ValueError(f"port {port} is the management path and must not be configured")
         self.mode = "moxa"
         self.port = port
         self.ssh_target, self.remote_dir = ssh_target, remote_dir
+        self.switch_ip = switch_ip  # management address as the control host reaches it (--host)
         self.schedule_args = parse_schedule(schedule)
         self.allow_write = allow_write
         self.poll_interval_s = poll_interval_s
@@ -123,7 +124,8 @@ class MoxaSwitch:
         self._thread = None
 
     def _ssh(self, args, timeout=60):
-        remote = f"cd {self.remote_dir} && python3 -I tas_config.py " + " ".join(args)
+        host = ["--host", self.switch_ip] if self.switch_ip else []
+        remote = f"cd {self.remote_dir} && python3 -I tas_config.py " + " ".join([*args, *host])
         cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", self.ssh_target, remote]
         done = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         if done.returncode != 0:
@@ -211,6 +213,7 @@ def create_switch(cfg):
     if cfg.SWITCH_MODE == "sim":
         return SimSwitch(cfg.SWITCH_PORT)
     if cfg.SWITCH_MODE == "moxa":
+        cfg.require("SWITCH_MODE=moxa", SSH_USER=cfg.SSH_USER, M2_LAB_IP=cfg.SWITCH_SSH_TARGET, SWITCH_IP=cfg.SWITCH_IP)
         return MoxaSwitch(cfg.SWITCH_PORT, cfg.SWITCH_SSH_TARGET, cfg.SWITCH_REMOTE_DIR,
-                          cfg.SWITCH_SCHEDULE, cfg.SWITCH_ALLOW_WRITE)
+                          cfg.SWITCH_SCHEDULE, cfg.SWITCH_ALLOW_WRITE, switch_ip=cfg.SWITCH_IP)
     raise ValueError(f"unknown SWITCH_MODE '{cfg.SWITCH_MODE}'")

@@ -46,6 +46,9 @@ def create_app(start_mqtt=True):
         stall_after_s=config.STALL_AFTER_S,
         max_latency_s=config.MAX_PLAUSIBLE_LATENCY_S,
     )
+    if config.TRAFFIC_MODE == "iperf":
+        config.require("TRAFFIC_MODE=iperf", M1_NOISE_IP=config.TRAFFIC_SERVER_IP, SSH_USER=config.TRAFFIC_CLIENT_TARGET,
+                       M4_LAB_IP=config.TRAFFIC_CLIENT_TARGET, M4_NOISE_IP=config.TRAFFIC_CLIENT_IP)
     server = IperfServer(config.TRAFFIC_SERVER_IP, config.IPERF3_BIN) if config.TRAFFIC_MODE == "iperf" else None
     traffic = TrafficController(
         config.TRAFFIC_MODE,

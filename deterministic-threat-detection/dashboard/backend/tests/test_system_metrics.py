@@ -16,6 +16,7 @@ SAMPLE = {"timestamp": 1, "metrics": [
     {"name": "mem_used", "labels": {}, "value": 4.0e9}, {"name": "mem_total", "labels": {}, "value": 16.0e9},
     {"name": "gpu_engine_usage_usage", "labels": {"engine": "rcs"}, "value": 12.0},
     {"name": "gpu_engine_usage_usage", "labels": {"engine": "vcs"}, "value": 30.0},
+    {"name": "npu_utilization", "labels": {}, "value": 7.0},
     {"name": "temp_temp", "labels": {}, "value": 52},
 ]}
 
@@ -30,7 +31,7 @@ def test_parse_sources():
 def test_parse_event_uses_the_cpu_total_and_the_busiest_gpu_engine():
     r = parse_event(SAMPLE)
     assert r["cpu"] == pytest.approx(60.0)  # 100 - idle of cpu-total, not the single-core 99
-    assert r["mem"] == 26.5 and r["gpu"] == 30.0 and r["temp"] == 52
+    assert r["mem"] == 26.5 and r["gpu"] == 30.0 and r["npu"] == 7.0 and r["temp"] == 52
     assert r["mem_used"] == 4.0e9 and r["mem_total"] == 16.0e9
 
 
@@ -38,7 +39,7 @@ def test_parse_event_without_idle_falls_back_and_missing_values_are_none():
     payload = {"metrics": [{"name": "cpu_usage_user", "labels": {"cpu": "cpu-total"}, "value": 10.0},
                            {"name": "cpu_usage_system", "labels": {"cpu": "cpu-total"}, "value": 5.0}]}
     r = parse_event(payload)
-    assert r["cpu"] == 15.0 and r["mem"] is None and r["gpu"] is None and r["temp"] is None
+    assert r["cpu"] == 15.0 and r["mem"] is None and r["gpu"] is None and r["npu"] is None and r["temp"] is None
     assert parse_event({})["cpu"] is None
 
 
@@ -75,3 +76,12 @@ def test_reads_a_real_event_stream_over_http():
     sm.stop()
     server.shutdown()
     assert sm.snapshot()["m1"]["ok"] and sm.snapshot()["m1"]["cpu"] == pytest.approx(60.0)
+
+
+def test_event_without_metrics_is_not_a_reading():
+    sm = SystemMetrics({"m1": "http://x"}, stale_after_s=5)
+    sm.ingest("m1", SAMPLE, now=100.0)
+    sm.ingest("m1", {"timestamp": 1, "metrics": []}, now=101.0)
+    snap = sm.snapshot(now=103.0)
+    assert snap["m1"]["cpu"] == pytest.approx(60.0) and snap["m1"]["age_s"] == 3.0 and snap["m1"]["error"]
+    assert not SystemMetrics({"m2": "http://y"}).snapshot()["m2"]["ok"]
