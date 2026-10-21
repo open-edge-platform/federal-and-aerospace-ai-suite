@@ -33,6 +33,17 @@ services:
     # No automatic restart: a restart would change the message sequence mid-demo.
     restart: "no"
 
+  # System load of this camera machine for the dashboard's "System load" card.
+  metrics-manager:
+    image: docker.io/intel/metrics-manager:2026.2.0
+    privileged: true
+    pid: host
+    volumes:
+      - /sys:/sys:ro
+    ports:
+      - "${METRICS_PORT:-19090}:9090"
+    restart: unless-stopped
+
 volumes:
   pipeline-root:
     driver: local

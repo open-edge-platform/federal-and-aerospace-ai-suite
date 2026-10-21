@@ -22,32 +22,44 @@
   </header>
 
   <main class="layout">
-    <section class="panel controls" aria-label="Controls">
-      <h2>Network load</h2>
-      <p class="hint">Background traffic from machine-4 to machine-1 over VLAN 5.</p>
-      <div class="slider-row">
-        <input id="traffic" type="range" min="0" max="1000" step="10" value="0">
-        <output id="traffic-value">0 Mbit/s</output>
-      </div>
-      <div id="traffic-measured" class="hint"></div>
-      <div id="traffic-msg" class="msg hidden"></div>
+    <div class="side" aria-label="Controls and system load">
+      <section class="panel" id="card-load" aria-labelledby="h-load">
+        <h2 id="h-load">Network load</h2>
+        <p class="hint">Background traffic from machine-4 to machine-1 over VLAN 5.</p>
+        <div class="slider-row">
+          <input id="traffic" type="range" min="0" max="1000" step="10" value="0" aria-labelledby="h-load">
+          <output id="traffic-value">0 Mbit/s</output>
+        </div>
+        <div id="traffic-measured" class="hint"></div>
+        <div id="traffic-msg" class="msg hidden"></div>
+      </section>
 
-      <h2>Time-aware Shaper (Qbv)</h2>
-      <p class="hint">Gate schedule on switch <span id="qbv-port">port 1</span> that protects the camera stream.</p>
-      <label class="switch">
-        <input id="qbv" type="checkbox">
-        <span class="track"></span>
-        <span id="qbv-label" class="switch-label">Off</span>
-      </label>
-      <div id="qbv-warn" class="warn hidden" role="alert"></div>
-      <div id="qbv-schedule" class="hint"></div>
-      <div id="qbv-msg" class="msg hidden"></div>
+      <section class="panel" id="card-qbv" aria-labelledby="h-qbv">
+        <h2 id="h-qbv">Time-aware Shaper (Qbv)</h2>
+        <p class="hint">Gate schedule on switch <span id="qbv-port">port 1</span> that protects the camera stream.</p>
+        <label class="switch">
+          <input id="qbv" type="checkbox">
+          <span class="track"></span>
+          <span id="qbv-label" class="switch-label">Off</span>
+        </label>
+        <div id="qbv-warn" class="warn hidden" role="alert"></div>
+        <div id="qbv-schedule" class="hint"></div>
+        <div id="qbv-msg" class="msg hidden"></div>
+      </section>
 
-      <h2>Chart</h2>
-      <label class="check"><input id="log-scale" type="checkbox"> Logarithmic scale</label>
-      <label class="check"><input id="include-proc" type="checkbox"> Add processing time (end-to-end)</label>
-      <button id="clear" class="btn" type="button">Clear history</button>
-    </section>
+      <section class="panel" id="card-chart" aria-labelledby="h-chart">
+        <h2 id="h-chart">Chart</h2>
+        <label class="check"><input id="log-scale" type="checkbox"> Logarithmic scale</label>
+        <label class="check"><input id="include-proc" type="checkbox"> Add processing time (end-to-end)</label>
+        <button id="clear" class="btn" type="button">Clear history</button>
+      </section>
+
+      <section class="panel sysload" id="card-system" aria-labelledby="h-system">
+        <h2 id="h-system">System load</h2>
+        <div id="system-rows" class="sys-rows"></div>
+        <p id="system-empty" class="hint hidden">Not configured (set METRICS_SOURCES).</p>
+      </section>
+    </div>
 
     <section class="main">
       <nav class="tabs" role="tablist" aria-label="Use case">

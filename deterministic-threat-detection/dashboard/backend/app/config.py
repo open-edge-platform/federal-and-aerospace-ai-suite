@@ -64,3 +64,6 @@ HOTA_LAG_S = _float("HOTA_LAG_S", 0.08)
 WATCHDOG_ENABLED = os.environ.get("WATCHDOG_ENABLED", "1") == "1"
 DLSPS_URL = os.environ.get("DLSPS_URL", "http://127.0.0.1:8082")
 WATCHDOG_CAMERAS = {"Cam_x1_0": "hota-cam1", "Cam_x2_0": "hota-cam2"}
+
+# System load: name=url pairs of the machines' metrics-manager streams (set in the local .env)
+METRICS_SOURCES = os.environ.get("METRICS_SOURCES", "")

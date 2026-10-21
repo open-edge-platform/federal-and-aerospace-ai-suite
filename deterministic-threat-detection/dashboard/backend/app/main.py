@@ -22,6 +22,7 @@ from .latency import LatencyTracker
 from .mqtt_source import MqttSource
 from .pipeline_watchdog import PipelineWatchdog
 from .scene_source import SceneSource
+from .system_metrics import SystemMetrics, parse_sources
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("main")
@@ -57,6 +58,12 @@ def create_app(start_mqtt=True):
     )
     switch = create_switch(config)
     source = MqttSource(tracker, config.MQTT_HOST, config.MQTT_PORT, config.MQTT_TOPIC)
+    system = None
+    if config.METRICS_SOURCES and start_mqtt:
+        try:
+            system = SystemMetrics(parse_sources(config.METRICS_SOURCES))
+        except ValueError as exc:
+            log.warning("system load disabled: %s", exc)
     scene = None
     if config.SCENE_ENABLED and start_mqtt:
         try:
@@ -78,6 +85,8 @@ def create_app(start_mqtt=True):
             scene.start()
             if scene.watchdog:
                 scene.watchdog.start()
+        if system:
+            system.start()
         yield
         traffic.shutdown()
         switch.stop()
@@ -85,6 +94,8 @@ def create_app(start_mqtt=True):
             scene.stop()
             if scene.watchdog:
                 scene.watchdog.stop()
+        if system:
+            system.stop()
         if start_mqtt:
             source.stop()
 
@@ -100,6 +111,7 @@ def create_app(start_mqtt=True):
             "qbv": switch.state(),
             "scene": scene.status() if scene else None,
             "hota": scene.latest if scene else None,
+            "system": system.snapshot() if system else None,
         }
 
     @app.get("/api/config")

@@ -91,6 +91,31 @@
     if (activeTab === 'uc2') { hotaChart.options.scales.x.min = state.lastNow - 120; hotaChart.options.scales.x.max = state.lastNow; hotaChart.update('none'); }
   }
 
+  // ---- system load card ----------------------------------------------------------------------
+  const level = (v) => (v >= 85 ? 'bad-level' : v >= 60 ? 'warn-level' : '');
+  function meter(label, value, title) {
+    const known = value !== null && value !== undefined;
+    const pct = known ? Math.max(0, Math.min(100, value)) : 0;
+    return `<div class="meter ${known ? level(value) : ''}" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100"` +
+      `${known ? ` aria-valuenow="${Math.round(pct)}"` : ''} title="${title}"><i style="width:${pct}%"></i>` +
+      `<span>${known ? Math.round(pct) + ' %' : '–'}</span></div>`;
+  }
+  function renderSystem(system) {
+    const rows = $('system-rows');
+    $('system-empty').classList.toggle('hidden', !!system && Object.keys(system).length > 0);
+    if (!system) { rows.innerHTML = ''; return; }
+    const head = '<div class="sys-head" aria-hidden="true"><span></span><span>CPU</span><span>RAM</span><span>GPU</span></div>';
+    rows.innerHTML = head + Object.entries(system).map(([name, m]) => {
+      const mem = m.mem_total ? `${(m.mem_used / 1e9).toFixed(1)} of ${(m.mem_total / 1e9).toFixed(1)} GB` : 'memory in use';
+      const temp = m.temp !== null && m.temp !== undefined ? ` · ${Math.round(m.temp)} °C` : '';
+      const note = m.ok ? '' : (m.age_s === null ? ' (no data yet)' : ' (no data for ' + Math.round(m.age_s) + ' s)');
+      return `<div class="sys-row ${m.ok ? '' : 'stale'}"><span class="sys-name" title="${name}${note}">${name.replace('machine-', 'M')}</span>` +
+        meter('CPU ' + name, m.ok ? m.cpu : null, 'CPU in use on ' + name + temp + note) +
+        meter('RAM ' + name, m.ok ? m.mem : null, mem + ' on ' + name + note) +
+        meter('GPU ' + name, m.ok ? m.gpu : null, 'busiest GPU engine on ' + name + note) + '</div>';
+    }).join('');
+  }
+
   // ---- tabs ------------------------------------------------------------------------------------
   let activeTab = 'uc1';
   function showTab(name) {
@@ -323,6 +348,7 @@
       addPoints(msg.points, state.cfg.history_s);
       addHotaPoints(msg.hota_points || []);
       renderHota(msg);
+      renderSystem(msg.system);
       renderKpis(msg.sources);
       renderControls(msg);
       render(msg.now);
