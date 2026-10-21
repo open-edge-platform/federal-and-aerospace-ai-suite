@@ -86,7 +86,7 @@ All configuration is via `.env` (see `.env.example`):
 |---|---|---|
 | `VIZ_HOST_IP` | `127.0.0.1` (`make init` sets the host's LAN IP) | Bind address for this machine's published port |
 | `VIZ_PORT` | `8080` | Dashboard port |
-| `VIZ_COMPANION_HOST` | `127.0.0.1` | Pre-filled value in the dashboard's UAV Companion Compute IP field |
+| `VIZ_COMPANION_HOST` | `127.0.0.1` | UAV Companion Compute IP field |
 | `VIZ_CAMERA_ORDER` | `front,bottom,back` | Camera card order, by a word in the stream name; unlisted cameras follow alphabetically |
 | `VIZ_REMOTE_HTTPS_PORT` | `443` | UAV host's nginx HTTPS port |
 | `VIZ_REMOTE_MQTT_PORT` | `1883` | UAV host's nginx MQTT passthrough port |

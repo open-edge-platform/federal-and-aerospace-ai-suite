@@ -29,6 +29,13 @@
   let lastFocus = null;
   let inFlight = null;
   let camerasLoadedForHost = null;
+  // Bumped on every populateCameras() call so a slower, superseded request
+  // can tell its own response is stale and skip rendering it -- without
+  // this, two in-flight requests racing could leave the modal showing the
+  // wrong host's cameras, or even get stuck re-showing "Looking up
+  // cameras..." if the later request's promise settles before the earlier
+  // (now-irrelevant) one does.
+  let camerasRequestToken = 0;
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -84,7 +91,16 @@
     hostInput.classList.toggle("hidden", nextSelection !== CUSTOM_HOST_VALUE);
   }
 
+  // Hard cap so a hung/slow /api/detect-pipelines call (e.g. the target UAV
+  // just rebooted its pipeline-server and is mid-reconnect) can't leave the
+  // modal stuck on "Looking up cameras..." forever with no way out other
+  // than a full page reload -- it now always resolves to either the real
+  // camera list or an explicit "took too long" message within this window.
+  const DETECT_PIPELINES_TIMEOUT_MS = 10000;
+
   async function populateCameras(host, { force = false } = {}) {
+    const myToken = ++camerasRequestToken;
+
     if (!host) {
       cameraChecks.replaceChildren(el("span", "muted", "Enter a UAV host above to list its cameras\u2026"));
       camerasLoadedForHost = null;
@@ -92,9 +108,13 @@
     }
     if (!force && camerasLoadedForHost === host) return;
     cameraChecks.replaceChildren(el("span", "muted", "Looking up cameras\u2026"));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DETECT_PIPELINES_TIMEOUT_MS);
     try {
-      const res = await fetch(`/api/detect-pipelines?host=${encodeURIComponent(host)}`);
+      const res = await fetch(`/api/detect-pipelines?host=${encodeURIComponent(host)}`, { signal: controller.signal });
+      if (myToken !== camerasRequestToken) return; // superseded by a newer call -- discard
       const data = await res.json();
+      if (myToken !== camerasRequestToken) return;
       const cameras = Array.isArray(data.cameras) ? data.cameras : [];
       if (!data.reachable) {
         cameraChecks.replaceChildren(el("span", "muted", `Could not reach ${host}.`));
@@ -122,8 +142,14 @@
       });
       camerasLoadedForHost = host;
     } catch (err) {
-      cameraChecks.replaceChildren(el("span", "muted", "Couldn't look up cameras for this host."));
+      if (myToken !== camerasRequestToken) return; // superseded -- a newer call already rendered something
+      const timedOut = err && err.name === "AbortError";
+      cameraChecks.replaceChildren(el("span", "muted",
+        timedOut ? `Timed out looking up cameras for ${host}. Click a host again to retry.`
+                 : "Couldn't look up cameras for this host."));
       camerasLoadedForHost = null;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

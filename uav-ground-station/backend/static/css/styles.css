@@ -170,6 +170,10 @@ code { color: var(--accent); }
   overflow-y: auto;
   min-height: 0;
 }
+
+.host-view {
+  display: contents;
+}
 .cards-empty {
   grid-column: 1 / -1;
   color: var(--muted);

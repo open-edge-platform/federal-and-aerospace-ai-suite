@@ -26,7 +26,20 @@
   // on top of an already multi-host-capable backend.
   const sessions = new Map(); // host -> { connectedAt, label }
 
+  // The most recent boot_id this tab has actually confirmed the backend is
+  // running under. Sent with every POST /api/sessions so the server can tell
+  // a *live* client apart from a tab that's been open since before a
+  // restart and is still running with a stale value.
+  let knownBootId = null;
+
   const SESSIONS_STORAGE_KEY = "uav-ground-station:sessions:v1";
+  // The viz-backend process generates a random boot_id every time it starts.
+  // We remember the last boot_id this browser saw; if the backend's current
+  // boot_id doesn't match, the backend has restarted since we last talked to
+  // it -- its in-memory `_sessions` registry is therefore genuinely empty,
+  // and this browser's own localStorage-remembered hosts must NOT be used
+  // to silently re-populate it.
+  const BOOT_ID_STORAGE_KEY = "uav-ground-station:boot-id:v1";
 
   function persistSessions() {
     try {
@@ -38,7 +51,9 @@
       fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ host: currentHost, label: label || null }),
+        body: JSON.stringify({ host: currentHost, label: label || null, boot_id: knownBootId }),
+      }).then((res) => {
+        if (res.status === 409) handleBackendRestartedMidSession();
       }).catch(() => {});
     }
   }
@@ -48,14 +63,48 @@
       const res = await fetch("/api/sessions");
       if (!res.ok) return null;
       const data = await res.json();
-      if (!data || !Array.isArray(data.sessions) || data.sessions.length === 0) return null;
+      if (!data || !Array.isArray(data.sessions)) return null;
+      if (typeof data.boot_id === "string") knownBootId = data.boot_id;
       return {
         hosts: data.sessions.map((s) => ({ host: s.host, label: s.label || null })),
         activeHost: data.active_host || null,
+        bootId: typeof data.boot_id === "string" ? data.boot_id : null,
       };
     } catch (_err) {
       return null;
     }
+  }
+
+  let handledBackendRestart = false;
+  function handleBackendRestartedMidSession() {
+    if (handledBackendRestart) return;
+    handledBackendRestart = true;
+    try { localStorage.removeItem(SESSIONS_STORAGE_KEY); } catch (_err) { /* ignore */ }
+    for (const host of Array.from(hostViews.keys())) teardownHostView(host);
+    sessions.clear();
+    currentHost = null;
+    hostInput.value = "";
+    renderTabs();
+    showNoHostsMessage();
+    resetMetricsHeader();
+    ChartManager.resetChart();
+    openConnectModal();
+    handledBackendRestart = false; // allow this to fire again after a future restart
+  }
+
+  // Returns true (and records the new boot_id) exactly once per backend
+  // restart -- the first time any browser tab notices a new boot_id after
+  // having seen a previous one. Returns false if this is the very first
+  // time we've ever talked to this backend (nothing to compare against --
+  // treat as "same", not "fresh", so a brand-new browser profile still
+  // restores from local storage the way it always has) or if the boot_id
+  // is unchanged.
+  function backendRestartedSinceLastSeen(bootId) {
+    if (!bootId) return false;
+    let previous = null;
+    try { previous = localStorage.getItem(BOOT_ID_STORAGE_KEY); } catch (_err) { /* ignore */ }
+    try { localStorage.setItem(BOOT_ID_STORAGE_KEY, bootId); } catch (_err) { /* ignore */ }
+    return previous !== null && previous !== bootId;
   }
 
   function readPersistedSessions() {
@@ -73,6 +122,11 @@
   async function resolvePersistedSessions() {
     const [server, local] = await Promise.all([fetchServerSessions(), Promise.resolve(readPersistedSessions())]);
     if (!server) return local;
+    if (backendRestartedSinceLastSeen(server.bootId)) {
+      try { localStorage.removeItem(SESSIONS_STORAGE_KEY); } catch (_err) { /* ignore */ }
+      return { hosts: server.hosts, activeHost: server.activeHost };
+    }
+    if (server.hosts.length === 0) return local;
     const localLabels = new Map((local?.hosts || []).map((h) => [h.host, h.label]));
     const hosts = server.hosts.map((h) => ({ host: h.host, label: h.label || localLabels.get(h.host) || null }));
     const activeHost = server.activeHost || local?.activeHost || hosts[0]?.host || null;
@@ -87,12 +141,10 @@
       tab.className = `uav-tab${host === currentHost ? " active" : ""}`;
       tab.setAttribute("role", "tab");
       const dot = document.createElement("span");
-      // Active tab reflects the live connection state; a background tab is
-      // assumed healthy (its VSS live-sync keeps being reconciled server-side
-      // for as long as it's in `sessions`, regardless of whether its view is
-      // rendered -- there's no cheap client-side signal for its own health
-      // without re-polling a host we're not currently showing).
-      dot.className = `uav-tab-dot uav-tab-dot-${host === currentHost ? currentConnState : "connected"}`;
+      // Every host -- not just the active tab -- keeps its own pipelines
+      // poller/metrics/captions running in the background,
+      // so its connState reflects real, continuously-refreshed health
+      dot.className = `uav-tab-dot uav-tab-dot-${hostViews.get(host)?.connState || "off"}`;
       const label = document.createElement("button");
       label.type = "button";
       label.className = "uav-tab-label";
@@ -118,40 +170,69 @@
     current: () => currentHost,
   };
 
-  let metricsSource = null;
   let localMetricsSource = null;
-  let pipelinePollTimer = null;
   let currentHost = null;
-  let currentConnState = "off"; // "connected" | "connecting" | "off" -- active tab's dot color
-  let isConnected = false; // true once at least one camera card is live
   let remoteHttpsPort = 443; // overwritten by /api/runtime-config
   let mediamtxWebrtcHost = "127.0.0.1"; // overwritten by /api/runtime-config
   let mediamtxWebrtcPort = 8889; // overwritten by /api/runtime-config
 
-  // camera (RTSP stream path) -> { wrap, videoContainer, video, chipTtft, chipTpot, chipThroughput, chipLag,
-  //             captionStatus, captionTimeline, captionHistory,
-  //             lastCaptionReceivedAt, captionsSource, titleEl, infoEl }
-  const cards = new Map();
+  // --- Per-host dashboard state ---------------------------------------------
+  // One entry per connected UAV, kept alive for as long as its tab stays
+  // open -- *not* just while it's the foreground/visible tab. So coming back to a
+  // tab always looked like a fresh connect, with no history of what had
+  // already been seen.
+  const hostViews = new Map();
 
+  function getOrCreateHostView(host) {
+    let view = hostViews.get(host);
+    if (!view) {
+      const container = document.createElement("div");
+      container.className = "host-view";
+      container.dataset.host = host;
+      container.style.display = "none";
+      cardsContainer.appendChild(container);
+      view = { container, cards: new Map(), captionsSource: null, captionsTopicsKey: "", chartBuffer: [], pollTimer: null, connState: "off" };
+      hostViews.set(host, view);
+    }
+    return view;
+  }
 
-  function setStatus(state) {
-    currentConnState = state;
-    isConnected = state === "connected";
+  function isHostConnected(host) {
+    return hostViews.get(host)?.connState === "connected";
+  }
+
+  function setStatus(host, state) {
+    const view = hostViews.get(host);
+    if (!view) return;
+    view.connState = state;
     renderTabs();
   }
 
-  function renderEmptyState(message) {
-    cardsContainer.innerHTML = "";
+  function renderEmptyState(host, message) {
+    const view = getOrCreateHostView(host);
+    view.container.innerHTML = "";
     if (!message) return;
     const empty = document.createElement("div");
     empty.className = "cards-empty";
     empty.textContent = message;
-    cardsContainer.appendChild(empty);
+    view.container.appendChild(empty);
   }
 
-  function clearEmptyState() {
-    const empty = cardsContainer.querySelector(".cards-empty");
+  function clearEmptyState(host) {
+    const view = hostViews.get(host);
+    if (!view) return;
+    const empty = view.container.querySelector(".cards-empty");
     if (empty) empty.remove();
+  }
+
+  // Show exactly one host's container at a time (its .device-card children
+  // keep participating in cards-container's grid via "display: contents" on
+  // the wrapper); every other host's view stays mounted in the DOM but hidden,
+  // so its video/captions keep updating invisibly instead of being torn down.
+  function showHostView(host) {
+    for (const [h, view] of hostViews) {
+      view.container.style.display = h === host ? "contents" : "none";
+    }
   }
 
   // --- Caption formatting (mirrors live-video-captioning's run-card timeline) -
@@ -221,13 +302,17 @@
   }
 
   // Update every card's lag chip every 100ms, same cadence as
-  // live-video-captioning (it does the same thing across all its run cards).
+  // live-video-captioning (it does the same thing across all its run cards)
+  // -- across every connected host, not just the visible one, since
+  // background hosts keep captioning live too.
   setInterval(() => {
     const now = Date.now();
-    for (const card of cards.values()) {
-      if (card.lastCaptionReceivedAt === null) continue;
-      const lagSeconds = (now - card.lastCaptionReceivedAt) / 1000;
-      card.chipLag.textContent = `${lagSeconds.toFixed(2)}s`;
+    for (const view of hostViews.values()) {
+      for (const card of view.cards.values()) {
+        if (card.lastCaptionReceivedAt === null) continue;
+        const lagSeconds = (now - card.lastCaptionReceivedAt) / 1000;
+        card.chipLag.textContent = `${lagSeconds.toFixed(2)}s`;
+      }
     }
   }, 100);
 
@@ -248,14 +333,16 @@
     try {
       const res = await fetch("/api/runtime-config");
       const cfg = await res.json();
-      connectHostInput.value = cfg.defaultHost || "127.0.0.1";
-      connectHostInput.placeholder = cfg.defaultHost || "127.0.0.1";
+      // Leave the input empty; keep the placeholder generic.
+      connectHostInput.value = "";
+      connectHostInput.placeholder = "127.0.0.1";
       if (cfg.remoteHttpsPort) remoteHttpsPort = cfg.remoteHttpsPort;
       if (cfg.mediamtxWebrtcHost) mediamtxWebrtcHost = cfg.mediamtxWebrtcHost;
       if (cfg.mediamtxWebrtcPort) mediamtxWebrtcPort = cfg.mediamtxWebrtcPort;
       return cfg;
     } catch (err) {
-      connectHostInput.value = "127.0.0.1";
+      connectHostInput.value = "";
+      connectHostInput.placeholder = "127.0.0.1";
       return {};
     }
   }
@@ -358,7 +445,6 @@
       chipLag,
       captionHistory: [],
       lastCaptionReceivedAt: null,
-      captionsSource: null,
     };
     renderCaptionTimeline(card);
     renderBadges(card, cam);
@@ -388,22 +474,31 @@
     if (info.overlay === false) add("no overlay", "device-badge-off", "Detection boxes and telemetry text are not drawn on this stream");
   }
 
-  // Shows the caption panel and listens to the camera's MQTT topic only while the pipeline captions.
+  // Shows the caption panel and listens to the camera's MQTT topic only while the
+  // pipeline captions. The actual MQTT/SSE subscription lives one level up, shared
+  // across every captioning camera on this host -- this just updates this card's
+  // own topic/UI state and asks that shared subscription to pick up the change.
   function applyCaptionState(host, card, topic) {
+    const topicChanged = card.topic !== (topic || null);
     card.topic = topic || null;
     card.captioning = !!topic;
     card.captionPanel.hidden = !card.captioning;
-    if (card.captioning) {
-      startCaptionsStream(host, card);
-    } else if (card.captionsSource) {
-      card.captionsSource.close();
-      card.captionsSource = null;
+    if (card.captioning && topicChanged) {
+      card.captionHistory = [];
+      card.lastCaptionReceivedAt = null;
+      renderCaptionTimeline(card);
+      card.chipTtft.textContent = "—";
+      card.chipTpot.textContent = "—";
+      card.chipThroughput.textContent = "—";
+      card.chipLag.textContent = "—";
+      card.captionStatus.textContent = "Listening for captions…";
     }
+    refreshHostCaptionsStream(host);
   }
 
-  function teardownCard(card) {
-    if (card.captionsSource) card.captionsSource.close();
+  function teardownCard(host, card) {
     card.wrap.remove();
+    refreshHostCaptionsStream(host); // drop this card's topic from the shared subscription, if any
   }
 
   // --- Video modes -----------------------------------------------------
@@ -430,7 +525,11 @@
       // Only swap the DOM in if this card is still in relay mode and
       // pointed at the same host -- avoids a slow response clobbering a
       // newer mode switch that happened while this fetch was in flight.
-      if (card.activeVideoMode !== "relay" || card.relayHost !== host) return;
+      // Also bail if the card's container was detached from the document
+      // while this fetch was in flight otherwise we'd silently build a
+      // working iframe into an orphaned node that's no longer rendered
+      // anywhere, which looks exactly like "no video, no error".
+      if (card.activeVideoMode !== "relay" || card.relayHost !== host || !card.videoContainer.isConnected) return;
       card.videoContainer.innerHTML = "";
       const iframe = document.createElement("iframe");
       iframe.className = "device-video device-video-webrtc";
@@ -457,7 +556,7 @@
   }
 
   // --- Pipeline/model info (available from the header's information icon) ---
-  async function refreshPipelineInfo(host, card) {
+  async function refreshPipelineInfo(host, card, { force } = {}) {
     try {
       const res = await fetch(`/api/pipeline-info?host=${encodeURIComponent(host)}&camera=${encodeURIComponent(card.camera)}`);
       const info = await res.json();
@@ -485,7 +584,7 @@
         const topic = info.captioning ? info.caption_topic : null;
         if (topic !== card.topic) applyCaptionState(host, card, topic);
       }
-      syncVideoMode(host, card, info.rtsp_available);
+      syncVideoMode(host, card, info.rtsp_available, force);
     } catch (err) {
       card.infoEl.title = "Unable to load pipeline details";
       card.infoEl.setAttribute("aria-label", `${card.cameraNameEl.textContent}: ${card.infoEl.title}`);
@@ -497,9 +596,27 @@
   // active and still correct (avoids tearing down a working WebRTC session
   // on every 5s pipeline-info poll). Shows the H.264 Relay (local mediamtx
   // remux) when a stream is published, otherwise a placeholder.
-  function syncVideoMode(host, card, streamAvailable) {
+  //
+  // `force`, when true, always reloads the iframe even if mode/host are
+  // unchanged. This matters because mediamtx's own WHEP viewer page (what
+  // the iframe points at) can get stuck showing its own terminal
+  // "source ... has timed out" error -- e.g. if the remote RTSP publisher
+  // was restarted (stop-rtsp/start-rtsp on the UAV) while mediamtx's
+  // on-demand pull was active -- and does not necessarily recover on its
+  // own; only loading the iframe fresh re-negotiates a new WHEP session.
+  // Without `force`, syncVideoMode has no way to tell "still relay mode,
+  // same host, but the existing iframe is wedged" apart from "still relay
+  // mode, same host, still working fine" since it can't see into the
+  // cross-origin iframe's content. Two things force a reload:
+  //   - the user clicking the refresh button (an explicit "recheck now")
+  //   - rtsp_available transitioning false -> true (the pipeline just
+  //     (re)started -- e.g. the user ran `make start-rtsp` again -- so any
+  //     existing iframe was necessarily showing a dead/placeholder state)
+  function syncVideoMode(host, card, streamAvailable, force) {
     const mode = streamAvailable ? "relay" : "none";
-    if (card.activeVideoMode === mode && card.relayHost === host) return;
+    const cameFromUnavailable = !card.lastStreamAvailable && streamAvailable;
+    card.lastStreamAvailable = streamAvailable;
+    if (card.activeVideoMode === mode && card.relayHost === host && !force && !cameFromUnavailable) return;
     card.activeVideoMode = mode;
     card.relayHost = host;
 
@@ -538,22 +655,49 @@
       } catch (err) {
         return;
       }
-      applyMetricsTo(payload.metrics || [], GroundStationChartManager, 'gs');
+      const frameSamples = buildFrameSamples(payload.metrics || []);
+      if (frameSamples) renderMetricsFrame(frameSamples, GroundStationChartManager, 'gs');
     };
   }
 
-  function startMetricsStream(host) {
-    if (metricsSource) metricsSource.close();
-    ChartManager.resetChart();
-    metricsSource = new EventSource(`/api/metrics-stream?host=${encodeURIComponent(host)}`);
-    metricsSource.onmessage = (evt) => {
+  const CHART_MAX_POINTS = 60; // keep in sync with utils/charts.js's own maxPoints
+
+  // One shared SSE connection covering EVERY connected host's metrics,
+  // instead of one persistent /api/metrics-stream connection per host.
+  let sharedMetricsSource = null;
+  let sharedMetricsHostsKey = "";
+
+  // Re-opens the shared metrics stream if the set of connected hosts
+  // changed since it was last opened (EventSource URLs are immutable once
+  // created, so a changed host list means closing and reconnecting) --
+  // call this any time a hostView is created or torn down. No-op if the
+  // host set is unchanged.
+  function refreshSharedMetricsStream() {
+    const hosts = Array.from(hostViews.keys());
+    const key = hosts.slice().sort().join(",");
+    if (key === sharedMetricsHostsKey && (hosts.length === 0 || sharedMetricsSource)) return;
+    if (sharedMetricsSource) {
+      sharedMetricsSource.close();
+      sharedMetricsSource = null;
+    }
+    sharedMetricsHostsKey = key;
+    if (hosts.length === 0) return;
+
+    sharedMetricsSource = new EventSource(`/api/metrics-stream-multi?hosts=${encodeURIComponent(key)}`);
+    sharedMetricsSource.onmessage = (evt) => {
       let payload;
       try {
         payload = JSON.parse(evt.data);
       } catch (err) {
         return;
       }
-      applyMetricsTo(payload.metrics || [], ChartManager, '');
+      const view = hostViews.get(payload.host);
+      if (!view) return;
+      const frameSamples = buildFrameSamples(payload.metrics || []);
+      if (!frameSamples) return;
+      view.chartBuffer.push(frameSamples);
+      if (view.chartBuffer.length > CHART_MAX_POINTS) view.chartBuffer.shift();
+      if (payload.host === currentHost) renderMetricsFrame(frameSamples, ChartManager, '');
     };
   }
 
@@ -579,46 +723,55 @@
     }
   }
 
-  // Shared metrics-manager payload parser -- `idPrefix` picks which panel's
-  // DOM ids to update ("" for the remote "UAV Companion Board" panel's
-  // cpuVal/ramVal/npuVal/npuStat/gpuValues, "gs" for this ground station's
-  // own gsCpuVal/gsRamVal/gsNpuVal/gsNpuStat/gsGpuValues).
-  function applyMetricsTo(metrics, chartManager, idPrefix) {
-    // "" (remote panel) uses lowerCamelCase ids (cpuVal, npuStat, ...);
-    // "gs" (ground station panel) prefixes the capitalized suffix (gsCpuVal, gsNpuStat, ...).
-    const id = (suffix) => (idPrefix ? `${idPrefix}${suffix}` : suffix.charAt(0).toLowerCase() + suffix.slice(1));
+  // Pure parser for a metrics-manager SSE payload -> a flat frameSamples
+  // object ({cpu, mem, npu, "gpu:<id>": ...}), with no DOM/chart side
+  // effects -- safe to call for a host that isn't currently on screen, so
+  // its samples can still be buffered for an instant replay once its tab
+  // becomes visible again.
+  function buildFrameSamples(metrics) {
     const frameSamples = {};
     const gpuUsageByDevice = new Map();
-
     for (const m of metrics) {
-      if (m.name === "cpu_usage_user") {
-        frameSamples.cpu = m.value;
-        setHeaderValue(id("CpuVal"), m.value);
-      }
-      if (m.name === "mem_used_percent") {
-        frameSamples.mem = m.value;
-        setHeaderValue(id("RamVal"), m.value);
-      }
-      if (m.name === "npu_utilization") {
-        frameSamples.npu = m.value;
-        setHeaderValue(id("NpuVal"), m.value);
-        const npuStat = document.getElementById(id("NpuStat"));
-        if (npuStat) npuStat.style.display = "";
-      }
+      if (m.name === "cpu_usage_user") frameSamples.cpu = m.value;
+      if (m.name === "mem_used_percent") frameSamples.mem = m.value;
+      if (m.name === "npu_utilization") frameSamples.npu = m.value;
       if (m.name === "gpu_engine_usage_usage") {
         const gpuId = String((m.labels && m.labels.gpu_id) || "0");
         gpuUsageByDevice.set(gpuId, Math.max(gpuUsageByDevice.get(gpuId) || 0, m.value));
       }
     }
+    for (const [gpuId, usage] of gpuUsageByDevice) frameSamples[`gpu:${gpuId}`] = usage;
+    return Object.keys(frameSamples).length > 0 ? frameSamples : null;
+  }
 
-    if (gpuUsageByDevice.size > 0) {
+  // Applies one already-parsed frameSamples object to the on-screen header
+  // numbers/chart -- only ever called for whichever host is currently
+  // visible (`idPrefix` picks which panel's DOM ids to update: "" for the
+  // remote "UAV Companion Board" panel's cpuVal/ramVal/npuVal/npuStat/
+  // gpuValues, "gs" for this ground station's own gsCpuVal/gsRamVal/
+  // gsNpuVal/gsNpuStat/gsGpuValues).
+  function renderMetricsFrame(frameSamples, chartManager, idPrefix) {
+    // "" (remote panel) uses lowerCamelCase ids (cpuVal, npuStat, ...);
+    // "gs" (ground station panel) prefixes the capitalized suffix (gsCpuVal, gsNpuStat, ...).
+    const id = (suffix) => (idPrefix ? `${idPrefix}${suffix}` : suffix.charAt(0).toLowerCase() + suffix.slice(1));
+
+    if (frameSamples.cpu !== undefined) setHeaderValue(id("CpuVal"), frameSamples.cpu);
+    if (frameSamples.mem !== undefined) setHeaderValue(id("RamVal"), frameSamples.mem);
+    if (frameSamples.npu !== undefined) {
+      setHeaderValue(id("NpuVal"), frameSamples.npu);
+      const npuStat = document.getElementById(id("NpuStat"));
+      if (npuStat) npuStat.style.display = "";
+    }
+
+    const gpuKeys = Object.keys(frameSamples).filter((k) => k.startsWith("gpu:"));
+    if (gpuKeys.length > 0) {
       const gpuValues = document.getElementById(id("GpuValues"));
       if (gpuValues) gpuValues.innerHTML = "";
-      Array.from(gpuUsageByDevice.entries())
-        .sort(([a], [b]) => (Number(a) || 0) - (Number(b) || 0))
-        .forEach(([gpuId, usage]) => {
-          const key = `gpu:${gpuId}`;
-          frameSamples[key] = usage;
+      gpuKeys
+        .sort((a, b) => (Number(a.slice(4)) || 0) - (Number(b.slice(4)) || 0))
+        .forEach((key) => {
+          const gpuId = key.slice(4);
+          const usage = frameSamples[key];
           if (gpuValues) {
             const chip = document.createElement("span");
             chip.className = "gpu-value-chip";
@@ -630,33 +783,51 @@
       if (gpuValues) gpuValues.style.display = "";
     }
 
-    if (Object.keys(frameSamples).length > 0) {
-      chartManager.pushStatFrame(frameSamples);
-    }
+    chartManager.pushStatFrame(frameSamples);
   }
 
 
   // --- Captions (MQTT bridged via SSE) --------------------------------------
-  // Payload shape (from the gvagenai -> MQTTPublisher gvapython stage):
-  //   { "metadata": { "result": "<caption text>", "timestamp_seconds": <float>,
-  //                    "timestamp": <int ns>, "metrics": {...}, ... }, "blob": "" }
-  function startCaptionsStream(host, card) {
-    if (card.captionsSource) card.captionsSource.close();
-    card.captionHistory = [];
-    card.lastCaptionReceivedAt = null;
-    renderCaptionTimeline(card);
-    card.chipTtft.textContent = "—";
-    card.chipTpot.textContent = "—";
-    card.chipThroughput.textContent = "—";
-    card.chipLag.textContent = "—";
-    card.captionsSource = new EventSource(`/api/captions-stream?host=${encodeURIComponent(host)}&topic=${encodeURIComponent(card.topic)}`);
-    card.captionsSource.onmessage = (evt) => {
-      let payload;
+  // One shared SSE/MQTT connection per HOST, covering every captioning
+  // camera on that host, instead of one connection per camera.
+  // Call whenever a card's topic changes or a card is added/removed;
+  // no-op if this host's set of captioning topics hasn't actually changed.
+  //
+  // Event payload shape (tagged with its topic by the backend's
+  // /api/captions-stream-multi, wrapping the gvagenai -> MQTTPublisher
+  // gvapython stage's own payload):
+  //   { "topic": "uav/caption/<name>",
+  //     "payload": { "metadata": { "result": "<caption text>",
+  //                                 "timestamp_seconds": <float>,
+  //                                 "timestamp": <int ns>, "metrics": {...}, ... },
+  //                  "blob": "" } }
+  function refreshHostCaptionsStream(host) {
+    const view = hostViews.get(host);
+    if (!view) return;
+    const topics = Array.from(view.cards.values()).filter((c) => c.topic).map((c) => c.topic);
+    const key = topics.slice().sort().join(",");
+    if (key === view.captionsTopicsKey && (topics.length === 0 || view.captionsSource)) return;
+    if (view.captionsSource) {
+      view.captionsSource.close();
+      view.captionsSource = null;
+    }
+    view.captionsTopicsKey = key;
+    if (topics.length === 0) return;
+
+    view.captionsSource = new EventSource(
+      `/api/captions-stream-multi?host=${encodeURIComponent(host)}&topics=${encodeURIComponent(key)}`,
+    );
+    view.captionsSource.onmessage = (evt) => {
+      let msg;
       try {
-        payload = JSON.parse(evt.data);
+        msg = JSON.parse(evt.data);
       } catch (err) {
         return;
       }
+      const card = Array.from(view.cards.values()).find((c) => c.topic === msg.topic);
+      if (!card) return; // card for this topic was removed/changed since the event was queued
+
+      const payload = msg.payload;
       const data = (payload && typeof payload === "object" && payload.metadata) ? payload.metadata : payload;
       const captionText = data && typeof data === "object" && data.result
         ? data.result
@@ -676,16 +847,32 @@
           ? `Updated at ${new Date(data.timestamp).toLocaleTimeString()}`
           : "—";
     };
-    card.captionsSource.addEventListener("connected", () => {
-      card.captionStatus.textContent = "Listening for captions…";
+    view.captionsSource.addEventListener("connected", () => {
+      for (const card of view.cards.values()) {
+        if (card.captioning) card.captionStatus.textContent = "Listening for captions…";
+      }
     });
   }
 
-  function stopAllStreams() {
-    if (metricsSource) { metricsSource.close(); metricsSource = null; }
-    if (pipelinePollTimer) { clearInterval(pipelinePollTimer); pipelinePollTimer = null; }
-    for (const card of cards.values()) teardownCard(card);
-    cards.clear();
+  // Fully tears down one host's background view: closes its metrics SSE,
+  // stops its 5s poll loop, closes every card's caption SSE and removes its
+  // DOM, then drops the host's wrapper container and hostViews entry
+  // entirely. This is the ONLY place a host's dashboard state is actually
+  // discarded -- used solely for an explicit disconnect/close-tab, never for
+  // a plain tab switch.
+  function teardownHostView(host) {
+    const view = hostViews.get(host);
+    if (!view) return;
+    if (view.captionsSource) view.captionsSource.close();
+    if (view.pollTimer) clearInterval(view.pollTimer);
+    // Just drop the DOM here (not teardownCard(), which would also try to
+    // refresh/reopen this host's shared captions subscription per-card --
+    // pointless since the whole hostView, including that subscription,
+    // is being discarded as a unit right below).
+    for (const card of view.cards.values()) card.wrap.remove();
+    view.container.remove();
+    hostViews.delete(host);
+    refreshSharedMetricsStream(); // drop this host from the shared metrics connection
   }
 
   function connectCard(host, card, cam) {
@@ -698,92 +885,106 @@
     refreshPipelineInfo(host, card);
   }
 
-  // Reconciles the card grid against the currently-detected running cameras:
+  // Reconciles `host`'s card grid against its currently-detected running
+  // cameras -- entirely within that host's own hostView, independent of
+  // whether `host` is the tab currently on screen:
   //  - a camera that's newly running -> add a card, start its streams.
   //  - a camera that's no longer running -> remove its card, stop its streams.
-  //  - a camera still running -> just refresh its pipeline-info text.
-  // (Metrics are host-level, not camera-level, so they're left untouched.)
-  function syncCards(host, detectedCameras) {
+  //  - a camera still running -> just refresh its pipeline-info text (its
+  //    caption SSE/history is left completely untouched, so captions keep
+  //    accumulating across tab switches instead of resetting to zero).
+  function syncCards(host, detectedCameras, { force } = {}) {
+    const view = getOrCreateHostView(host);
     const detectedSet = new Set(detectedCameras.map((c) => c.camera));
 
-    for (const [camera, card] of Array.from(cards.entries())) {
+    for (const [camera, card] of Array.from(view.cards.entries())) {
       if (!detectedSet.has(camera)) {
-        teardownCard(card);
-        cards.delete(camera);
+        view.cards.delete(camera); // delete first: teardownCard() below recomputes this host's shared captions subscription from what's left in view.cards
+        teardownCard(host, card);
       } else {
-        refreshPipelineInfo(host, card);
+        refreshPipelineInfo(host, card, { force });
       }
     }
 
     // Insert new cards at their position in the backend's camera order, so a
     // camera whose pipeline starts late doesn't end up last.
     detectedCameras.forEach((cam, idx) => {
-      if (!cards.has(cam.camera)) {
-        clearEmptyState();
+      if (!view.cards.has(cam.camera)) {
+        clearEmptyState(host);
         const card = createCard(cam);
-        const next = detectedCameras.slice(idx + 1).map((c) => cards.get(c.camera)).find(Boolean);
-        cardsContainer.insertBefore(card.wrap, next ? next.wrap : null);
-        cards.set(cam.camera, card);
+        const next = detectedCameras.slice(idx + 1).map((c) => view.cards.get(c.camera)).find(Boolean);
+        view.container.insertBefore(card.wrap, next ? next.wrap : null);
+        view.cards.set(cam.camera, card);
         connectCard(host, card, cam);
       }
     });
 
-    if (cards.size === 0) {
-      renderEmptyState("No running pipeline detected on this host.");
-      setStatus("off");
+    if (view.cards.size === 0) {
+      renderEmptyState(host, "No running pipeline detected on this host.");
+      setStatus(host, "off");
     } else {
-      setStatus("connected");
+      setStatus(host, "connected");
     }
   }
 
-  async function pollAndReconcile(host) {
+  // Ensures `host` has a live hostView with its metrics stream and 5s
+  // poll-and-reconcile loop running -- idempotent, so it's safe to call
+  // every time a host becomes "the one we care about keeping live", whether
+  // that's a brand-new connect, switching to an already-connected tab, or
+  // restoring a background tab on page load.
+  function ensureHostActive(host) {
+    const view = getOrCreateHostView(host);
+    refreshSharedMetricsStream();
+    if (!view.pollTimer) {
+      view.pollTimer = setInterval(() => pollAndReconcile(host), 5000);
+    }
+    return view;
+  }
+
+  async function pollAndReconcile(host, { force } = {}) {
     const detected = await detectPipelines(host);
-    // A different tab may have become active while this request was in
-    // flight -- never let a stale response from a background/previous host
-    // overwrite what's currently on screen (this was the cause of tabs
-    // appearing to "switch back" on their own).
-    if (host !== currentHost) return;
+    if (!hostViews.has(host)) return; // host was disconnected while this request was in flight
     if (!detected.reachable) {
       // Host went unreachable -- leave existing cards as-is (video/caption
       // streams will show their own connection errors) rather than tearing
       // everything down on a possibly-transient network blip.
       return;
     }
-    syncCards(host, detected.cameras || []);
+    syncCards(host, detected.cameras || [], { force });
     const existing = sessions.get(host);
     if (existing) existing.lastCameras = detected.cameras || [];
   }
 
+  // Connects to `host` for the first time: creates its background hostView
+  // (metrics + 5s reconcile loop, both of which keep running for as long as
+  // the tab stays open, regardless of whether it's visible), then makes it
+  // the visible tab.
   async function connectNow(label) {
     const host = (hostInput.value || "127.0.0.1").trim();
     currentHost = host;
-    stopAllStreams();
-    setStatus("connecting");
-    startMetricsStream(host);
-
-    const cached = sessions.get(host)?.lastCameras;
-    if (cached && cached.length) {
-      syncCards(host, cached);
-    } else {
-      renderEmptyState("Detecting running pipelines…");
+    const view = ensureHostActive(host);
+    showHostView(host);
+    replayChartBuffer(host);
+    resetMetricsHeader();
+    if (view.cards.size === 0) {
+      setStatus(host, "connecting");
+      renderEmptyState(host, "Detecting running pipelines…");
     }
 
     const detected = await detectPipelines(host);
-    // Another switchToTab()/connectNow() may have taken over while this
-    // request was in flight -- don't clobber whatever host is active now.
-    if (host !== currentHost) return;
+    if (!hostViews.has(host)) return; // disconnected while this request was in flight
     if (!detected.reachable) {
-      if (!cached || !cached.length) {
-        renderEmptyState("Host unreachable.");
-        setStatus("off");
+      if (view.cards.size === 0) {
+        renderEmptyState(host, "Host unreachable.");
+        setStatus(host, "off");
       }
-      // else: keep showing the cached cards; the next poll will retry.
+      // else: keep showing the existing cards; the poll loop will retry.
     } else {
       syncCards(host, detected.cameras || []);
     }
-    pipelinePollTimer = setInterval(() => pollAndReconcile(host), 5000);
-    // Switching back to an already-connected tab calls connectNow() too --
-    // keep its existing label/cache rather than clearing them.
+    // Re-connecting to an already-known host (e.g. the connect modal was
+    // used again for a host that's already open in another tab) keeps its
+    // existing label/cache rather than clearing them.
     const existing = sessions.get(host);
     sessions.set(host, {
       connectedAt: existing?.connectedAt ?? Date.now(),
@@ -794,65 +995,84 @@
     document.dispatchEvent(new CustomEvent("uav:connected", { detail: { host } }));
   }
 
-  // Tear down only the *foreground* dashboard view (cards/metrics/SSE) --
-  // does not touch VSS live-sync for `host`, so its indexing keeps running.
-  // Used when switching away from a tab, not when closing one.
-  function teardownView() {
-    stopAllStreams();
-    ChartManager.resetChart();
-    resetMetricsHeader();
-    renderEmptyState(null);
-    setStatus("off");
-  }
-
-  function disconnectNow() {
-    const host = currentHost;
-    teardownView();
-    if (host) {
-      sessions.delete(host);
-      renderTabs();
-      // Fully stop: pause this host's VSS live-sync indexing too (it won't
-      // be reconciled again until something reconnects to this host), and
-      // drop it from the server-side registry so no other browser/window
-      // restores a tab for a UAV this one just disconnected.
-      fetch("/api/sessions", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ host }),
-      }).catch(() => {});
-      document.dispatchEvent(new CustomEvent("uav:disconnected", { detail: { host } }));
-    }
-    currentHost = null;
-    // No UAVs left to show -- the connect modal is the only way back in, so
-    // open it rather than leaving an empty dashboard with no obvious action.
-    if (sessions.size === 0) openConnectModal();
-  }
-
-  // Switch the visible dashboard to an already-connected host's tab, without
-  // stopping VSS indexing for the host being switched away from.
-  async function switchToTab(host) {
-    teardownView();
+  // Switch the visible dashboard to an already-connected host's tab. This is
+  // a pure visibility toggle -- it does NOT stop or restart any stream: the
+  // newly-visible host's video/captions/metrics were already running in the
+  // background, so nothing resets and no history is lost.
+  function switchToTab(host) {
+    currentHost = host;
+    showHostView(host);
     hostInput.value = host;
-    await connectNow();
+    renderTabs();
+    replayChartBuffer(host);
+    resetMetricsHeader();
+    document.dispatchEvent(new CustomEvent("uav:connected", { detail: { host } }));
+    // Opportunistic refresh so the tab looks up-to-date the moment it's
+    // shown, instead of waiting for the next 5s poll tick -- non-destructive,
+    // since syncCards() only patches the diff against existing cards.
+    pollAndReconcile(host);
   }
 
-  // Fully disconnect one host (closing its tab): if it's the active tab,
-  // tear down the view too; either way its background indexing is stopped.
+  // The CPU/GPU/NPU chart (ChartManager) is one shared Chart.js instance,
+  // not per-host -- recreating N Chart.js instances for N UAVs was judged
+  // not worth the memory/perf cost for what's just a header sparkline, so
+  // instead each host buffers its own recent samples (chartBuffer, see
+  // refreshSharedMetricsStream()) and this replays them into the shared chart the
+  // instant its tab becomes visible, so switching tabs shows that host's own
+  // recent trend immediately rather than an empty chart or (worse) a
+  // leftover trace from whichever host was previously on screen.
+  function replayChartBuffer(host) {
+    ChartManager.resetChart();
+    const view = hostViews.get(host);
+    if (!view) return;
+    for (const frameSamples of view.chartBuffer) ChartManager.pushStatFrame(frameSamples);
+  }
+
+  function showNoHostsMessage() {
+    cardsContainer.innerHTML = "";
+    const empty = document.createElement("div");
+    empty.className = "cards-empty";
+    empty.textContent = "No UAVs connected. Click \u201cAdd UAV\u201d to connect one.";
+    cardsContainer.appendChild(empty);
+  }
+
+  // Fully disconnects one host: tears down its background view (stopping
+  // its metrics/poll loop/caption SSE and discarding its caption history --
+  // this is the one case that's supposed to happen), removes it from the
+  // tab bar and the server-side session registry, and -- if it was the
+  // active tab -- switches to another remaining tab (or shows the "no UAVs
+  // connected" state / re-opens the connect modal if that was the last one).
   function closeTab(host) {
-    if (host === currentHost) {
-      disconnectNow();
-      hostInput.value = "";
-      return;
-    }
+    const wasActive = host === currentHost;
+    teardownHostView(host);
     sessions.delete(host);
-    renderTabs();
     fetch("/api/sessions", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ host }),
     }).catch(() => {});
     document.dispatchEvent(new CustomEvent("uav:disconnected", { detail: { host } }));
-    if (sessions.size === 0) openConnectModal();
+
+    if (wasActive) {
+      currentHost = null;
+      hostInput.value = "";
+      const remaining = sessions.keys().next().value;
+      if (remaining) {
+        switchToTab(remaining);
+        return;
+      }
+    }
+    renderTabs();
+    if (sessions.size === 0) {
+      showNoHostsMessage();
+      resetMetricsHeader();
+      ChartManager.resetChart();
+      openConnectModal();
+    }
+  }
+
+  function disconnectNow() {
+    if (currentHost) closeTab(currentHost);
   }
 
   // --- Connect modal ("Add UAV") -----------------------------------------
@@ -891,23 +1111,25 @@
       return;
     }
     connectErrorEl.textContent = "";
+    connectModal.classList.add("hidden");
     if (sessions.has(host)) {
       // Already connected -- just bring its tab forward instead of
       // reconnecting (which would needlessly restart its video/metrics
       // streams).
-      connectModal.classList.add("hidden");
-      if (host !== currentHost) await switchToTab(host);
+      if (host !== currentHost) switchToTab(host);
       return;
     }
-    teardownView();
     hostInput.value = host;
-    connectModal.classList.add("hidden");
     await connectNow(label || undefined);
   });
 
   refreshBtn.addEventListener("click", () => {
-    if (!isConnected || !currentHost) return;
-    pollAndReconcile(currentHost);
+    if (!currentHost || !sessions.has(currentHost)) return;
+    // force: true -- also reload any video iframe even if its mode/host
+    // look unchanged, so a WHEP viewer wedged on mediamtx's own "source ...
+    // has timed out" error actually gets refreshed by this button instead
+    // of silently no-op'ing until a full page reload.
+    pollAndReconcile(currentHost, { force: true });
   });
 
   // Auto-reconnect to every host that was connected before the last reload
@@ -941,12 +1163,16 @@
     // about these hosts yet.
     for (const h of saved.hosts) {
       if (h.host === activeHost) continue;
+      ensureHostActive(h.host);
+      renderEmptyState(h.host, "Detecting running pipelines…");
       pollAndReconcile(h.host);
       document.dispatchEvent(new CustomEvent("uav:connected", { detail: { host: h.host } }));
       fetch(`/api/sessions?active=false`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ host: h.host, label: h.label || null }),
+        body: JSON.stringify({ host: h.host, label: h.label || null, boot_id: knownBootId }),
+      }).then((res) => {
+        if (res.status === 409) handleBackendRestartedMidSession();
       }).catch(() => {});
     }
     return true;
