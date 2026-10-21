@@ -2,17 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 """Background traffic injector: iperf3 UDP from machine-4 to machine-1 over VLAN 5.
 
-The client is started over ssh on the *lab* network (so control never depends on the TSN path);
-the iperf3 server runs here, on machine-1's VLAN 5 address, and reports what actually arrived.
+The client runs in the load agent container on machine-4, controlled over HTTP on the *lab* network
+(so control never depends on the TSN path); the iperf3 server runs here, on machine-1's VLAN 5 address, and reports what actually arrived.
 """
 
+import json
 import logging
 import re
-import shlex
 import shutil
 import subprocess
 import threading
 import time
+import urllib.request
 
 log = logging.getLogger("traffic")
 
@@ -89,72 +90,72 @@ class IperfServer:
 
 
 class TrafficController:
-    """Rate in Mbit/s; 0 stops the load. mode 'sim' only records the request."""
+    """Rate in Mbit/s; 0 stops the load. mode 'sim' only records the request.
 
-    def __init__(self, mode, max_mbps, server_ip, client_target, client_ip,
-                 server=None, guard_s=3600, ssh_opts=None):
+    In 'iperf' mode the rate is sent to the load agent on machine-4 (HTTP on its lab address). The agent
+    stops the load by itself if no refresh arrives within ttl_s, so a dead dashboard cannot leave it on.
+    """
+
+    def __init__(self, mode, max_mbps, agent_url="", server=None, ttl_s=30, refresh_s=10, timeout_s=3):
         self.mode = mode
         self.max_mbps = max_mbps
-        self.server_ip, self.client_target, self.client_ip = server_ip, client_target, client_ip
+        self.agent_url = agent_url.rstrip("/")
         self.server = server
-        self.guard_s = guard_s
-        self.ssh_opts = ssh_opts or [
-            "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "StrictHostKeyChecking=accept-new"]
+        self.ttl_s, self.refresh_s, self.timeout_s = ttl_s, refresh_s, timeout_s
         self.rate_mbps = 0
         self.error = None
-        self._proc = None
+        self.agent = None
         self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = None
 
-    def command(self, rate_mbps):
-        """ssh command that runs the iperf3 UDP client on the injector.
+    def _call(self, method, path, body=None):
+        data = json.dumps(body).encode() if body is not None else None
+        req = urllib.request.Request(self.agent_url + path, data=data, method=method,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:
+            return json.load(resp)
 
-        -tt gives the remote process a terminal, so it gets SIGHUP and stops if this ssh
-        connection drops; 'timeout' and iperf3's own -t bound it if even that fails.
-        """
-        remote = (
-            f"timeout {self.guard_s + 5} iperf3 -c {self.server_ip} -B {self.client_ip} -u "
-            f"-b {int(rate_mbps)}M -t {self.guard_s} -f m"
-        )
-        return ["ssh", "-tt", *self.ssh_opts, self.client_target, remote]
+    def _push_locked(self, rate):
+        try:
+            self.agent = self._call("POST", "/rate", {"mbps": rate, "ttl_s": self.ttl_s})
+            self.error = None
+            return True
+        except (OSError, ValueError) as exc:
+            self.error = f"load agent unreachable: {exc}"
+            return False
 
     def start(self):
         if self.server:
             self.server.start()
+        if self.mode == "iperf" and self._thread is None:
+            self._thread = threading.Thread(target=self._refresh, daemon=True)
+            self._thread.start()
+
+    def _refresh(self):
+        while not self._stop.wait(self.refresh_s):
+            with self._lock:
+                try:
+                    self.agent = self._call("GET", "/state")
+                    self.error = None
+                    if self.rate_mbps > 0:
+                        self._push_locked(self.rate_mbps)
+                except (OSError, ValueError) as exc:
+                    self.error = f"load agent unreachable: {exc}"
 
     def set_rate(self, rate_mbps):
         rate = max(0, min(int(rate_mbps), self.max_mbps))
         with self._lock:
-            if self.mode == "iperf":
-                self._stop_locked()
-                if rate > 0:
-                    try:
-                        cmd = self.command(rate)
-                        log.info("starting load: %s", shlex.join(cmd))
-                        self._proc = subprocess.Popen(
-                            cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL)
-                        self.error = None
-                    except OSError as exc:
-                        self.error = str(exc)
-                        rate = 0
+            if self.mode == "iperf" and not self._push_locked(rate):
+                rate = 0
             self.rate_mbps = rate
         return rate
 
-    def _stop_locked(self):
-        if self._proc and self._proc.poll() is None:
-            self._proc.terminate()
-            try:
-                self._proc.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                self._proc.kill()
-        self._proc = None
-
     def state(self):
         running = self.rate_mbps > 0
-        if self.mode == "iperf" and self.rate_mbps > 0 and self._proc is not None \
-                and self._proc.poll() is not None:
+        if self.mode == "iperf" and running and self.agent is not None and not self.agent.get("running"):
             running = False
-            self.error = f"iperf3 client exited with code {self._proc.returncode}"
+            self.error = f"iperf3 client exited with code {self.agent.get('returncode')}"
         server = self.server.state() if self.server else None
         if self.mode == "iperf" and server and server["error"] and not self.error:
             self.error = server["error"]
@@ -168,7 +169,9 @@ class TrafficController:
         }
 
     def shutdown(self):
+        self._stop.set()
         with self._lock:
-            self._stop_locked()
+            if self.mode == "iperf" and self.rate_mbps > 0:
+                self._push_locked(0)
         if self.server:
             self.server.stop()
