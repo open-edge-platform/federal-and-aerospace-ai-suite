@@ -22,6 +22,18 @@ authInternalUsers:
 api: yes
 apiAddress: :9997
 
+readTimeout: 60s
+writeTimeout: 60s
+
+pathDefaults:
+  sourceOnDemandStartTimeout: 60s
+  # How long to keep the source running after the last reader disconnects
+  # before tearing it down again -- 10s default means a viewer briefly
+  # reloading the page (or two cards polling in quick succession) can
+  # retrigger a full "start on demand" cycle on the UAV's RTSP encoder
+  # unnecessarily.
+  sourceOnDemandCloseAfter: 60s
+
 rtsp: no
 rtmp: no
 hls: no
