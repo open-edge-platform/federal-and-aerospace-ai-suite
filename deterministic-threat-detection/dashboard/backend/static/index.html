@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Deterministic Threat Detection</title>
-  <link rel="stylesheet" href="css/styles.css?v=6">
+  <link rel="stylesheet" href="css/styles.css?v=11">
 </head>
 <body>
   <header class="topbar">
@@ -16,6 +16,7 @@
       <span class="sub">TSN latency demo</span>
     </div>
     <div class="chips">
+      <button id="toggle-arch" class="btn" type="button">Architecture</button>
       <span id="chip-mqtt" class="chip chip-bad">MQTT: connecting</span>
       <span id="chip-mode" class="chip chip-warn hidden"></span>
     </div>
@@ -112,7 +113,19 @@
     </section>
   </main>
 
+  <div id="arch-modal" class="arch-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="arch-title">
+    <div class="arch-dialog">
+      <div class="arch-head">
+        <h2 id="arch-title">Architecture &middot; live traffic</h2>
+        <div id="arch-legend" class="arch-legend"></div>
+        <button id="arch-close" class="btn" type="button" aria-label="Close">Close</button>
+      </div>
+      <svg id="arch-svg" viewBox="0 0 1000 580" role="img" aria-label="Machines connected through the TSN switch, with live traffic"></svg>
+    </div>
+  </div>
+
   <script src="js/vendor/chart.umd.js"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/arch.js?v=11"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>

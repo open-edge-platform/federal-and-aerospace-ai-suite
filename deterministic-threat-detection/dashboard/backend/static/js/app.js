@@ -401,6 +401,8 @@
       renderKpis(msg.sources);
       renderControls(msg);
       render(msg.now);
+      window.__dash.lastStatus = msg;
+      if (window.TsnArch) window.TsnArch.update(msg);
     };
     connect();
   }

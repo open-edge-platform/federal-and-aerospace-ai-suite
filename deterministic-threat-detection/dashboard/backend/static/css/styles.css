@@ -165,3 +165,34 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
    (a chart stretched to the whole column height is far taller than it is wide) */
 .sys-chart { height: 230px; }
 .sys-chart canvas { position: absolute; inset: 0; }
+
+/* ---- Architecture overlay (js/arch.js): topology with live, animated traffic ---- */
+.arch-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(5, 8, 12, .82); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.arch-dialog { width: min(1400px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--panel);
+  border: 1px solid var(--panel-border); border-radius: 10px; overflow: hidden; }
+.arch-head { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--panel-border); }
+.arch-head h2 { margin: 0; white-space: nowrap; }
+.arch-legend { flex: 1; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); }
+.arch-legend i { display: inline-block; width: 22px; height: 0; border-top: 3px dotted var(--c); margin-right: 6px; vertical-align: middle; }
+#arch-svg { width: 100%; height: auto; min-height: 0; display: block; font-family: inherit; }
+#arch-svg .node { fill: #0f151c; stroke: #2b3947; stroke-width: 1.5; }
+#arch-svg .node-in { fill: #17202a; stroke: #2b3947; }
+#arch-svg .t { fill: var(--text); font-size: 13px; font-weight: 600; }
+#arch-svg .s { fill: var(--muted); font-size: 11px; }
+#arch-svg .live { fill: var(--text); font-size: 11px; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: #0f151c; stroke-width: 4px; stroke-linejoin: round; }
+#arch-svg .dot { fill: var(--muted); }
+#arch-svg .dot.ok { fill: var(--ok); }
+#arch-svg .dot.bad { fill: var(--bad); }
+#arch-svg .switch { fill: #101a26; stroke: #4da3ff; stroke-width: 2; }
+#arch-svg .flow { fill: none; stroke: var(--c); stroke-width: var(--w, 3); stroke-linecap: round; stroke-dasharray: 1 13;
+  animation: arch-flow var(--dur, 1s) linear infinite; opacity: .95; }
+#arch-svg .flow.idle { animation: none; opacity: .18; stroke-dasharray: 2 6; }
+#arch-svg .flow.stale { animation: none; stroke: var(--bad); opacity: .6; stroke-dasharray: 2 6; }
+#arch-svg .rail { fill: none; stroke: var(--c); stroke-width: 1; opacity: .16; }
+#arch-svg .ctl { fill: none; stroke: #6b7886; stroke-width: 1.5; stroke-dasharray: 4 4; }
+@keyframes arch-flow { to { stroke-dashoffset: -14; } }
+@media (prefers-reduced-motion: reduce) { #arch-svg .flow { animation: none; } }
+#arch-svg .flow.lossy { opacity: .6; stroke-dasharray: 1 6 1 22; animation-name: arch-flow-lossy; }
+#arch-svg .drop { fill: none; stroke: var(--bad); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 0.1 34;
+  opacity: var(--o, 1); animation: arch-flow var(--dur, 1s) linear infinite; filter: drop-shadow(0 0 3px var(--bad)); }
+@keyframes arch-flow-lossy { to { stroke-dashoffset: -29; } }
