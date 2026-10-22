@@ -43,6 +43,12 @@
   function machine(key, x, y, w, h, title, sub, metricsY) {
     box(x, y, w, h);
     add(svg, 'circle', { cx: x + w - 16, cy: y + 18, r: 4.5, class: 'dot', id: `dot-${key}` });
+    const clk = add(svg, 'g', { class: 'clock', transform: `translate(${x + w - 16} ${metricsY - 4})` });
+    add(clk, 'title', {}, 'Clock synchronised with PTP (IEEE 1588)');
+    add(clk, 'circle', { r: 12, cx: 0, cy: 0, class: 'hit' });
+    add(clk, 'circle', { r: 6, cx: 0, cy: 0 });
+    add(clk, 'path', { d: 'M0 -3.5V0L2.5 1.5' });
+    add(clk, 'text', { x: -11, y: 4, class: 'ptp', 'text-anchor': 'end' }, 'PTP');
     text(x + 14, y + 22, title, 't');
     text(x + 14 + title.length * 7.6 + 8, y + 22, sub, 's');
     refs[`sys-${key}`] = text(x + 14, metricsY, 'no metrics', 's');
@@ -88,7 +94,7 @@
     part(756, 450, 208, 60, 'Load agent · iperf3 client', 'UDP load on VLAN 5');
 
     // the switch
-    box(420, 215, 160, 150, 'switch');
+    refs.sw = add(svg, 'rect', { x: 420, y: 215, width: 160, height: 150, rx: 8, class: 'switch' });
     text(500, 245, 'Moxa TSN switch', 't', 'middle');
     text(500, 264, 'PTP grandmaster', 's', 'middle');
     refs.qbv = text(500, 300, 'Qbv', 'live', 'middle');
@@ -96,7 +102,9 @@
     text(500, 345, 'VLAN 1 · VLAN 5', 's', 'middle');
 
     for (const f of FLOWS) refs[f.id] = text(f.lx, f.ly, '', 'live', f.anchor);
-    refs.shield = text(500, 195, '', 'live', 'middle');
+    refs.shield = text(500, 172, '', 'live', 'middle');
+    refs.badge = add(svg, 'path', { d: 'M562 226l11 4v9c0 8-5 12-11 14-6-2-11-6-11-14v-9z M557 238l4 4 7-8', class: 'badge hidden', transform: 'translate(-61 -42)' });
+    refs.lock = text(500, 385, '', 'live', 'middle');
 
     const legend = document.getElementById('arch-legend');
     for (const [c, label] of LEGEND) {
@@ -108,11 +116,11 @@
   }
 
   // loss: share of traffic lost (0..1) on the way to machine-1; lossy lines flicker and show red pulses
-  function setFlow(id, { rate, label, stale, width, loss = 0, lossLabel = '' }) {
+  function setFlow(id, { rate, label, stale, width, loss = 0, lossLabel = '', protect = false }) {
     const f = FLOWS.find((x) => x.id === id);
     const active = !stale && rate > 0;
     const lossy = active && loss > 0;
-    f.path.setAttribute('class', `flow ${stale ? 'stale' : active ? (lossy ? 'lossy' : '') : 'idle'}`);
+    f.path.setAttribute('class', `flow ${stale ? 'stale' : active ? (lossy ? 'lossy' : '') : 'idle'}${protect && active && !lossy ? ' protected' : ''}`);
     f.path.style.setProperty('--dur', `${Math.max(0.35, Math.min(3, 4 / Math.sqrt(Math.max(rate, 1))))}s`);
     f.path.style.setProperty('--w', String(width || 3));
     if (f.drop) {
@@ -138,6 +146,7 @@
   function update(msg) {
     if (modal.classList.contains('hidden')) return;
     const src = msg.sources || {}, scene = msg.scene, tr = msg.traffic, sys = msg.system || {};
+    const protect = !!(msg.qbv && msg.qbv.known !== false && (msg.qbv.enabled || msg.qbv.active));
 
     [['uc1-m2', 'Cam_x1_0'], ['uc1-m3', 'Cam_x2_0']].forEach(([id, cam]) => {
       const s = src[cam];
@@ -149,7 +158,7 @@
       const late = (s.p95_ms || 0) > 20;
       const fmt = (ms) => (ms >= 1000 ? `${fix(ms / 1000, 1)} s` : `${fix(ms, 0)} ms`);
       const loss = lost > 0 ? Math.min(0.25, lost / dt / Math.max(s.rate_hz || 1, 1)) : late ? 0.08 + Math.min(0.17, (s.p95_ms || 0) / 4000) : 0;
-      setFlow(id, { rate: s.rate_hz, stale: s.stalled, loss,
+      setFlow(id, { protect, rate: s.rate_hz, stale: s.stalled, loss,
         lossLabel: lost > 0 ? `${fix(lost / dt, 1)} lost/s` : `delayed · p95 ${fmt(s.p95_ms)}`,
         label: s.stalled ? '✖ stalled · messages held back' : `${fix(s.rate_hz, 0)} msg/s · ${fix(s.last_ms, 1)} ms` });
     });
@@ -161,7 +170,7 @@
       const h = recent(`fps-${cam}`, msg.now, c.fps, 60);
       const peak = Math.max(...h.map((p) => p.v));
       const deficit = peak > 0 ? Math.max(0, (peak - c.fps) / peak) : 0;
-      setFlow(id, { rate: c.fps, stale, loss: deficit > 0.05 ? deficit : 0, lossLabel: `${fix(deficit * 100, 0)}% frames`,
+      setFlow(id, { protect, rate: c.fps, stale, loss: deficit > 0.05 ? deficit : 0, lossLabel: `${fix(deficit * 100, 0)}% frames`,
         label: stale ? 'stalled' : `${fix(c.fps, 0)} fps` });
     });
 
@@ -178,11 +187,18 @@
       const on = q.enabled || q.active;
       refs.qbv.textContent = on ? 'Qbv ON' : 'Qbv OFF';
       refs.qbv.style.fill = on ? '#3ecf8e' : '#8b98a7';
-      refs.qbvSub.textContent = `gate schedule · port ${q.port}`;
+      refs.qbv.style.fontWeight = on ? '800' : '400';
+      refs.qbv.style.fontSize = on ? '16px' : '11px';
+      refs.sw.setAttribute('class', on ? 'switch on' : 'switch');
+      refs.qbvSub.textContent = on ? 'reserved critical slots' : `gate schedule · port ${q.port}`;
+      refs.badge.setAttribute('class', on ? 'badge' : 'badge hidden');
+      refs.lock.textContent = on && tr && tr.running ? 'Load confined to its own slot' : '';
+      refs.lock.style.fill = '#ff9d9d';
       refs.shield.textContent = on && tr && tr.running ? 'Qbv protects UC1 + UC2 from the load' : !on && tr && tr.running ? 'Qbv off: load competes with UC1 + UC2' : '';
       refs.shield.style.fill = on ? '#3ecf8e' : '#ffb347';
     } else {
-      refs.qbv.textContent = 'Qbv: unknown';
+      refs.qbv.textContent = 'Qbv: unknown'; refs.badge.setAttribute('class', 'badge hidden'); refs.lock.textContent = '';
+      refs.qbv.style.fontWeight = '400'; refs.sw.setAttribute('class', 'switch');
       refs.qbvSub.textContent = '';
     }
 
