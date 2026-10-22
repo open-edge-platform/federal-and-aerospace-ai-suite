@@ -33,45 +33,48 @@ def test_missing_binary_is_reported():
     assert "not found" in server.state()["error"] and not server.state()["running"]
 
 
-def test_iperf_mode_launches_and_stops_the_client(monkeypatch):
-    launched = []
+class FakeAgent:
+    """Stands in for the load agent: records POSTs, answers like it."""
 
-    class FakeProc:
-        returncode = None
+    def __init__(self, fail=False):
+        self.posts, self.fail, self.running = [], fail, False
 
-        def __init__(self, cmd, **kw):
-            launched.append((cmd, kw))
+    def __call__(self, method, path, body=None):
+        if self.fail:
+            raise OSError("connection refused")
+        if method == "POST":
+            self.posts.append(body)
+            self.running = body["mbps"] > 0
+        return {"running": self.running, "returncode": None if self.running else 255}
 
-        def poll(self):
-            return None if self.returncode is None else self.returncode
 
-        def terminate(self):
-            self.returncode = -15
+def make(agent, **kw):
+    t = TrafficController("iperf", 900, "http://m4:8099", **kw)
+    t._call = agent
+    return t
 
-        def wait(self, timeout=None):
-            return self.returncode
 
-    monkeypatch.setattr("app.controllers.traffic.subprocess.Popen", FakeProc)
-    t = TrafficController("iperf", 900, "srv-noise", "u@h", "inj-noise", guard_s=60)
-    assert t.set_rate(400) == 400 and len(launched) == 1
+def test_iperf_mode_sends_rates_to_the_agent():
+    agent = FakeAgent()
+    t = make(agent, ttl_s=30)
+    assert t.set_rate(400) == 400 and agent.posts == [{"mbps": 400, "ttl_s": 30}]
     assert t.state()["running"] is True
-    assert t.set_rate(2000) == 900 and len(launched) == 2  # restarted at the capped rate
-    assert t.set_rate(0) == 0 and len(launched) == 2  # 0 stops, nothing new is started
+    assert t.set_rate(2000) == 900 and agent.posts[-1]["mbps"] == 900  # capped
+    assert t.set_rate(0) == 0 and agent.posts[-1]["mbps"] == 0
     assert t.state()["running"] is False
 
 
-def test_client_that_exits_is_reported(monkeypatch):
-    class Dead:
-        returncode = 255
+def test_unreachable_agent_is_reported_and_load_not_assumed():
+    t = make(FakeAgent(fail=True))
+    assert t.set_rate(100) == 0
+    assert "unreachable" in t.state()["error"]
 
-        def __init__(self, *a, **k):
-            pass
 
-        def poll(self):
-            return 255
-
-    monkeypatch.setattr("app.controllers.traffic.subprocess.Popen", Dead)
-    t = TrafficController("iperf", 900, "s", "u@h", "c")
+def test_agent_whose_client_exited_is_reported():
+    agent = FakeAgent()
+    t = make(agent)
     t.set_rate(100)
+    agent.running = False
+    t.agent = agent("GET", "/state")  # what the refresh loop does
     state = t.state()
     assert state["running"] is False and "exited with code 255" in state["error"]

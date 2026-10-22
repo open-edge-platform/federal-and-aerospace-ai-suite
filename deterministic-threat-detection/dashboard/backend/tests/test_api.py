@@ -45,16 +45,6 @@ def test_history_shows_added_samples(client):
     assert client.get("/api/status").json()["sources"] == {}
 
 
-def test_traffic_command_uses_the_noise_vlan_addresses_and_the_lab_control_path():
-    from app.controllers.traffic import TrafficController
-
-    t = TrafficController("iperf", 1000, "srv-noise", "user@injector-lab", "inj-noise")
-    cmd = t.command(300)
-    assert cmd[0:2] == ["ssh", "-tt"] and cmd[-2] == "user@injector-lab"  # control over the lab address
-    assert "-B inj-noise" in cmd[-1] and "-c srv-noise" in cmd[-1] and "-b 300M" in cmd[-1]
-    assert "timeout " in cmd[-1] and "-t 3600" in cmd[-1] and "-l " not in cmd[-1]  # default packet size
-
-
 def test_missing_lab_entries_are_named_at_startup():
     import pytest
 

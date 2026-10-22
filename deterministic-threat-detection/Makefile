@@ -4,7 +4,7 @@
 # Deterministic Threat Detection: both use cases behind one web dashboard.
 #
 #   make up        start everything: the RTSP streams on the camera machines, the dashboard (with the MQTT
-#                  broker), the metrics-manager on machine-4, use case 1 (camera pipelines on the camera
+#                  broker), the metrics-manager and load agent on machine-4, use case 1 (camera pipelines on the camera
 #                  machines) and use case 2 (SceneScape)
 #   make down      stop everything (reverse order)
 #   make status    what is running
@@ -34,7 +34,7 @@ up:
 	# the dashboard mounts the SceneScape broker's CA certificate, which the secrets step creates
 	$(MAKE) -C usecase2 secrets
 	$(MAKE) -C dashboard up
-	common/metrics/deploy.sh up
+	common/traffic-node/deploy.sh up
 	$(MAKE) -C usecase1 up STREAMS=0
 	$(MAKE) -C usecase2 up STREAMS=0
 	@echo "Everything is up. Dashboard: see the address printed above; SceneScape: https://localhost/"
@@ -43,12 +43,12 @@ down:
 	-$(MAKE) -C usecase2 down STREAMS=0
 	-$(MAKE) -C usecase1 down STREAMS=0
 	-$(MAKE) -C dashboard down
-	-common/metrics/deploy.sh down
+	-common/traffic-node/deploy.sh down
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-down
 
 status:
 	@echo "== dashboard"; $(MAKE) -s -C dashboard status
-	@echo "== metrics-manager (machine-4)"; common/metrics/deploy.sh status
+	@echo "== traffic node: metrics-manager + load agent (machine-4)"; common/traffic-node/deploy.sh status
 	@echo "== use case 1 (camera machines)"; $(MAKE) -s -C usecase1 status STREAMS=0
 	@echo "== use case 2"; $(MAKE) -s -C usecase2 status
 

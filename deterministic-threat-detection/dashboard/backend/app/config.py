@@ -69,11 +69,12 @@ SWITCH_ALLOW_WRITE = os.environ.get("SWITCH_ALLOW_WRITE", "0") == "1"
 SWITCH_SCHEDULE = os.environ.get("SWITCH_SCHEDULE", "90000:6,1,0 10000:5,1,0")
 
 TRAFFIC_SERVER_IP = os.environ.get("TRAFFIC_SERVER_IP") or M1_NOISE_IP
-# Machine-4 on the lab network (control path); the traffic itself leaves via VLAN 5.
-TRAFFIC_CLIENT_TARGET = os.environ.get("TRAFFIC_CLIENT_TARGET") or _target(M4_LAB_IP)
-TRAFFIC_CLIENT_IP = os.environ.get("TRAFFIC_CLIENT_IP") or M4_NOISE_IP
+# Load agent on machine-4: HTTP on its *lab* address (never a TSN VLAN, so it stays reachable under load);
+# the iperf3 traffic itself leaves machine-4 via VLAN 5.
+TRAFFIC_AGENT_URL = os.environ.get("TRAFFIC_AGENT_URL") or (f"http://{M4_LAB_IP}:{_int('LOAD_PORT', 8099)}" if M4_LAB_IP else "")
 IPERF3_BIN = os.environ.get("IPERF3_BIN", "iperf3")
-TRAFFIC_GUARD_S = _int("TRAFFIC_GUARD_S", 3600)
+# The agent stops the load by itself this long after the last refresh from the dashboard.
+TRAFFIC_TTL_S = _int("TRAFFIC_TTL_S", 30)
 
 # --- use case 2: live HOTA from the SceneScape stack on this machine ---
 SCENE_ENABLED = os.environ.get("SCENE_ENABLED", "1") == "1"

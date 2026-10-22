@@ -47,17 +47,14 @@ def create_app(start_mqtt=True):
         max_latency_s=config.MAX_PLAUSIBLE_LATENCY_S,
     )
     if config.TRAFFIC_MODE == "iperf":
-        config.require("TRAFFIC_MODE=iperf", M1_NOISE_IP=config.TRAFFIC_SERVER_IP, SSH_USER=config.TRAFFIC_CLIENT_TARGET,
-                       M4_LAB_IP=config.TRAFFIC_CLIENT_TARGET, M4_NOISE_IP=config.TRAFFIC_CLIENT_IP)
+        config.require("TRAFFIC_MODE=iperf", M1_NOISE_IP=config.TRAFFIC_SERVER_IP, M4_LAB_IP=config.TRAFFIC_AGENT_URL)
     server = IperfServer(config.TRAFFIC_SERVER_IP, config.IPERF3_BIN) if config.TRAFFIC_MODE == "iperf" else None
     traffic = TrafficController(
         config.TRAFFIC_MODE,
         config.TRAFFIC_MAX_MBPS,
-        config.TRAFFIC_SERVER_IP,
-        config.TRAFFIC_CLIENT_TARGET,
-        config.TRAFFIC_CLIENT_IP,
+        config.TRAFFIC_AGENT_URL,
         server=server,
-        guard_s=config.TRAFFIC_GUARD_S,
+        ttl_s=config.TRAFFIC_TTL_S,
     )
     switch = create_switch(config)
     source = MqttSource(tracker, config.MQTT_HOST, config.MQTT_PORT, config.MQTT_TOPIC)
