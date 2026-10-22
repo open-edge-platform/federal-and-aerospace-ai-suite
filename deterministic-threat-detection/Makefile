@@ -1,24 +1,17 @@
 # SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 #
-# Deterministic Threat Detection: both use cases behind one web dashboard.
+# Deterministic Threat Detection: TSN usecase demonstation for Intel NIC.
 #
 #   make up        start everything: the RTSP streams on the camera machines, the dashboard (with the MQTT
 #                  broker), the metrics-manager and load agent on machine-4, use case 1 (camera pipelines on the camera
 #                  machines) and use case 2 (SceneScape)
 #   make down      stop everything (reverse order)
 #   make status    what is running
-#   make test      unit tests of the dashboard backend
-#   make test-e2e  end-to-end test of use case 2 through the SceneScape UI (needs the stack up)
 #   make help
 #
-# Run one part on its own with its own Makefile:
-#   common/streams/start-synced-streams.sh up|down|status    RTSP "cameras" on the camera machines
-#   make -C dashboard ...    the shared UI + backend + MQTT broker
-#   make -C usecase1 ...     use case 1: camera pipelines on the camera machines
-#   make -C usecase2 ...     use case 2: SceneScape + the mediamtx relay on this machine
 #
-# STREAMS=0 skips the RTSP publishers (they must already be running).
+#
 
 SHELL := /bin/bash
 STREAMS ?= 1
@@ -27,7 +20,7 @@ STREAMS_SCRIPT := common/streams/start-synced-streams.sh
 .PHONY: help up down status test test-e2e streams-up streams-down streams-status
 
 help:
-	@sed -n '4,20p' Makefile | sed 's/^# \{0,1\}//'
+	@sed -n '4,15p' Makefile | sed 's/^# \{0,1\}//'
 
 up:
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-up
