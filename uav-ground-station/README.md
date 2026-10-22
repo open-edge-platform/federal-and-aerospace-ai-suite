@@ -40,6 +40,7 @@ that host until you enter its IP in the dashboard and press **Connect**.
   [Video Search and Summarization (VSS)](https://github.com/open-edge-platform/edge-ai-libraries/tree/main/sample-applications/video-search-and-summarization)
   search stack -- see [VSS search](#vss-search) below.
 - An interactive **Architecture** popup: the services on the UAV host, the ground station and the optional VSS stack, color-coded by origin (Open Edge Platform, open source, application). Pick a flow such as live video, captions, live indexing or search to highlight its path, click a service for its role, image and APIs, and see which models run on the NPU, GPU and CPU.
+- A **Flight Summary** report (top bar's **Flight Summary** button): pick one or more cameras that are currently captioning and a time window, and get an extractive summary -- an overview paragraph, recurring subjects, and a timeline of de-duplicated scene highlights grouped camera-by-camera (not interleaved by arrival time, so each camera's own story reads start-to-finish) -- built entirely from the MQTT caption stream already flowing for captioning-enabled pipelines. No VSS deployment or LLM call required; see [Flight Summary](#flight-summary) below.
 
 ## Project Structure
 
@@ -52,9 +53,12 @@ uav-ground-station/
 └── backend/             # FastAPI app: static UI + proxy/bridge APIs
     ├── main.py
     ├── vss_search.py    # /api/search* proxy to the separate VSS stack
+    ├── caption_log.py   # MQTT caption ring buffer, feeds vss_summary.py
+    ├── vss_summary.py   # /api/summary* -- Flight Summary report (no VSS needed)
+    ├── pdf_writer.py    # dependency-free PDF renderer used by vss_summary.py
     ├── requirements.txt
     ├── Dockerfile
-    └── static/           # index.html, css/, js/ (app.js, search.js, arch.js), img/
+    └── static/           # index.html, css/, js/ (app.js, search.js, summary.js, arch.js), img/
 ```
 
 ## Quick Start
@@ -82,7 +86,7 @@ All configuration is via `.env` (see `.env.example`):
 |---|---|---|
 | `VIZ_HOST_IP` | `127.0.0.1` (`make init` sets the host's LAN IP) | Bind address for this machine's published port |
 | `VIZ_PORT` | `8080` | Dashboard port |
-| `VIZ_COMPANION_HOST` | `127.0.0.1` | Pre-filled value in the dashboard's UAV Companion Compute IP field |
+| `VIZ_COMPANION_HOST` | `127.0.0.1` | UAV Companion Compute IP field |
 | `VIZ_CAMERA_ORDER` | `front,bottom,back` | Camera card order, by a word in the stream name; unlisted cameras follow alphabetically |
 | `VIZ_REMOTE_HTTPS_PORT` | `443` | UAV host's nginx HTTPS port |
 | `VIZ_REMOTE_MQTT_PORT` | `1883` | UAV host's nginx MQTT passthrough port |
@@ -99,6 +103,8 @@ All configuration is via `.env` (see `.env.example`):
 | `VSS_PREVIEW_MAX_KBPS` | `800` | Preview video bitrate cap |
 | `VSS_PREVIEW_CACHE_MB` | `1024` | Disk budget for cached previews in `viz-backend` |
 | `VSS_PREVIEW_PREWARM` | `3` | Top results transcoded as soon as a search returns |
+| `CAPTION_BUFFER_SIZE` | `1000` | Max scene captions kept per (host, camera) for the Flight Summary report |
+| `CAPTION_LOG_IDLE_TTL_SECONDS` | `120` | Drop a (host, camera) caption subscriber after this many seconds of not being observed captioning |
 
 The remote-port defaults assume the standard nginx-published ports from
 `uav-vision-analytics/docker-compose-pymavlink.yml`; only change them if that
@@ -156,10 +162,65 @@ curl -s -X POST http://${VIZ_HOST_IP:-127.0.0.1}:${VIZ_PORT:-8080}/api/search \
   -H 'Content-Type: application/json' -d '{"query": "a car on the road"}'
 ```
 
+### Multiple UAVs at once
+
+The dashboard supports connecting to more than one UAV companion board in the
+same browser session: a tab bar appears above the connect field once a second
+host is connected, and switching tabs swaps which host's camera cards and
+metrics are shown. Disconnecting (closing a tab's **×**) stops that host's VSS
+live-sync indexing; switching tabs does not -- a host keeps being indexed in
+the background for as long as its tab stays open, even while another tab is
+active.
+
+Because camera names are operator-chosen (`configs/cameras-*.yaml`), two UAVs
+could configure the same camera name (e.g. both have a `uav-front-camera`);
+each host's streams are registered with VSS under a host-qualified name
+(`uav-<host>--<camera>`) so they never collide, and search results carry a
+`camera`/`host` field resolved back from that for display (and, optionally,
+for scoping a search to the currently-connected UAV's own footage via
+`POST /api/search {"query": "...", "host": "<ip>"}`).
+
 Clips whose codec the browser can't decode (for example some stored
 live-stream segments) fall back to VSS's
 server-decoded best-matching frame plus a download link. Live segments older
 than VSS's `LIVE_RETENTION_HOURS` may no longer be available.
+
+## Flight Summary
+
+The **Flight Summary** button (top bar) opens a report built from the MQTT
+scene-caption stream (`uav/caption/<camera>`) -- the same captions shown live
+under each camera's video. It works independently of VSS: no extra containers,
+no LLM call, always available once a camera's pipeline is running with
+captioning on.
+
+1. `viz-backend` keeps a small ring buffer of recent captions per
+   `(host, camera)` (`caption_log.py`), kept warm only while the dashboard's
+   normal pipeline-info polling has observed that camera captioning; an idle
+   `(host, camera)` pair is dropped after `CAPTION_LOG_IDLE_TTL_SECONDS`.
+2. Open **Flight Summary**, confirm the host (defaults to the connected UAV),
+   pick one or more cameras from the list (populated from whichever cameras
+   are currently captioning) and a time window, then **Generate**.
+3. `vss_summary.py` runs an extractive map-reduce over that camera's buffered
+   captions: consecutive near-identical captions are folded into one "scene"
+   (with an occurrence count), a keyword tally feeds the overview paragraph,
+   and a representative subset of scenes (favoring long-held/repeated ones,
+   filled out with an even chronological spread of the rest) is kept per
+   camera up to the requested highlight budget. With more than one camera
+   selected, the timeline is **grouped by camera** -- all of one camera's
+   highlights in order, then the next camera's -- rather than interleaved by
+   arrival time, which is hard to follow once several cameras are captioning
+   concurrently.
+4. **Download PDF** renders the same report via `pdf_writer.py` (a small,
+   dependency-free PDF writer -- no extra system packages).
+
+If a search was just run, the report also appended the query and its matched
+clips as an "appendix", tying a natural-language search back to the raw
+caption evidence around the same time window.
+
+| Route | Purpose |
+|---|---|
+| `POST /api/summary` `{"host", "cameras": [...], "window_minutes", "max_highlights"}` | JSON report, rendered inline in the modal |
+| `GET /api/summary.pdf?host=...&cameras=a,b&window_minutes=15&max_highlights=20` | Same report as a downloadable PDF |
 
 ## Notes
 

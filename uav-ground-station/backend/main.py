@@ -42,16 +42,22 @@ import json
 import logging
 import os
 import re
+import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
 import paho.mqtt.client as mqtt
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
+import caption_log
+import uav_naming
 import vss_live_sync
 from vss_search import router as vss_search_router
+from vss_summary import router as vss_summary_router
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("viz-backend")
@@ -86,6 +92,7 @@ LOCAL_METRICS_MANAGER_BASE = os.environ.get("LOCAL_METRICS_MANAGER_BASE", "http:
 # topic of a camera is "uav/caption/<name>". Both end up in URLs / subscriptions, so they are validated.
 CAMERA_PATTERN = r"^[A-Za-z0-9_-]{1,48}$"
 TOPIC_PATTERN = r"^uav/caption/[A-Za-z0-9_-]{1,48}$"
+TOPIC_PATTERN_RE = re.compile(TOPIC_PATTERN)
 # uav_object_detection_<det>[_<vlm>] (video file) or uav_camera_<det>[_<vlm>] (live camera); the older uav_object_detection_<device>_caption
 # naming is still recognised so a UAV host that has not been updated keeps working.
 _PIPELINE_NAME = re.compile(r"^uav_(?:object_detection|camera)_(cpu|gpu|npu)(?:_(cpu|gpu)|(_caption))?$")
@@ -230,6 +237,102 @@ def _camera_sort_key(camera: dict) -> tuple:
     return (rank, camera["camera"])
 
 
+class SessionUpsert(BaseModel):
+    host: str = Field(..., min_length=1, max_length=253)
+    label: Optional[str] = Field(None, max_length=64)
+    boot_id: Optional[str] = None
+
+
+class SessionDelete(BaseModel):
+    host: str = Field(..., min_length=1, max_length=253)
+
+
+_sessions: dict = {}  # host -> {"label": str|None, "connected_at": iso str}
+_active_host: Optional[str] = None
+
+# Random per-process identity, regenerated every time this backend starts
+# (container redeploy, restart, crash recovery). The frontend compares
+# this against the boot_id it last saw (stored in its own localStorage)
+# and, if they differ, treats its saved session list as stale and does
+# NOT auto-restore from it. boot_id makes that restart
+# observable to the client so it can start clean, matching the operator's
+# expectation that a fresh deploy begins with no UAVs connected.
+_boot_id = uuid.uuid4().hex
+
+
+@app.get("/api/sessions")
+async def list_sessions():
+    return {
+        "sessions": [{"host": h, **v} for h, v in _sessions.items()],
+        "active_host": _active_host if _active_host in _sessions else None,
+        "boot_id": _boot_id,
+    }
+
+
+_SESSION_KEEPWARM_INTERVAL_SECONDS = 5.0
+
+
+async def _sessions_keepwarm_loop():
+    """Keep caption_log's per-(host, camera) MQTT subscribers warm for every
+    *connected* UAV, not just whichever one happens to be the active/visible
+    tab in someone's browser.
+    """
+    async with httpx.AsyncClient(verify=False, timeout=5.0, trust_env=False) as client:
+        while True:
+            try:
+                hosts = list(_sessions.keys())
+                for host in hosts:
+                    try:
+                        instances = await _instances_with_requests(client, _remote_base(host), running_only=True)
+                    except (httpx.HTTPError, ValueError) as exc:
+                        logger.debug("sessions-keepwarm: %s unreachable: %s", host, exc)
+                        continue
+                    for cam in _cameras_from(instances):
+                        if cam.get("captioning") and cam.get("mqtt_topic"):
+                            await caption_log.note_active(host, cam["camera"], cam["mqtt_topic"])
+            except Exception:  # noqa: BLE001 -- this loop must never die, or every
+                # session silently stops being kept warm until the next restart.
+                logger.exception("sessions-keepwarm: unexpected error in keep-warm loop")
+            await asyncio.sleep(_SESSION_KEEPWARM_INTERVAL_SECONDS)
+
+
+@app.on_event("startup")
+async def _start_sessions_keepwarm():
+    asyncio.ensure_future(_sessions_keepwarm_loop())
+
+
+@app.post("/api/sessions")
+async def upsert_session(req: SessionUpsert, active: bool = Query(True)):
+    global _active_host
+    if req.boot_id != _boot_id:
+        # Either this client has never fetched the current boot_id or the case this
+        # exists to catch -- it last fetched one from *before* this process started
+        # and hasn't refreshed it since. Reject rather than silently registering:
+        # letting this through is exactly what would make a fresh redeploy look like
+        # it never actually cleared anything.
+        return JSONResponse(
+            status_code=409,
+            content={"ok": False, "error": "boot_id_mismatch", "boot_id": _boot_id},
+        )
+    existing = _sessions.get(req.host)
+    _sessions[req.host] = {
+        "label": req.label if req.label is not None else (existing or {}).get("label"),
+        "connected_at": (existing or {}).get("connected_at") or datetime.now(timezone.utc).isoformat(),
+    }
+    if active:
+        _active_host = req.host
+    return {"ok": True}
+
+
+@app.delete("/api/sessions")
+async def delete_session(req: SessionDelete):
+    global _active_host
+    _sessions.pop(req.host, None)
+    if _active_host == req.host:
+        _active_host = next(iter(_sessions), None)
+    return {"ok": True}
+
+
 @app.get("/api/runtime-config")
 async def runtime_config():
     return {
@@ -271,6 +374,12 @@ async def pipeline_info(host: str = Query(...), camera: str = Query(..., pattern
             info.update(record)
             info["caption_topic"] = record["mqtt_topic"]
             info["rtsp_available"] = True
+            if record.get("captioning") and record.get("mqtt_topic"):
+                # Keep the Flight Summary feature's caption history warm for
+                # this (host, camera) -- cheap to call on every poll; it's a
+                # no-op unless the subscriber doesn't exist yet or the topic
+                # changed.
+                asyncio.ensure_future(caption_log.note_active(host, camera, record["mqtt_topic"]))
     except (httpx.HTTPError, ValueError) as exc:
         logger.warning("pipeline-info lookup failed for host=%s camera=%s: %s", host, camera, exc)
     return info
@@ -347,23 +456,108 @@ async def metrics_stream(host: str = Query(...)):
     return StreamingResponse(relay(), media_type="text/event-stream")
 
 
+@app.get("/api/metrics-stream-multi")
+async def metrics_stream_multi(hosts: str = Query(...)):
+    """Proxy *all* of several hosts' metrics-manager SSE streams over a
+    single downstream SSE connection, each frame tagged with which host it
+    came from (`{"host": "...", "timestamp": ..., "metrics": [...]}`).
+
+    Replaces one /api/metrics-stream connection per connected UAV -- with
+    the per-camera captions streams and this endpoint, the number of
+    long-lived SSE connections the dashboard holds open no longer scales
+    with the number of connected UAVs/cameras.
+    """
+    host_list = [h for h in hosts.split(",") if h]
+    if not host_list:
+        raise HTTPException(status_code=400, detail="hosts must be a non-empty comma-separated list")
+
+    queue: asyncio.Queue = asyncio.Queue(maxsize=200)
+    loop = asyncio.get_event_loop()
+
+    async def pump_one(host: str):
+        base = _remote_base(host)
+        url = f"{base}/metrics/stream"
+        try:
+            async with httpx.AsyncClient(verify=False, timeout=None, trust_env=False) as client:
+                async with client.stream("GET", url) as resp:
+                    if resp.status_code != 200:
+                        await queue.put({"host": host, "error": f"status {resp.status_code}"})
+                        return
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data:"):
+                            continue
+                        try:
+                            payload = json.loads(line[len("data:"):].strip())
+                        except json.JSONDecodeError:
+                            continue
+                        payload["host"] = host
+                        await queue.put(payload)
+        except httpx.HTTPError as exc:
+            logger.warning("metrics-stream-multi proxy failed for host=%s: %s", host, exc)
+            await queue.put({"host": host, "error": str(exc)})
+        except asyncio.CancelledError:
+            raise
+
+    tasks = [loop.create_task(pump_one(h)) for h in host_list]
+
+    async def relay():
+        try:
+            while True:
+                item = await queue.get()
+                yield f"data: {json.dumps(item)}\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            for t in tasks:
+                t.cancel()
+
+    return StreamingResponse(relay(), media_type="text/event-stream")
+
+
 @app.get("/api/captions-stream")
 async def captions_stream(host: str = Query(...), topic: str = Query(..., pattern=TOPIC_PATTERN)):
-    """Bridge a caption topic (uav/caption/<name>, from pipeline-info's caption_topic) of the remote MQTT broker to the browser over SSE."""
+    """Bridge a caption topic (uav/caption/<name>, from pipeline-info's caption_topic) of the remote MQTT broker to the browser over SSE.
+
+    With several cameras per UAV and several UAVs connected, one persistent
+    MQTT connection per host is preferred over one per camera.
+    """
+    return await _captions_stream_impl(host, [topic])
+
+
+@app.get("/api/captions-stream-multi")
+async def captions_stream_multi(host: str = Query(...), topics: str = Query(...)):
+    """Bridge *all* of one host's caption topics over a single MQTT
+    connection / single SSE stream, each event tagged with which topic it
+    came from. `topics` is a comma-separated list of `uav/caption/<name>`
+    topics (validated individually against TOPIC_PATTERN, same as the
+    single-topic endpoint)."""
+    topic_list = [t for t in topics.split(",") if t]
+    if not topic_list:
+        raise HTTPException(status_code=400, detail="topics must be a non-empty comma-separated list")
+    for t in topic_list:
+        if not TOPIC_PATTERN_RE.match(t):
+            raise HTTPException(status_code=400, detail=f"invalid topic: {t}")
+    return await _captions_stream_impl(host, topic_list)
+
+
+async def _captions_stream_impl(host: str, topics: list):
     loop = asyncio.get_event_loop()
-    queue: asyncio.Queue = asyncio.Queue(maxsize=50)
+    queue: asyncio.Queue = asyncio.Queue(maxsize=200)
 
     def on_message(_client, _userdata, msg):
         try:
             payload = json.loads(msg.payload.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             return
-        loop.call_soon_threadsafe(queue.put_nowait, payload)
+        # Tag with the topic it arrived on so a multi-topic (multi-camera)
+        # subscription can be demuxed back to the right card client-side.
+        loop.call_soon_threadsafe(queue.put_nowait, {"topic": msg.topic, "payload": payload})
 
     def on_connect(client, _userdata, _flags, reason_code, _properties=None):
         if reason_code == 0:
-            client.subscribe(topic)
-            logger.info("captions-stream: subscribed to %s on %s", topic, host)
+            for t in topics:
+                client.subscribe(t)
+            logger.info("captions-stream: subscribed to %s on %s", topics, host)
         else:
             logger.warning("captions-stream: MQTT connect failed (%s) for %s", reason_code, host)
 
@@ -380,10 +574,10 @@ async def captions_stream(host: str = Query(...), topic: str = Query(..., patter
 
     async def relay():
         try:
-            yield f"event: connected\ndata: {json.dumps({'topic': topic})}\n\n"
+            yield f"event: connected\ndata: {json.dumps({'topics': topics})}\n\n"
             while True:
-                payload = await queue.get()
-                yield f"data: {json.dumps(payload)}\n\n"
+                item = await queue.get()
+                yield f"data: {json.dumps(item)}\n\n"
         except asyncio.CancelledError:
             pass
         finally:
@@ -395,10 +589,16 @@ async def captions_stream(host: str = Query(...), topic: str = Query(..., patter
 
 @app.post("/api/relay-path")
 async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CAMERA_PATTERN)):
-    """(Re)configure the local mediamtx sidecar's "relay-<camera>" path to
-    pull the remote host's H.264 RTSP stream on demand, for "H.264 Relay"
-    video mode (see module docstring). Pure remux -- mediamtx does not
-    transcode, the remote stream is already H.264.
+    """(Re)configure the local mediamtx sidecar's "relay-<host_tag>-<camera>"
+    path to pull the remote host's H.264 RTSP stream on demand, for "H.264
+    Relay" video mode.
+
+    The path name is namespaced by host, not just by camera name, because 
+    different UAVs commonly reuse the same camera names (e.g. "uav-front-camera"). 
+    Without the host in the path name, connecting a second UAV with the same camera
+    names would PATCH the *same* mediamtx path that the first UAV's card is
+    already viewing, silently repointing its `source` RTSP URL out from
+    under it -- video for whichever host loses that race goes blank/stale.
 
     Idempotent/cheap to call on every connect (e.g. the user switching the
     host field, or re-polling pipeline-info) -- mediamtx's config API
@@ -407,12 +607,28 @@ async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CA
     the mediamtx sidecar isn't reachable (e.g. docker-compose-mediamtx.yml
     wasn't brought up).
     """
-    path_name = f"relay-{camera}"
+    path_name = f"relay-{uav_naming.host_tag(host)}-{camera}"
     source = f"rtsp://{host}:{REMOTE_RTSP_PORT}/{camera}"
     # rtspTransport=tcp: the UAV host's nginx only forwards RTSP over TCP, so the default
     # "automatic" mode wastes several seconds trying UDP ("no UDP packets received,
     # switching to TCP") every time a viewer opens a stream.
-    body = {"source": source, "sourceOnDemand": True, "rtspTransport": "tcp"}
+    #
+    # sourceOnDemandStartTimeout/sourceOnDemandCloseAfter ARE valid per-path
+    # keys, and these are the ones that were actually firing in practice
+    # The UAV's RTSP encoder pipeline is rebuilt from scratch on every client
+    # (re)connect and can occasionally take longer than 10s under
+    # concurrent GPU/NPU load (detection + VLM captioning), which triggered
+    # a reconnect-storm (torn down -> on-demand rebuild -> stalls again)
+    # that showed up in the UI as a stuck "source has timed out" error.
+    # Set explicitly per-path here (in addition to configs/mediamtx.yml's
+    # matching global default) so it holds regardless of the global config.
+    body = {
+        "source": source,
+        "sourceOnDemand": True,
+        "rtspTransport": "tcp",
+        "sourceOnDemandStartTimeout": "60s",
+        "sourceOnDemandCloseAfter": "60s",
+    }
     try:
         async with httpx.AsyncClient(timeout=5.0, trust_env=False) as client:
             resp = await client.patch(f"{MEDIAMTX_API_BASE}/v3/config/paths/patch/{path_name}", json=body)
@@ -430,6 +646,9 @@ async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CA
 vss_live_sync.configure(_detect_running_cameras, REMOTE_RTSP_PORT)
 app.include_router(vss_search_router)
 app.include_router(vss_live_sync.router)
+# Flight Summary report -- built from the caption history, keeps
+# warm via the note_active() call in pipeline_info() above.
+app.include_router(vss_summary_router)
 
 
 class RevalidateStaticAssets:
