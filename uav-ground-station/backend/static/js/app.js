@@ -186,6 +186,7 @@
   function getOrCreateHostView(host) {
     let view = hostViews.get(host);
     if (!view) {
+      cardsContainer.querySelectorAll(":scope > .cards-empty").forEach((n) => n.remove());
       const container = document.createElement("div");
       container.className = "host-view";
       container.dataset.host = host;
@@ -445,6 +446,8 @@
       chipLag,
       captionHistory: [],
       lastCaptionReceivedAt: null,
+      relayWatchdogTimer: null,
+      lastRelayReady: null,
     };
     renderCaptionTimeline(card);
     renderBadges(card, cam);
@@ -497,6 +500,7 @@
   }
 
   function teardownCard(host, card) {
+    stopRelayWatchdog(card);
     card.wrap.remove();
     refreshHostCaptionsStream(host); // drop this card's topic from the shared subscription, if any
   }
@@ -538,6 +542,7 @@
       iframe.src = `http://${mediamtxWebrtcHost}:${mediamtxWebrtcPort}/${path}/`;
       card.videoContainer.appendChild(iframe);
       setStatus("connected");
+      startRelayWatchdog(host, card);
     } catch (err) {
       card.videoContainer.innerHTML = "";
       const placeholder = document.createElement("div");
@@ -547,7 +552,59 @@
     }
   }
 
+  // Polls /api/relay-status (a thin proxy onto mediamtx's own control API,
+  // see main.py) so a WHEP session that has silently wedged -- the remote
+  // RTSP publisher restarted out from under an already-open relay, or some
+  // other transient mediamtx fault -- gets noticed and auto-recovered
+  // without requiring the user to notice video is frozen and click the
+  // refresh button themselves. This is the actual "automatic WHEP
+  // renegotiation loop" half of the fix; bumping mediamtx's on-demand
+  // timeouts (configs/mediamtx.yml) addresses the single most common cause
+  // of the stall, but only this watchdog can recover from the stall if it
+  // happens anyway.
+  const RELAY_WATCHDOG_INTERVAL_MS = 15000;
+
+  function startRelayWatchdog(host, card) {
+    stopRelayWatchdog(card);
+    card.lastRelayReady = null;
+    card.relayWatchdogTimer = setInterval(async () => {
+      // Bail if this card has moved on (different host/mode, or torn down)
+      // since the timer was scheduled -- avoids a stray reload firing into
+      // a card that's no longer showing this relay at all.
+      if (card.activeVideoMode !== "relay" || card.relayHost !== host) {
+        stopRelayWatchdog(card);
+        return;
+      }
+      let ready = null;
+      try {
+        const res = await fetch(
+          `/api/relay-status?host=${encodeURIComponent(host)}&camera=${encodeURIComponent(card.camera)}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          ready = !!data.ready;
+        }
+      } catch (err) {
+        return; // transient network/backend hiccup -- try again next tick, don't force-reload on a guess
+      }
+      if (card.activeVideoMode !== "relay" || card.relayHost !== host) return; // re-check after the await
+      if (card.lastRelayReady === true && ready === false) {
+        syncVideoMode(host, card, true, true); // force: re-negotiate a fresh WHEP session
+      }
+      card.lastRelayReady = ready;
+    }, RELAY_WATCHDOG_INTERVAL_MS);
+  }
+
+  function stopRelayWatchdog(card) {
+    if (card.relayWatchdogTimer) {
+      clearInterval(card.relayWatchdogTimer);
+      card.relayWatchdogTimer = null;
+    }
+    card.lastRelayReady = null;
+  }
+
   function showNoStreamPlaceholder(card) {
+    stopRelayWatchdog(card);
     card.videoContainer.innerHTML = "";
     const placeholder = document.createElement("div");
     placeholder.className = "device-video-placeholder";
@@ -1139,7 +1196,7 @@
   // restored (so the caller can skip opening the connect modal).
   async function restorePersistedSessions() {
     const saved = await resolvePersistedSessions();
-    if (!saved) return false;
+    if (!saved || !saved.hosts || saved.hosts.length === 0) return false;
 
     // Pre-populate sessions so tabs render immediately, before any network
     // round trip -- avoids a blank dashboard while each host is re-probed.
@@ -1179,7 +1236,12 @@
   }
 
   loadRuntimeConfig().then(async () => {
-    const restored = await restorePersistedSessions();
+    let restored = false;
+    try {
+      restored = await restorePersistedSessions();
+    } catch (err) {
+      console.error("restorePersistedSessions failed, falling back to connect modal", err);
+    }
     // No UAVs connected/restored -- the connect modal is the only way to get
     // a dashboard going, so open it immediately.
     if (!restored && sessions.size === 0) openConnectModal();

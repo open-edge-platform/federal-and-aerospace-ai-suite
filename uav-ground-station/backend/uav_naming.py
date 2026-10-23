@@ -38,7 +38,7 @@ MANAGED_NAME = re.compile(r"^uav-[a-z0-9-]{1,40}--[A-Za-z0-9_-]{1,48}$")
 # Kept recognizable so the live-sync loop still manages/cleans up streams
 # registered under this older convention, but -- having no embedded host --
 # it can never match a host-scoped search filter; see vss_search.py.
-LEGACY_NAME = re.compile(r"^uav-[A-Za-z0-9_-]{1,44}$")
+LEGACY_NAME = re.compile(r"^uav-(?!.*--)[A-Za-z0-9_-]{1,44}$")
 
 
 def host_tag(host: str) -> str:
@@ -64,6 +64,14 @@ _registry: dict = {}
 
 
 def register(name: str, host: str, camera: str) -> None:
+    """Claim `name` for `host`. For a host-tagged name this is just called
+    every reconciliation pass. For a legacy (no embedded host) name, this
+    is a one-time, first-come claim made by the first time any host's 
+    reconciliation pass sees it unclaimed -- once claimed, ``info_for()`` 
+    ties it to that one host from then on, so a *different* host reconciling
+    later does NOT also treat it as its own. Without this, every connected 
+    host's live-index / search-scoping would show the same orphaned legacy
+    streams as if they belonged to it too."""
     _registry[name] = (host, camera)
 
 
@@ -75,9 +83,19 @@ def replace_host_registry(host: str, entries: dict) -> None:
     """Replace every registered entry for `host` with `entries`
     (stream_name -> camera) in one go -- used at the end of each
     reconciliation pass so a camera that stopped being registered (pipeline
-    stopped, camera removed from config) drops out of the registry too."""
+    stopped, camera removed from config) drops out of the registry too.
+
+    Only touches *host-tagged* (``MANAGED_NAME``) entries -- a legacy
+    (pre-multi-UAV, no embedded host) entry claimed for this host via
+    ``register()`` below is deliberately left alone here: `entries` only
+    ever contains host-tagged names (built from ``stream_name()``), so
+    wiping every registry row for `host` unconditionally would immediately
+    un-claim that host's legacy adoption again on the very next
+    reconciliation pass, defeating the whole point of claiming it in the
+    first place (see ``register()``'s docstring).
+    """
     for name, (h, _camera) in list(_registry.items()):
-        if h == host:
+        if h == host and MANAGED_NAME.fullmatch(name):
             del _registry[name]
     for name, camera in entries.items():
         _registry[name] = (host, camera)
@@ -92,3 +110,14 @@ def info_for(name: str) -> Optional[tuple]:
 
 def stream_names_for_host(host: str) -> set:
     return {name for name, (h, _camera) in _registry.items() if h == host}
+
+
+def hosts_and_cameras() -> dict:
+    """{host: sorted [camera, ...]} for every currently-managed stream in the
+    registry -- i.e. every UAV host + camera combination that's currently
+    live-indexed. Used to populate the search UI's "UAV" / "Camera" filter
+    dropdowns (see vss_search.py's GET /api/search/sources)."""
+    out: dict = {}
+    for _name, (host, camera) in _registry.items():
+        out.setdefault(host, set()).add(camera)
+    return {host: sorted(cams) for host, cams in out.items()}

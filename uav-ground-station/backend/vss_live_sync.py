@@ -125,7 +125,10 @@ def _status() -> dict:
 def _summary(stream: dict, host: Optional[str]) -> dict:
     name = stream.get("stream_name")
     info = uav_naming.info_for(str(name or ""))
-    camera = info[1] if info else (str(name or "")[4:] if uav_naming.LEGACY_NAME.fullmatch(str(name or "")) else None)
+    # Same reasoning as vss_search.py's _camera_and_host(): a legacy
+    # stream_name IS the bare camera name verbatim, not something to strip a
+    # "uav-" prefix off of.
+    camera = info[1] if info else (str(name or "") if uav_naming.LEGACY_NAME.fullmatch(str(name or "")) else None)
     stats = stream.get("stats") if isinstance(stream.get("stats"), dict) else {}
     return {
         "camera": camera,
@@ -172,15 +175,43 @@ async def _reconcile_host(client: httpx.AsyncClient, host: str) -> None:
         return
     active_cameras = sorted({c["camera"] for c in detected.get("cameras", []) if isinstance(c, dict) and c.get("camera")})
 
+    # Update the (host, camera) registry *before* touching any VSS API below
+    # -- vss_search.py's /api/search/sources (the dashboard's "UAV"/"Camera"
+    # search filters) and its per-result host/camera attribution both read
+    # straight from this registry, not from whether reconciliation below
+    # actually succeeds. Previously this was only done at the very end of
+    # this function, so any failure in between (a slow/erroring VSS -- e.g.
+    # from the very duplicate-stream pileup this function now cleans up
+    # below -- would abort the whole pass early and leave a freshly
+    # connected UAV's registry entries never populated, which is exactly
+    # what made the search filter dropdowns show no UAVs at all.
+    wanted = {uav_naming.stream_name(host, camera): camera for camera in active_cameras}
+    uav_naming.replace_host_registry(host, wanted)
+
     listing = await _call(client, "GET", "/streams")
     managed: dict = {}
     for stream in (listing or {}).get("streams", []):
         name = stream.get("stream_name") if isinstance(stream, dict) else None
         if name and uav_naming.is_managed_name(name) and _is_managed_for_host(name, host):
             managed.setdefault(name, stream)
+            # A legacy (pre-multi-UAV, no embedded host) stream only passes
+            # via its "unclaimed -> true for anyone" fallback. Claim it for
+            # this host right now, the first time any host's reconciliation
+            # pass sees it unclaimed -- otherwise every other connected host
+            # would *also* match that same fallback on its own next pass
+            # (nothing was ever recorded to stop it), and the exact same
+            # orphaned stream would show up duplicated across every UAV's
+            # live-index list / count towards every UAV's search scope,
+            # forever, since legacy names carry no host of their own
+            # to disambiguate by. One-time, first-come: once claimed here,
+            # `uav_naming.info_for()` ties it to this host from now on, so
+            # `_is_managed_for_host` correctly returns False for every other
+            # host afterwards.
+            if uav_naming.LEGACY_NAME.fullmatch(name) and uav_naming.info_for(name) is None:
+                uav_naming.register(name, host, name)
 
     errors = []
-    wanted = {uav_naming.stream_name(host, camera): camera for camera in active_cameras}
+    ready = set()  # names in `wanted` whose canonical VSS stream exists and is running this pass
     for name, camera in wanted.items():
         url = f"rtsp://{host}:{_rtsp_port}/{camera}"
         stream = managed.get(name)
@@ -197,6 +228,7 @@ async def _reconcile_host(client: httpx.AsyncClient, host: str) -> None:
                 elif stream.get("state") == "paused":
                     await _call(client, "PATCH", f"/streams/{stream['stream_id']}", json={"state": "running"})
                     logger.info("VSS live stream %s resumed", name)
+                    ready.add(name)
                     continue
             if not stream:
                 await _call(client, "POST", "/streams", json={
@@ -208,6 +240,7 @@ async def _reconcile_host(client: httpx.AsyncClient, host: str) -> None:
                 })
                 _recreated_at[name] = time.monotonic()
                 logger.info("VSS live stream %s registered for %s", name, url)
+            ready.add(name)
         except (RuntimeError, httpx.HTTPError) as exc:
             errors.append(str(exc))
 
@@ -220,10 +253,30 @@ async def _reconcile_host(client: httpx.AsyncClient, host: str) -> None:
         except (RuntimeError, httpx.HTTPError) as exc:
             errors.append(str(exc))
 
-    # Keep uav_naming's registry (used by vss_search.py for host-scoped
-    # search and result attribution) in step with what's actually wanted
-    # this pass -- a camera that stopped reporting drops out here too.
-    uav_naming.replace_host_registry(host, wanted)
+    # Clean up *any* other VSS stream -- whatever its name, whether it was
+    # ever "managed" by this feature's naming convention at all -- that
+    # points at the exact same RTSP URL as a camera we just confirmed is
+    # correctly registered under its canonical host-qualified name.
+    wanted_urls = {
+        f"rtsp://{host}:{_rtsp_port}/{camera}".rstrip("/"): name
+        for name, camera in wanted.items()
+        if name in ready
+    }
+    for stream in (listing or {}).get("streams", []):
+        if not isinstance(stream, dict):
+            continue
+        canonical_name = wanted_urls.get(str(stream.get("stream_url", "")).rstrip("/"))
+        dup_name = stream.get("stream_name")
+        if canonical_name is None or dup_name == canonical_name:
+            continue
+        try:
+            await _call(client, "DELETE", f"/streams/{stream['stream_id']}")
+            logger.info(
+                "VSS duplicate live stream %s deregistered (duplicate source URL of %s)", dup_name, canonical_name,
+            )
+            uav_naming.unregister(str(dup_name or ""))
+        except (RuntimeError, httpx.HTTPError) as exc:
+            errors.append(str(exc))
 
     listing = await _call(client, "GET", "/streams")
     state["streams"] = sorted(

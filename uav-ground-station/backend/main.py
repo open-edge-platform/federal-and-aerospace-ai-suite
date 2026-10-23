@@ -642,6 +642,28 @@ async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CA
     return {"path": path_name}
 
 
+@app.get("/api/relay-status")
+async def relay_status(host: str = Query(...), camera: str = Query(..., pattern=CAMERA_PATTERN)):
+    """Lightweight health check for a "H.264 Relay" path, polled by the
+    dashboard, so a dead WHEP session can be recovered automatically
+    instead of only on a manual refresh click.
+    """
+    path_name = f"relay-{uav_naming.host_tag(host)}-{camera}"
+    try:
+        async with httpx.AsyncClient(timeout=5.0, trust_env=False) as client:
+            resp = await client.get(f"{MEDIAMTX_API_BASE}/v3/paths/get/{path_name}")
+            if resp.status_code == 404:
+                # Path was never configured (e.g. this camera has never been
+                # viewed in relay mode yet) -- not an error, just "no status".
+                return {"path": path_name, "exists": False, "ready": False}
+            resp.raise_for_status()
+            data = resp.json()
+    except httpx.HTTPError as exc:
+        logger.warning("relay-status check failed for host=%s camera=%s: %s", host, camera, exc)
+        raise HTTPException(status_code=502, detail=f"Cannot reach local mediamtx: {exc}")
+    return {"path": path_name, "exists": True, "ready": bool(data.get("ready"))}
+
+
 # VSS natural-language search proxy (separate VSS Compose stack) -- see vss_search.py.
 vss_live_sync.configure(_detect_running_cameras, REMOTE_RTSP_PORT)
 app.include_router(vss_search_router)
