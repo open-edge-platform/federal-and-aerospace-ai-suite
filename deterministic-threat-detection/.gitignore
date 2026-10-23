@@ -12,3 +12,4 @@ __pycache__/
 
 lab.env
 src/scene/mediamtx/mediamtx.yml
+src/scene/dlstreamer-pipeline-server/config.generated.json

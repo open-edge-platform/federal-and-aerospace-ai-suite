@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Standalone deterministic threat detection (HOTA) application.
-#   make up [HOST_IP=x.x.x.x]   generate secrets/certs, configure .env, start the stack
+#   make up [SOURCE=video|basler] [HOST_IP=x.x.x.x]   generate secrets/certs, configure .env, start the stack
 #   make down                   stop the stack (keeps volumes) and the remote streams
 #   make clean                  stop the stack and delete volumes (and stop the streams)
 #   make streams-up|streams-down|streams-status   RTSP cameras on the remote machines only
@@ -24,6 +24,14 @@ STREAM_HOSTS ?= tsn-machine-2:Cam_x1_0 tsn-machine-3:Cam_x2_0
 export STREAM_HOSTS
 # Hosts the web UI accepts (Django ALLOWED_HOSTS). '*' = any host/IP; restrict with make up ALLOWED_HOSTS=a,b
 ALLOWED_HOSTS ?= *
+
+# Camera source: video (default) or basler. An explicit value is remembered in .env.
+SOURCE ?= $(or $(shell sed -n 's/^SOURCE=//p' .env 2>/dev/null),video)
+export SOURCE
+# The Basler source adds the pylon image and a macvlan on the TSN VLAN
+ifeq ($(SOURCE),basler)
+export COMPOSE_FILE := docker-compose.yml:docker-compose.basler.yml
+endif
 
 SECRETS_DIR := secrets
 SSL_DIR := nginx/ssl
@@ -55,10 +63,17 @@ $(SECRETS_DIR)/browser.auth:
 # the broker entrypoint copies secrets under a root-owned directory.
 env: secrets
 	@[ -f .env ] || cp .env.example .env
+	@# keys added to .env.example after .env was created
+	@grep -E '^[A-Z0-9_]+=' .env.example | while IFS= read -r l; do grep -q "^$${l%%=*}=" .env || echo "$$l" >> .env; done
 	sed -i "s#^SUPASS=.*#SUPASS=$$(cat $(SECRETS_DIR)/supass)#" .env
 	sed -i "s#^HOST_IP=.*#HOST_IP=$(HOST_IP)#" .env
 	grep -q "^LAB_IP=" .env || echo "LAB_IP=" >> .env
 	sed -i "s#^LAB_IP=.*#LAB_IP=$(LAB_IP)#" .env
+	grep -q "^SOURCE=" .env || echo "SOURCE=" >> .env
+	sed -i "s#^SOURCE=.*#SOURCE=$(SOURCE)#" .env
+	grep -q "^COMPOSE_PROFILES=" .env || echo "COMPOSE_PROFILES=" >> .env
+	sed -i "s#^COMPOSE_PROFILES=.*#COMPOSE_PROFILES=$(SOURCE)#" .env
+	python3 dlstreamer-pipeline-server/render_config.py dlstreamer-pipeline-server/config.generated.json .env
 	sed -i "s#^UID=.*#UID=#; s#^GID=.*#GID=#" .env
 	sed -i "s#^ALLOWED_HOSTS=.*#ALLOWED_HOSTS=$(ALLOWED_HOSTS)#" .env
 

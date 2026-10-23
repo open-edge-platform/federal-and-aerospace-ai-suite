@@ -92,11 +92,10 @@ class SceneSource:
         now = time.time()
         if "/data/camera/" in topic:
             frame = msg.get("frame")
-            if not isinstance(frame, int):
-                self.bad_msgs += 1
-                return
             with self._lock:
-                self.hota.on_camera(iso_to_epoch(msg["timestamp"]), frame)
+                # live cameras (basler) carry no SEI frame number: counted for rates, not for HOTA
+                if isinstance(frame, int):
+                    self.hota.on_camera(iso_to_epoch(msg["timestamp"]), frame)
                 self.camera_msgs += 1
                 self.last_camera = now
                 self._rates["camera"].append(now)

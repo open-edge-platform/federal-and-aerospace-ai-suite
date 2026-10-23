@@ -119,6 +119,7 @@ services:
   # One-shot: imports the hota-scene appdata package (scene, cameras, map)
   # into the database once the web service has migrated it. Idempotent.
   scene-loader:
+    profiles: [video]  # other sources use a scene the user calibrates in the UI
     image: intel/scenescape-manager:${SCENESCAPE_VERSION}
     entrypoint: ["bash", "/opt/load_scene.sh"]
     networks:
@@ -155,6 +156,7 @@ services:
         condition: service_healthy
       scene-loader:
         condition: service_completed_successfully
+        required: false  # only runs for SOURCE=video
       broker:
         condition: service_started
       ntpserver:
@@ -185,6 +187,7 @@ services:
         condition: service_healthy
       scene-loader:
         condition: service_completed_successfully
+        required: false  # only runs for SOURCE=video
       broker:
         condition: service_started
       ntpserver:
@@ -207,6 +210,7 @@ services:
   # Pulls each camera stream once over the TSN VLAN and serves it as local RTSP (for the pipelines)
   # and as WebRTC (for the dashboard in the browser).
   mediamtx:
+    profiles: [video]  # only the test-video source needs the relay
     image: docker.io/bluenviron/mediamtx:1.19.2
     networks:
       scenescape:
@@ -232,9 +236,13 @@ services:
     tty: true
     entrypoint: ["./run.sh"]
     depends_on:
-      - broker
-      - ntpserver
-      - mediamtx
+      broker:
+        condition: service_started
+      ntpserver:
+        condition: service_started
+      mediamtx:
+        condition: service_started
+        required: false  # only for SOURCE=video
     healthcheck:
       test: ["CMD", "curl", "-I", "-s", "http://localhost:8080/pipelines"]
       interval: 10s
@@ -255,7 +263,7 @@ services:
       - no_proxy=.scenescape.intel.com,mediamtx,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
       - NO_PROXY=.scenescape.intel.com,mediamtx,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
     volumes:
-      - ./dlstreamer-pipeline-server/config.json:/home/pipeline-server/config.json:ro
+      - ./dlstreamer-pipeline-server/config.generated.json:/home/pipeline-server/config.json:ro
       - ./dlstreamer-pipeline-server/gstplugins:/home/sscape/python:ro
       - ./dlstreamer-pipeline-server/sei_parser.py:/home/pipeline-server/user_scripts/gvapython/sscape/sei_parser.py:ro
       - ../data/models:/home/pipeline-server/models:ro

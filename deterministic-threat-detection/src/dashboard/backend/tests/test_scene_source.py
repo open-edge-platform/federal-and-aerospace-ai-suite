@@ -57,10 +57,10 @@ def test_camera_and_scene_messages_feed_the_score():
     assert src.points_since(0)[0][1] == result["HOTA"]
 
 
-def test_message_without_a_frame_number_is_counted_bad():
+def test_message_without_a_frame_number_counts_for_rates_not_hota():
     src = make_source()
-    src.handle("scenescape/data/camera/Cam_x1_0", json.dumps({"timestamp": "2026-10-23T19:24:56.229Z"}))
-    assert src.bad_msgs == 1 and src.camera_msgs == 0
+    src.handle("scenescape/data/camera/Cam_x1_0", json.dumps({"id": "Cam_x1_0", "timestamp": "2026-10-23T19:24:56.229Z"}))
+    assert src.bad_msgs == 0 and src.camera_msgs == 1 and "Cam_x1_0" in src.status()["cameras"]
 
 
 def test_per_camera_status_and_rates():

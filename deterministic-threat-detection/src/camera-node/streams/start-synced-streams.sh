@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start / stop synchronized RTSP "cameras" on several machines from this one.
 #
-#   ./start-synced-streams.sh up       # copy files, pull image, start all at one common time
+#   ./start-synced-streams.sh up       # copy files, start all at one common time
 #   ./start-synced-streams.sh status   # container state + recent log per machine
 #   ./start-synced-streams.sh down     # stop and remove the containers
 #
@@ -51,8 +51,6 @@ prepare() {
     scp -q -o BatchMode=yes "$MEDIA_DIR/$file" "$host:$REMOTE_DIR/media/"
   fi
   "${SSH[@]}" "$host" "printf 'CAM=%s\nIMAGE=%s\nRTSP_PORT=%s\n' '$cam' '$IMAGE' '$RTSP_PORT' > $REMOTE_DIR/.env"
-  echo "[$(label "$host")] pulling image (if missing)"
-  "${SSH[@]}" "$host" "cd $REMOTE_DIR && docker compose pull -q"
 }
 
 launch() {

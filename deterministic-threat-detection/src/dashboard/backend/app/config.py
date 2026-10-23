@@ -103,4 +103,6 @@ def _default_metrics_sources():
     return ",".join(parts)
 
 
+# UC2 camera source: video (files via RTSP from machines 2/3), or basler (cameras on the switch)
+SCENE_SOURCE = os.environ.get("SCENE_SOURCE", "video")
 METRICS_SOURCES = os.environ.get("METRICS_SOURCES") or _default_metrics_sources()

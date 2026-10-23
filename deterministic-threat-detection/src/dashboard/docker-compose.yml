@@ -51,6 +51,7 @@ services:
       TRAFFIC_MAX_MBPS: ${TRAFFIC_MAX_MBPS:-1000}
       SWITCH_MODE: ${SWITCH_MODE:-moxa}
       SWITCH_ALLOW_WRITE: ${SWITCH_ALLOW_WRITE:-0}
+      SCENE_SOURCE: ${SOURCE:-video}
       SCENE_ENABLED: ${SCENE_ENABLED:-1}
       # name=url pairs of the machines' metrics-manager streams (the local .env lists them)
       METRICS_SOURCES: ${METRICS_SOURCES:-}

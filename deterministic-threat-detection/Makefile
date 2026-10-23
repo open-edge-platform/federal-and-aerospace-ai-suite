@@ -15,6 +15,9 @@
 
 SHELL := /bin/bash
 STREAMS ?= 1
+# UC2 camera source (video|basler); defaults to what src/scene/.env holds. The dashboard diagram follows it.
+SOURCE ?= $(or $(shell sed -n 's/^SOURCE=//p' src/scene/.env 2>/dev/null),video)
+export SOURCE
 -include lab.env
 # This machine is machine-1, so its lab address is M1_LAB_IP (falls back to the default-route address)
 LAB_IP ?= $(or $(M1_LAB_IP),$(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($$i=="src") print $$(i+1)}'))

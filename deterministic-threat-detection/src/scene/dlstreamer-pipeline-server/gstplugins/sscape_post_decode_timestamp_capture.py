@@ -32,6 +32,8 @@ TIMEZONE = "UTC"
 NTP_RESYNC_INTERVAL_S = 1000
 NTP_REQUEST_TIMEOUT_S = 2
 NTP_CAPS_STRING = "timestamp/x-ntp"
+# Camera PTP time attached by gencamsrc (Basler, built with GENCAMSRC_ENABLE_HW_TIMESTAMP_META)
+HW_CAPS_STRING = "timestamp/x-hardware"
 
 # GstDebugCategory registered at module load so `GST_DEBUG=sscape_ts_capture:2`
 # (or any level) toggles this plugin's verbosity like any built-in category.
@@ -121,6 +123,7 @@ class PostDecodeTimestampCapture(GstBase.BaseTransform):
     self._ntp_caps = Gst.Caps.from_string(NTP_CAPS_STRING)
     if not self._ntp_caps:
       self._log.error(f"Failed to build caps for {NTP_CAPS_STRING}")
+    self._hw_caps = Gst.Caps.from_string(HW_CAPS_STRING)
 
   def do_get_property(self, prop):  # pylint: disable=arguments-differ
     name = prop.name
@@ -182,6 +185,14 @@ class PostDecodeTimestampCapture(GstBase.BaseTransform):
     )
     return f"{dt_utc.strftime(DATETIME_FORMAT)[:-3]}Z"
 
+  def _extract_hw_timestamp(self, buffer: Gst.Buffer) -> Optional[str]:
+    """Read GstReferenceTimestampMeta with caps=timestamp/x-hardware (camera PTP clock, nanoseconds)."""
+    hw_meta = buffer.get_reference_timestamp_meta(self._hw_caps)
+    if not hw_meta:
+      return None
+    dt_utc = datetime.fromtimestamp(hw_meta.timestamp / 1e9, tz=timezone(TIMEZONE))
+    return f"{dt_utc.strftime(DATETIME_FORMAT)[:-3]}Z"
+
   def _update_fps(self, now: float) -> None:
     self._frame_cnt += 1
     if self._last_calc_ts is None:
@@ -228,10 +239,13 @@ class PostDecodeTimestampCapture(GstBase.BaseTransform):
       f"{datetime.fromtimestamp(adjusted, tz=timezone(TIMEZONE)).strftime(DATETIME_FORMAT)[:-3]}Z"
     )
 
-    if self._use_frame_ntp:
-      frame_ntp = self._extract_ntp_timestamp(buffer)
-      if frame_ntp:
-        postdecode_ts = frame_ntp
+    # The camera's hardware timestamp is used whenever the source provides one (no setting needed);
+    # the RTSP NTP timestamp only when enabled; otherwise the post-decode system time stays.
+    frame_ts = self._extract_hw_timestamp(buffer)
+    if frame_ts is None and self._use_frame_ntp:
+      frame_ts = self._extract_ntp_timestamp(buffer)
+    if frame_ts:
+      postdecode_ts = frame_ts
 
     payload = json.dumps({
       "postdecode_timestamp": postdecode_ts,

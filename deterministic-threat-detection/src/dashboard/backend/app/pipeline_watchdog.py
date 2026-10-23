@@ -56,8 +56,10 @@ class PipelineWatchdog:
     def _camera_for(self, instance_id):
         if instance_id not in self._camera_of:
             info = self._http("GET", f"{self.base_url}/pipelines/{instance_id}") or {}
-            params = (info.get("params") or {}).get("parameters") or {}
-            cam = params.get("cameraid")
+            info_params = info.get("params") or {}
+            # applied parameters, or the ones from the start request (sources without a stream URL, e.g. gencamsrc)
+            cam = ((info_params.get("parameters") or {}).get("cameraid")
+                   or ((info_params.get("request") or {}).get("parameters") or {}).get("cameraid"))
             if cam is None:  # fall back to the stream name in the launch command
                 cam = next((c for c in self.cameras if f"/{c} " in info.get("launch_command", "") + " "), None)
             self._camera_of[instance_id] = cam

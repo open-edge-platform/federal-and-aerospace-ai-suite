@@ -16,7 +16,8 @@
   const UC1 = '#4da3ff', UC2 = '#3ecf8e', LOAD = '#ef5b5b', CTL = '#6b7886';
 
   // id, colour, path (orthogonal; the middle part runs under the switch box), label position
-  const FLOWS = [
+  let FLOWS = [];
+  const baseFlows = () => [
     { id: 'uc1-m2', eg: 'M580 235 H610 V75 H740', c: UC1, d: 'M260 70 H300 V235 H610 V75 H740', lx: 264, ly: 63 },
     { id: 'uc1-m3', eg: 'M580 250 H622 V100 H740', c: UC1, d: 'M260 435 H312 V250 H622 V100 H740', lx: 264, ly: 451 },
     { id: 'uc2-m2', eg: 'M580 265 H634 V155 H740', c: UC2, d: 'M260 130 H324 V265 H634 V155 H740', lx: 264, ly: 123 },
@@ -24,7 +25,18 @@
     { id: 'load', c: LOAD, d: 'M740 480 H690 V335 H500 V305 H670 V270 H740', lx: 736, ly: 498, anchor: 'end' },
   ];
 
-  const LEGEND = [[UC1, 'Use case 1: inference over MQTT (latency)'], [UC2, 'Use case 2: RTSP video (tracking)'],
+  // SOURCE=basler: the UC2 cameras are wired straight to the switch (VLAN 3), not served from machine-2/3
+  const CAMERAS = {
+    basler: { name: 'Basler camera', sub: 'GigE Vision', unit: 'GigE Vision' },
+  };
+  const camFlows = () => baseFlows().map((f) => {
+    if (f.id === 'uc2-m2') return { ...f, d: 'M435 420 V265 H634 V155 H740', lx: 435, ly: 516, anchor: 'middle' };
+    if (f.id === 'uc2-m3') return { ...f, d: 'M565 420 V280 H646 V180 H740', lx: 565, ly: 516, anchor: 'middle' };
+    return f;
+  });
+
+  const legendFor = (cam) => [[UC1, 'Use case 1: inference over MQTT (latency)'],
+    [UC2, cam ? `Use case 2: ${cam.unit} cameras on the switch (tracking)` : 'Use case 2: RTSP video (tracking)'],
     [LOAD, 'Background load, VLAN 5'], [CTL, 'Control, lab network (not TSN)']];
 
   function el(name, attrs, text) {
@@ -40,15 +52,19 @@
   function box(x, y, w, h, cls) { add(svg, 'rect', { x, y, width: w, height: h, rx: 8, class: cls || 'node' }); }
   function text(x, y, s, cls, anchor) { return add(svg, 'text', { x, y, class: cls, 'text-anchor': anchor || 'start' }, s); }
 
-  function machine(key, x, y, w, h, title, sub, metricsY) {
-    box(x, y, w, h);
-    add(svg, 'circle', { cx: x + w - 16, cy: y + 18, r: 4.5, class: 'dot', id: `dot-${key}` });
-    const clk = add(svg, 'g', { class: 'clock', transform: `translate(${x + w - 16} ${metricsY - 4})` });
+  function ptpClock(cx, cy) {
+    const clk = add(svg, 'g', { class: 'clock', transform: `translate(${cx} ${cy})` });
     add(clk, 'title', {}, 'Clock synchronised with PTP (IEEE 1588)');
     add(clk, 'circle', { r: 12, cx: 0, cy: 0, class: 'hit' });
     add(clk, 'circle', { r: 6, cx: 0, cy: 0 });
     add(clk, 'path', { d: 'M0 -3.5V0L2.5 1.5' });
     add(clk, 'text', { x: -11, y: 4, class: 'ptp', 'text-anchor': 'end' }, 'PTP');
+  }
+
+  function machine(key, x, y, w, h, title, sub, metricsY) {
+    box(x, y, w, h);
+    add(svg, 'circle', { cx: x + w - 16, cy: y + 18, r: 4.5, class: 'dot', id: `dot-${key}` });
+    ptpClock(x + w - 16, metricsY - 4);
     text(x + 14, y + 22, title, 't');
     text(x + 14 + title.length * 7.6 + 8, y + 22, sub, 's');
     refs[`sys-${key}`] = text(x + 14, metricsY, 'no metrics', 's');
@@ -60,7 +76,10 @@
     if (l2) text(x + 10, y + h / 2 + 12, l2, 's');
   }
 
-  function build() {
+  function build(source) {
+    const cam = CAMERAS[source] || null;
+    FLOWS = cam ? camFlows() : baseFlows();
+    svg.replaceChildren();
     const defs = add(svg, 'defs');
     const mk = add(defs, 'marker', { id: 'arch-arrow', viewBox: '0 0 8 8', refX: 7, refY: 4, markerWidth: 6, markerHeight: 6, orient: 'auto' });
     add(mk, 'path', { d: 'M0 0L8 4L0 8z', fill: CTL });
@@ -75,11 +94,23 @@
     text(868, 379, 'POST /rate · lab network', 's');
 
     // machine-2 / machine-3: the two camera machines
-    for (const [key, y, cam, d1, d2] of [['m2', 20, 'Cam_x1_0', 52, 112], ['m3', 370, 'Cam_x2_0', 417, 477]]) {
-      machine(key, 20, y, 240, 185, `machine-${key[1]}`, `camera · ${cam}`, y + 170);
+    for (const [key, y, cam0, d1, d2] of [['m2', 20, 'Cam_x1_0', 52, 112], ['m3', 370, 'Cam_x2_0', 417, 477]]) {
+      const camName = cam0;
+      machine(key, 20, y, 240, 185, `machine-${key[1]}`, cam ? `inference · ${camName}` : `camera · ${camName}`, y + 170);
       part(36, d1, 208, 36, 'DL Streamer Pipeline Server', 'UC1 · inference → MQTT');
-      part(36, d2, 208, 36, 'RTSP stream (mediamtx + ffmpeg)', 'UC2 · video');
+      if (cam) part(36, d2, 208, 36, 'Test video (mediamtx + ffmpeg)', 'UC1 input · stays on this machine');
+      else part(36, d2, 208, 36, 'RTSP stream (mediamtx + ffmpeg)', 'UC2 · video');
       add(svg, 'path', { d: `M140 ${d2} V${d1 + 36}`, class: 'ctl', 'marker-end': 'url(#arch-arrow)' });
+    }
+
+    if (cam) {
+      // the UC2 cameras are plugged into switch ports 5 and 6 (VLAN 3)
+      [[380, 'Cam_x1_0', 'port 5'], [510, 'Cam_x2_0', 'port 6']].forEach(([x, id, port], i) => {
+        box(x, 420, 110, 76, 'node-in');
+        text(x + 10, 442, `${cam.name} ${i + 1}`, 'live');
+        text(x + 10, 460, `${cam.sub} · ${port}`, 's');
+        ptpClock(x + 94, 478);
+      });
     }
 
     // machine-1: dashboard, SceneScape, iperf3 server
@@ -99,7 +130,7 @@
     text(500, 264, 'PTP grandmaster', 's', 'middle');
     refs.qbv = text(500, 300, 'Qbv', 'live', 'middle');
     refs.qbvSub = text(500, 318, '', 's', 'middle');
-    text(500, 345, 'VLAN 1 · VLAN 5', 's', 'middle');
+    text(500, 345, cam ? 'VLAN 1 · VLAN 3 · VLAN 5' : 'VLAN 1 · VLAN 5', 's', 'middle');
 
     for (const f of FLOWS) refs[f.id] = text(f.lx, f.ly, '', 'live', f.anchor);
     refs.shield = text(500, 172, '', 'live', 'middle');
@@ -107,7 +138,8 @@
     refs.lock = text(500, 385, '', 'live', 'middle');
 
     const legend = document.getElementById('arch-legend');
-    for (const [c, label] of LEGEND) {
+    legend.replaceChildren();
+    for (const [c, label] of legendFor(cam)) {
       const s = document.createElement('span');
       s.innerHTML = `<i style="--c:${c}"></i>`;
       s.append(label);
@@ -218,7 +250,9 @@
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
-  build();
+  build('video');
+  // the source (video | basler) comes from the server; redraw once it is known
+  fetch('api/config').then((r) => r.json()).then((c) => { if (CAMERAS[c.source]) build(c.source); }).catch(() => {});
   window.TsnArch = { update };
   // open straight away with the newest message instead of waiting for the next one
   openBtn.addEventListener('click', () => { const m = window.__dash && window.__dash.lastStatus; if (m) update(m); });

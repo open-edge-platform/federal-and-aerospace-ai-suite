@@ -35,7 +35,7 @@ logs:
 
 deploy-switch:
 	ssh -o BatchMode=yes $(SWITCH_HOST) 'mkdir -p ~/moxa'
-	scp -o BatchMode=yes ../switch/get_port_mode.py ../switch/tas_config.py $(SWITCH_HOST):moxa/
+	scp -o BatchMode=yes ../switch/get_port_mode.py ../switch/tas_config.py ../switch/port_priority.py $(SWITCH_HOST):moxa/
 
 fake:
 	python3 -I tools/fake_publisher.py --port $$(grep ^MQTT_PORT= .env | cut -d= -f2) --api http://$$(grep ^DASHBOARD_BIND= .env | cut -d= -f2):8080

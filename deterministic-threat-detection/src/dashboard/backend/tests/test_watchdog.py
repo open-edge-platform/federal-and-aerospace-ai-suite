@@ -22,6 +22,8 @@ class FakeServer:
             return f"new-{cam}"
         if method == "GET" and "/pipelines/" in url:
             inst = self.instances[url.rsplit("/", 1)[1]]
+            if inst.get("request_only"):  # e.g. gencamsrc: the camera id only appears in the start request
+                return {"params": {"parameters": {}, "request": {"parameters": {"cameraid": inst["camera"]}}}}
             return {"params": {"parameters": {"cameraid": inst["camera"]}}}
         raise AssertionError((method, url))
 
@@ -64,3 +66,11 @@ def test_unreachable_server_is_reported_not_raised():
     wd = PipelineWatchdog("http://x:8082", CAMS, http=down)
     assert wd.check(now=1) == []
     assert "not reachable" in wd.status()["error"]
+
+
+def test_camera_id_is_read_from_the_start_request_when_parameters_are_empty():
+    srv = FakeServer({"a": {"state": "RUNNING", "camera": "Cam_x1_0", "request_only": True},
+                      "b": {"state": "RUNNING", "camera": "Cam_x2_0", "request_only": True}})
+    wd = PipelineWatchdog("http://x:8082", CAMS, http=srv)
+    assert wd.check(now=100) == []
+    assert not any(c[0] == "POST" for c in srv.calls)

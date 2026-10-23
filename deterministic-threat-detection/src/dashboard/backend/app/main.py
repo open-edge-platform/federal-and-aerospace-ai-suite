@@ -123,6 +123,7 @@ def create_app(start_mqtt=True):
             "traffic_mode": config.TRAFFIC_MODE,
             "switch_mode": config.SWITCH_MODE,
             "qbv_port": switch.port,
+            "source": config.SCENE_SOURCE,
         }
 
     @app.get("/api/history")
