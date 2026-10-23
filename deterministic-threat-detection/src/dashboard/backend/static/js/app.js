@@ -106,7 +106,7 @@
   function makeSysPanel(name) {
     const el = document.createElement('div');
     el.className = 'sys-machine';
-    el.innerHTML = `<div class="sys-title"><span class="sys-name">${name}</span><span class="sys-note"></span></div>` +
+    el.innerHTML = `<div class="sys-title"><span class="sys-note"></span></div>` +
       '<div class="sys-header">' + SERIES.map((s) =>
         `<span class="sys-value" data-key="${s.key}" style="color:${s.color}">${s.short} <span>—</span></span>`).join('') + '</div>' +
       '<div class="sys-chart"><canvas></canvas></div>';
@@ -184,7 +184,7 @@
     const decoded = { 'decoded-cam1': 'Cam_x1_0', 'decoded-cam2': 'Cam_x2_0' };
     for (const [id, cam] of Object.entries(decoded)) {
       const el = $(id);
-      if (on) { if (!el.getAttribute('src')) el.setAttribute('src', `/api/frames/${cam}.mjpg`); }
+      if (on) { if (!el.getAttribute('src')) el.setAttribute('src', `api/frames/${cam}.mjpg`); }
       else el.removeAttribute('src');
     }
   }
@@ -318,7 +318,7 @@
     $('traffic-value').textContent = `${e.target.value} Mbit/s`;
     clearTimeout(trafficTimer);
     trafficTimer = setTimeout(async () => {
-      await post('/api/traffic', { rate_mbps: Number(e.target.value) });
+      await post('api/traffic', { rate_mbps: Number(e.target.value) });
       state.draggingTraffic = false;
     }, 300);
   });
@@ -328,7 +328,7 @@
     state.qbvRequestedAt = Date.now();  // lock the button right away; the server state takes over
     $('qbv').disabled = true;
     $('qbv-label').textContent = wanted ? 'Enabling…' : 'Disabling…';
-    const r = await post('/api/qbv', { enabled: wanted });
+    const r = await post('api/qbv', { enabled: wanted });
     if (!r.ok) {
       state.qbvRequestedAt = 0;
       const m = $('qbv-msg');
@@ -354,7 +354,7 @@
   });
 
   $('clear').addEventListener('click', async () => {
-    await post('/api/reset', {});
+    await post('api/reset', {});
     for (const s of Object.values(state.series)) s.ds.data.length = 0;
     chart.update('none');
   });
@@ -364,20 +364,20 @@
   }
 
   async function start() {
-    state.cfg = await (await fetch('/api/config')).json();
+    state.cfg = await (await fetch('api/config')).json();
     $('traffic').max = state.cfg.traffic_max_mbps;
-    const hist = await (await fetch('/api/history')).json();
+    const hist = await (await fetch('api/history')).json();
     state.lastNow = hist.now;
     addPoints(hist.points, state.cfg.history_s);
     try {
-      const h = await (await fetch('/api/hota')).json();
+      const h = await (await fetch('api/hota')).json();
       state.lastNow = h.now; addHotaPoints(h.points);
       $('hota-window').textContent = h.window_s;
     } catch (e) { /* use case 2 disabled */ }
     showTab(location.hash.replace('#', ''));
     window.__dash = { state, chart, hotaChart, es: null, msgs: 0, lastMsg: Date.now(), reconnects: 0 };  // also a hook for browser tests
     const connect = () => {
-      const es = new EventSource('/api/stream');
+      const es = new EventSource('api/stream');
       window.__dash.es = es;
       es.onmessage = (ev) => onStream(JSON.parse(ev.data));
       es.onerror = () => {

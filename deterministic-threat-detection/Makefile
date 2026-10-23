@@ -15,6 +15,9 @@
 
 SHELL := /bin/bash
 STREAMS ?= 1
+-include lab.env
+# This machine is machine-1, so its lab address is M1_LAB_IP (falls back to the default-route address)
+LAB_IP ?= $(or $(M1_LAB_IP),$(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($$i=="src") print $$(i+1)}'))
 STREAMS_SCRIPT := src/camera-node/streams/start-synced-streams.sh
 
 .PHONY: help up down status test test-e2e streams-up streams-down streams-status
@@ -30,7 +33,10 @@ up:
 	src/traffic-node/deploy.sh up
 	STREAMS=0 src/camera-node/pipeline/deploy.sh up
 	$(MAKE) -C src/scene up STREAMS=0
-	@echo "Everything is up. Dashboard: see the address printed above; SceneScape: https://localhost/"
+	@echo ""
+	@echo "Everything is up."
+	@echo "  Dashboard:  https://$(LAB_IP)/dashboard/   (self-signed certificate: accept the browser warning)"
+	@echo "  SceneScape: https://$(LAB_IP)/"
 
 down:
 	-$(MAKE) -C src/scene down STREAMS=0

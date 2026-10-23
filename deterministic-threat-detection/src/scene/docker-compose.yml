@@ -286,6 +286,7 @@ services:
       - no_proxy=${no_proxy:-},${HOST_IP}
       - NO_PROXY=${no_proxy:-},${HOST_IP}
       - NGINX_CLIENT_MAX_BODY_SIZE=${NGINX_CLIENT_MAX_BODY_SIZE}
+      - DASHBOARD_UPSTREAM=${LAB_IP}:${DASHBOARD_PORT:-8080}
       - NGINX_ENVSUBST_TEMPLATE_DIR=/etc/nginx
       - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
     restart: on-failure:5

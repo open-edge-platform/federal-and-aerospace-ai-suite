@@ -144,7 +144,6 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 .sys-rows { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; min-height: 0; }
 .sys-machine.stale { opacity: .5; }
 .sys-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.sys-name { color: var(--text); font-weight: 600; font-size: 13px; }
 .sys-note { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .sys-header { display: flex; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0 4px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .sys-value > span { display: inline-block; min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums; }

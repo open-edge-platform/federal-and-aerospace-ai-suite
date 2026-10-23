@@ -41,6 +41,22 @@ http {
         add_header X-Frame-Options SAMEORIGIN;
         add_header X-XSS-Protection "1; mode=block";
 
+        # The TSN dashboard (served by its own container on the lab address); the prefix is stripped.
+        # Buffering is off so the live event stream and the MJPEG frames are not held back.
+        location = /dashboard { return 301 /dashboard/; }
+        location /dashboard/ {
+            proxy_pass http://${DASHBOARD_UPSTREAM}/;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Connection "";
+            proxy_buffering off;
+            proxy_cache off;
+            proxy_read_timeout 1h;
+        }
+
         # Scenescape API endpoints (more specific than /api/)
         location /api/v1/ {
             proxy_pass https://scenescape/api/v1/;
