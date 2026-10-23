@@ -111,7 +111,7 @@ services:
       RETRIEVER_ENDPOINT: http://vector-retriever:8000/query
       VIDEO_UPLOAD_ENDPOINT: http://pipeline-manager:3000
       AGGREGATION_ENABLED: "true"
-      AGGREGATION_MAX_RESULTS: ${VSS_MAX_RESULTS:-20}
+      AGGREGATION_MAX_RESULTS: ${VSS_MAX_RESULTS:-50}
     depends_on:
       minio-service:
         condition: service_healthy

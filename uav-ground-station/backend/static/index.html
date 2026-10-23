@@ -143,6 +143,22 @@ SPDX-License-Identifier: Apache-2.0
         <button id="search-submit-btn" class="btn btn-primary search-submit" type="submit">Search</button>
       </form>
 
+      <!-- Scope filters: always visible (idle state, while typing, and on top
+           of results) rather than tucked away post-search, so a multi-UAV
+           operator can narrow the search *before* typing a query (e.g. "only
+           this drone's front camera"), and -- just as importantly -- can
+           narrow or widen an *already-run* search's results without having to
+           re-type the query, since changing either select re-runs the last
+           query automatically. Defaults to "All UAVs"/"All
+           cameras" so search covers every connected UAV's footage unless the
+           operator deliberately narrows it. -->
+      <div id="search-filter-bar" class="summary-form-row search-filter-bar">
+        <label for="search-uav-filter">UAV</label>
+        <select id="search-uav-filter"><option value="">All UAVs</option></select>
+        <label for="search-camera-filter">Camera</label>
+        <select id="search-camera-filter"><option value="">All cameras</option></select>
+      </div>
+
       <div id="search-body" class="search-body" aria-live="polite"></div>
     </div>
   </div>

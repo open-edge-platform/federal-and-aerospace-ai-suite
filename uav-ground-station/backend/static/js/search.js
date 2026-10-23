@@ -16,11 +16,17 @@
   const submitBtn = document.getElementById("search-submit-btn");
   const vssPill = document.getElementById("search-vss-status");
   const body = document.getElementById("search-body");
+  const uavFilterEl = document.getElementById("search-uav-filter");
+  const cameraFilterEl = document.getElementById("search-camera-filter");
 
   const EXAMPLES = ["a white car on the road", "a person walking", "a truck parked near buildings", "an empty street"];
 
   let inFlight = null;
   let lastFocus = null;
+  // Every result the last query returned from the backend, unfiltered --
+  // the "UAV"/"Camera" selects narrow this down to `results` (below) purely
+  // client-side, rather than re-querying the backend.
+  let allResults = [];
   let results = [];
   let filteredOutCount = 0;
   let filter = "all";
@@ -28,11 +34,11 @@
   let playerEl = null;
   let listEl = null;
   let searchAvailable = false;
-  // Which UAV host the currently-displayed `results` were searched against --
-  // used to detect a tab switch and drop stale results/player state that
-  // belong to the UAV the dashboard just switched away from
-  // null until the first search runs.
-  let resultsHost = null;
+  let lastQuery = null;
+  // {host: [camera, ...]} from the last /api/search/sources fetch, used to
+  // rebuild the camera dropdown's options whenever the UAV filter changes.
+  let sources = {};
+  let sessionLabels = {};
 
   // ---------- helpers ----------
   function el(tag, className, text) {
@@ -86,8 +92,12 @@
     // Prefer the plain camera name the backend resolved for this result (set
     // whenever it's a live clip from a camera this feature currently
     // manages) over the raw, host-qualified VSS stream_name -- much more
-    // readable once multiple UAVs are connected.
-    if (r.source === "live") return r.camera || r.stream_name || `Stream ${String(r.video_id || "").slice(0, 8)}`;
+    // readable once multiple UAVs are connected. Deliberately do NOT fall
+    // back to the raw stream_name when attribution is unknown: it's a
+    // `uav-<host_tag>--<camera>` string, which looks exactly like (and is
+    // easily mistaken for) a *different*, still-connected UAV's own camera
+    // name/IP -- very misleading for a result that's actually unattributed.
+    if (r.source === "live") return r.camera || "Unknown camera";
     return r.filename || r.video_id || "Unknown video";
   }
 
@@ -418,11 +428,6 @@
   function renderFilterBar(counts) {
     const bar = el("div", "results-toolbar");
     bar.appendChild(el("span", "results-count", `${results.length} result${results.length === 1 ? "" : "s"}`));
-    if (filteredOutCount > 0) {
-      const hidden = el("span", "results-hidden muted", `${filteredOutCount} weak match${filteredOutCount === 1 ? "" : "es"} hidden`);
-      hidden.title = "VSS returned these clips, but their best frame was not similar enough to the query to show.";
-      bar.appendChild(hidden);
-    }
     if (counts.live && counts.upload) {
       const seg = el("div", "segmented");
       [["all", `All ${results.length}`], ["upload", `Uploads ${counts.upload}`], ["live", `Live ${counts.live}`]].forEach(([key, label]) => {
@@ -491,27 +496,46 @@
     }
   }
 
+  function applyFilters() {
+    const host = uavFilterEl ? uavFilterEl.value.trim() : "";
+    const camera = cameraFilterEl ? cameraFilterEl.value.trim() : "";
+    results = allResults.filter((r) => {
+      if (host && r.host !== host) return false;
+      if (camera && r.camera !== camera) return false;
+      return true;
+    });
+    selectedIndex = -1;
+    if (!allResults.length) return; // nothing searched yet -- let runSearch's own messaging stand
+    if (!results.length) {
+      const detail = host || camera
+        ? "No results from this UAV/camera for the current search — try widening or clearing the filter."
+        : "Try a different description, or make sure videos have been uploaded and indexed in VSS.";
+      renderMessage("empty", `No matches for “${lastQuery}”`, detail, true);
+      return;
+    }
+    renderResults();
+  }
+
   async function runSearch(query) {
     if (inFlight) inFlight.abort();
     const controller = new AbortController();
     inFlight = controller;
+    allResults = [];
     results = [];
     selectedIndex = -1;
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Searching…";
     renderMessage("loading", `Searching for “${query}”…`, "Ranking matching video segments.");
+    lastQuery = query;
     try {
-      // Scope results to the currently connected UAV when one is known, so a
-      // second UAV's (or someone else's, on a shared VSS deployment) footage
-      // doesn't show up mixed in
-      const hostInput = document.getElementById("host-input");
-      const host = hostInput && hostInput.value.trim();
-      const body = host ? { query, host } : { query };
+      // Always search across every connected UAV's footage -- the "UAV"/
+      // "Camera" selects narrow the already-fetched result set client-side
+      // rather than being sent to the backend.
       const resp = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ query }),
         signal: controller.signal,
       });
       let data = null;
@@ -521,17 +545,16 @@
         renderMessage("error", "Search failed", detail);
         return;
       }
-      results = (data && data.results) || [];
-      resultsHost = host || null;
+      allResults = (data && data.results) || [];
       filteredOutCount = (data && data.filtered_out) || 0;
-      if (!results.length) {
+      if (!allResults.length) {
         const detail = filteredOutCount > 0
           ? "VSS returned some hits, but none were confident enough to show — try a more specific description."
           : "Try a different description, or make sure videos have been uploaded and indexed in VSS.";
         renderMessage("empty", `No matches for “${query}”`, detail, true);
         return;
       }
-      renderResults();
+      applyFilters();
     } catch (err) {
       if (err.name !== "AbortError") renderMessage("error", "Search failed", "Can't reach the ground-station backend.");
     } finally {
@@ -557,6 +580,7 @@
     input.focus();
     input.select();
     checkVss();
+    populateSourceFilters();
   }
 
   function closeModal() {
@@ -586,6 +610,92 @@
     entryPoints.forEach((n) => n && n.classList.toggle("hidden", !searchAvailable));
     return searchAvailable;
   })();
+
+  // ---- Search scope filters ("UAV" / "Camera" selects) ----------------
+  // Options come from /api/search/sources (uav_naming's registry of
+  // currently-managed live streams), not from the dashboard's own list of
+  // connected tabs -- a UAV only shows up here once it actually has a
+  // running, indexed camera, which is what a search filter should be
+  // offering choices over anyway.
+  function cameraLabel(cam) {
+    return String(cam || "").replace(/^uav-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function rebuildCameraOptions() {
+    if (!cameraFilterEl) return;
+    const selectedHost = uavFilterEl ? uavFilterEl.value : "";
+    const previousCamera = cameraFilterEl.value;
+    // "All UAVs" selected (or nothing known yet) -- offer the union of every
+    // connected UAV's cameras; a specific UAV selected -- only its own.
+    const cameraSet = new Set();
+    if (selectedHost) {
+      (sources[selectedHost] || []).forEach((c) => cameraSet.add(c));
+    } else {
+      Object.values(sources).forEach((cams) => cams.forEach((c) => cameraSet.add(c)));
+    }
+    const cameras = Array.from(cameraSet).sort();
+    cameraFilterEl.replaceChildren(el("option", null, "All cameras"));
+    cameraFilterEl.firstChild.value = "";
+    for (const cam of cameras) {
+      const opt = el("option", null, cameraLabel(cam));
+      opt.value = cam;
+      cameraFilterEl.appendChild(opt);
+    }
+    // Keep the previous selection if it's still offered (e.g. switching from
+    // "All UAVs" to one UAV that happens to also have a "front-camera");
+    // otherwise fall back to "All cameras" rather than silently keeping a
+    // now-invalid filter applied.
+    cameraFilterEl.value = cameras.includes(previousCamera) ? previousCamera : "";
+  }
+
+  function hostOptionLabel(host) {
+    const label = sessionLabels[host];
+    return label ? `${label} (${host})` : host;
+  }
+
+  async function populateSourceFilters() {
+    if (!uavFilterEl || !(await availability)) return;
+    try {
+      const [sourcesResp, sessionsResp] = await Promise.all([
+        fetch("/api/search/sources"),
+        fetch("/api/sessions").catch(() => null),
+      ]);
+      if (!sourcesResp.ok) return;
+      const data = await sourcesResp.json();
+      const hostList = Array.isArray(data.hosts) ? data.hosts : [];
+      sources = Object.fromEntries(hostList.map((h) => [h.host, h.cameras || []]));
+      sessionLabels = {};
+      if (sessionsResp && sessionsResp.ok) {
+        const sessionData = await sessionsResp.json();
+        (sessionData.sessions || []).forEach((s) => { if (s.label) sessionLabels[s.host] = s.label; });
+      }
+    } catch (_err) {
+      return; // dropdowns keep their last-known options
+    }
+    const previousHost = uavFilterEl.value;
+    const hosts = Object.keys(sources).sort();
+    uavFilterEl.replaceChildren(el("option", null, "All UAVs"));
+    uavFilterEl.firstChild.value = "";
+    for (const host of hosts) {
+      const opt = el("option", null, hostOptionLabel(host));
+      opt.value = host;
+      uavFilterEl.appendChild(opt);
+    }
+    uavFilterEl.value = hosts.includes(previousHost) ? previousHost : "";
+    rebuildCameraOptions();
+  }
+
+  if (uavFilterEl) {
+    uavFilterEl.addEventListener("change", () => {
+      rebuildCameraOptions();
+      applyFilters();
+    });
+  }
+  if (cameraFilterEl) {
+    cameraFilterEl.addEventListener("change", () => {
+      applyFilters();
+    });
+  }
 
   // ---- Live indexing: the backend registers every running UAV pipeline as a
   // VSS live stream; this panel just starts/stops that and shows its state.
@@ -617,7 +727,7 @@
       const name = document.createElement("span");
       // Prefer the plain camera name the backend already resolved over the
       // host-qualified stream_name, which is not meant to be read directly.
-      name.textContent = String(st.camera || st.stream_name || "feed").replace(/^uav-/, "").replace(/-/g, " ").toUpperCase();
+      name.textContent = String(st.camera || "unknown feed").replace(/^uav-/, "").replace(/-/g, " ").toUpperCase();
       const badge = document.createElement("span");
       badge.className = `live-state live-state-${state.replace(/[^a-z]/g, "")}`;
       badge.textContent = state;
@@ -646,26 +756,21 @@
     } catch (_err) { /* panel keeps its last state */ }
   }
 
-  // The active UAV tab changed If the search modal is showing results from
-  // UAV, the dashboard just switched *away* from, drop them immediately
-  // rather than leaving the previous host's clips/camera names on screen
-  // without this, a visible search modal kept showing stale results
-  // until noticed and re-submitted a new query for the now-active host.
+  // Search results are never host-scoped by default (a search spans every
+  // connected UAV's footage unless the "UAV"/"Camera" filters narrow it
+  // deliberately, so switching the active dashboard tab
+  // no longer needs to drop/replace whatever's currently shown in the
+  // search modal. These listeners only (a) keep the main page's live-index
+  // panel showing the *active* tab's own indexing state, and
+  // (b) keep the filter dropdowns' options in sync with which UAVs/cameras
+  // are actually connected right now.
   document.addEventListener("uav:connected", async (e) => {
-    const newHost = e && e.detail && e.detail.host;
-    if (resultsHost && newHost && newHost !== resultsHost) {
-      if (inFlight) { inFlight.abort(); inFlight = null; }
-      results = [];
-      filteredOutCount = 0;
-      selectedIndex = -1;
-      resultsHost = null;
-      if (isOpen()) renderIdle();
-    }
     if (!(await availability)) return;
     clearInterval(livePollTimer);
     liveSyncHost = e.detail.host;
     await liveSync("POST", { host: e.detail.host });
     livePollTimer = setInterval(() => liveSync("GET"), 10000);
+    if (isOpen()) populateSourceFilters();
   });
   document.addEventListener("uav:disconnected", async (e) => {
     if (!(await availability)) return;
@@ -674,6 +779,7 @@
     // not just the one being disconnected here.
     const host = e && e.detail && e.detail.host;
     await liveSync("DELETE", host ? { host } : undefined);
+    if (isOpen()) populateSourceFilters();
     if (!host || host === liveSyncHost) {
       clearInterval(livePollTimer);
       livePollTimer = null;

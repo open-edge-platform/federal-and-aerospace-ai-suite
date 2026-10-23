@@ -212,11 +212,9 @@ def _live_captured_at(media_path: Any, offset: Optional[float]) -> Optional[str]
 
 
 def _camera_and_host(stream_name: Optional[str]) -> tuple:
-    """(camera, host) for a result's VSS stream_name, using uav_naming's
-    registry of currently-managed live streams. None, None for uploaded
-    videos (no stream_name) or a stream this feature doesn't recognize
-    (e.g. hand-registered, or indexed before this container last restarted --
-    the registry is in-memory only)."""
+    """(camera, host) for a stream_name, using uav_naming's registry of
+    currently-managed live streams. None, None if `stream_name` is falsy or
+    this feature doesn't recognize it (e.g. hand-registered)."""
     if not stream_name:
         return None, None
     info = uav_naming.info_for(stream_name)
@@ -224,27 +222,86 @@ def _camera_and_host(stream_name: Optional[str]) -> tuple:
         return info[1], info[0]
     if uav_naming.LEGACY_NAME.fullmatch(stream_name):
         # Pre-multi-UAV stream name (bare camera, no embedded host) -- the
-        # camera is still known, just not which host it came from.
-        return stream_name[4:], None
+        # camera is still known, just not which host it came from. The
+        # stream_name IS the bare camera name verbatim (this app's cameras
+        # are themselves always named like "uav-front-camera"; see
+        # vss_live_sync.py's legacy-adoption comment for why stripping a
+        # "uav-" prefix here used to be wrong).
+        return stream_name, None
     return None, None
 
 
-def _belongs_to_host(result: dict, host: str) -> bool:
-    """True if `result` should be shown when scoping search to `host`.
+def _attribute_result(metadata: dict, stream: Optional[dict]) -> tuple:
+    """(camera, host) for one search hit, preferring sources that survive a
+    VSS live stream being deleted and re-registered (which vss_live_sync.py's
+    reconciliation does whenever the remote RTSP source moves or errors out).
 
-    Only live results are scoped at all -- a result from an uploaded/
-    recorded video has no "owning" UAV host to filter by, so it's always
-    kept. A live result with a stream_name this feature doesn't recognize
-    (not currently managed -- e.g. hand-registered in VSS, or indexed before
-    a container restart cleared the in-memory registry) is also kept rather
-    than hidden, since we cannot prove it belongs to a *different* host.
+    Each embedding's own stored metadata is far more durable:
+    ``sensor_id`` is set (by vss_live_sync.py's stream registration, as the
+    canonical ``uav-<host_tag>--<camera>`` name) on every embedding created
+    under that registration and is documented by the ingestion service
+    itself as a "stable logical source identity; outlives live_stream_id" --
+    exactly this problem. It's baked into the embedding at index time, so it
+    keeps resolving correctly no matter how many times the underlying VSS
+    stream object has since been deleted/recreated, and does not depend on
+    this process's in-memory ``uav_naming`` registry still being populated
+    either (so it also survives a viz-backend restart, unlike the old
+    registry-only path).
+    """
+    sensor_id = metadata.get("sensor_id") or metadata.get("live_stream_name")
+    if sensor_id:
+        camera, host = _camera_and_host(str(sensor_id))
+        if camera is not None:
+            return camera, host
+
+    # Fall back to the stream's own registration-time ``tags`` (["uav", host,
+    # camera], set in vss_live_sync.py's POST /streams call). These are
+    # VIDEO-level metadata (tied to the video/stream record, not baked into
+    # every frame the way ``sensor_id`` is), so they could in theory also go
+    # stale across a stream delete+recreate -- but in practice they've shown
+    # up reliably even in cases where ``sensor_id`` attribution still fell
+    # back to "Unknown camera" (the same result's own "Tags" detail panel
+    # kept showing the correct uav/host/camera throughout). Only trusted when
+    # they match the exact 3-element ["uav", host, camera] shape this app
+    # itself writes -- any other tags (user- or VSS-added) are left alone.
+    tags = _as_tag_list(metadata.get("tags"))
+    if len(tags) == 3 and tags[0] == "uav":
+        return tags[2], tags[1]
+
+    stream_name = (stream or {}).get("stream_name")
+    return _camera_and_host(stream_name)
+
+
+def _belongs_to_host(result: dict, host: str) -> bool:
+    """True if `result` should be shown when the caller has explicitly asked
+    to scope search to `host` (only called when ``SearchRequest.host`` is
+    set -- an *unfiltered* search is never scoped at all, see ``search()``).
+
+    Only live results are scoped -- a result from an uploaded/recorded video
+    has no "owning" UAV host to filter by, so it's always kept.
+
+    A live result whose host could not be resolved (``result.get("host") is
+    None`` -- e.g. a stream registered before this feature's in-memory
+    registry existed/restarted, or already-indexed footage left behind by a
+    UAV that has since been disconnected: pausing a stream on disconnect
+    intentionally does NOT purge its already-indexed embeddings, see
+    vss_live_sync.py's module docstring) is now EXCLUDED rather than kept.
     """
     if result.get("source") != "live":
         return True
-    result_host = result.get("host")
-    if result_host is None:
+    return result.get("host") == host
+
+
+def _belongs_to_camera(result: dict, camera: str) -> bool:
+    """Same reasoning as `_belongs_to_host`, scoped to one camera name
+    instead of one host -- lets the dashboard's "Camera" filter narrow a
+    search to e.g. just the front camera, across whichever UAV(s) the host
+    filter (if any) still allows. Also strict: a live result whose camera
+    couldn't be resolved no longer passes an active camera filter (see
+    ``_belongs_to_host``'s docstring for why)."""
+    if result.get("source") != "live":
         return True
-    return result_host == host
+    return result.get("camera") == camera
 
 
 def _flatten_results(payload: Any) -> list:
@@ -266,11 +323,17 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=MAX_QUERY_LENGTH)
     tags: Optional[str] = Field(None, max_length=500)
     timeFilter: Optional[TimeFilter] = None
-    # Optional: scope results to one UAV's own footage (multi-UAV dashboards
-    # keep a tab per connected host). Only affects *live* results -- a result
-    # from an uploaded/recorded video that isn't tied to any host's live
-    # stream is never filtered out, since it isn't "someone else's drone".
+    # Optional: scope results to one UAV's own footage and/or one of its
+    # cameras (the dashboard's "UAV" / "Camera" search filters -- see
+    # search.js). By default (both omitted/empty) a search covers every
+    # connected UAV's footage; this is the normal case, not scoping-by-host,
+    # since one operator may be watching several drones at once and wants a
+    # single query to search all of them. Only affects *live* results -- a
+    # result from an uploaded/recorded video that isn't tied to any host's
+    # live stream is never filtered out, since it isn't "someone else's
+    # drone".
     host: Optional[str] = Field(None, min_length=1, max_length=253, pattern=HOST_PATTERN)
+    camera: Optional[str] = Field(None, min_length=1, max_length=128)
 
 
 @router.get("/api/search/status")
@@ -303,6 +366,20 @@ async def search_status():
         logger.warning("VSS status check failed (%s): %s", VSS_MANAGER_URL, exc)
         status["error"] = "VSS is not reachable"
     return status
+
+
+@router.get("/api/search/sources")
+async def search_sources():
+    """Every UAV host + camera combination currently live-indexed, for the
+    dashboard's "UAV" / "Camera" search-scope filter dropdowns (search.js).
+    Backed by uav_naming's in-memory registry -- the same source of truth
+    vss_live_sync.py writes to and this module's own host/camera result
+    attribution reads from -- so the dropdowns only ever offer choices that
+    can actually match something, and immediately reflect the registry
+    (e.g. a UAV that was just disconnected drops out, no polling delay)."""
+    _require_enabled()
+    hosts = uav_naming.hosts_and_cameras()
+    return {"hosts": [{"host": host, "cameras": cameras} for host, cameras in sorted(hosts.items())]}
 
 
 @router.post("/api/search")
@@ -359,9 +436,15 @@ async def search(req: SearchRequest):
         object_path = _resolve_object_path(metadata, video)
         frame = _frame_params(metadata)
         best = metadata.get("best_frame_info") if isinstance(metadata.get("best_frame_info"), dict) else {}
-        is_live = bool(best.get("is_live")) or stream is not None
+        # Prefer metadata's own `is_live`/`sensor_id` (set once, at index time,
+        # baked permanently into the embedding) over `stream is not None`
+        # (true only while the *current* VSS stream object for this exact
+        # video_id still exists) -- the latter alone would flip an old live
+        # clip to look like an upload the moment its stream is recreated,
+        # same durability problem as camera/host attribution below.
+        is_live = bool(best.get("is_live")) or bool(metadata.get("is_live")) or bool(metadata.get("sensor_id")) or stream is not None
         stream_name = (stream or {}).get("stream_name")
-        camera, result_host = _camera_and_host(stream_name)
+        camera, result_host = _attribute_result(metadata, stream)
         results.append({
             "video_id": video_id,
             "source": "live" if is_live else "upload",
@@ -386,6 +469,8 @@ async def search(req: SearchRequest):
 
     if req.host:
         results = [r for r in results if _belongs_to_host(r, req.host)]
+    if req.camera:
+        results = [r for r in results if _belongs_to_camera(r, req.camera)]
 
     results, raw_count = _filter_and_score(results)
     _prewarm_previews(results)
