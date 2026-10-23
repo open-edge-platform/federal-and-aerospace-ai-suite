@@ -17,8 +17,9 @@
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
+. "$HERE/../../lib/label.sh"
 STREAM_HOSTS=${STREAM_HOSTS:-"tsn-machine-2:Cam_x1_0 tsn-machine-3:Cam_x2_0"}
-MEDIA_DIR=${MEDIA_DIR:-$HERE/../media}
+MEDIA_DIR=${MEDIA_DIR:-$HERE/../../data/media}
 LEAD=${LEAD:-20}
 VLAN_IF=${VLAN_IF:-tsn0.1}
 RTSP_PORT=${RTSP_PORT:-8554}
@@ -36,9 +37,9 @@ each() {  # each <fn>: run fn <host> <cam> for every pair
 prepare() {
   local host=$1 cam=$2 file="${2}_1k_sei.ts"
   [ -r "$MEDIA_DIR/$file" ] || die "missing $MEDIA_DIR/$file"
-  echo "[$host] checking ssh + docker"
+  echo "[$(label "$host")] checking ssh + docker"
   "${SSH[@]}" "$host" 'docker compose version >/dev/null' || die "$host: ssh or docker compose not working"
-  echo "[$host] copying compose files"
+  echo "[$(label "$host")] copying compose files"
   "${SSH[@]}" "$host" "mkdir -p $REMOTE_DIR/media"
   scp -q -o BatchMode=yes "$HERE/docker-compose.yml" "$HERE/entrypoint.sh" "$host:$REMOTE_DIR/"
   # copy the video only when the remote copy is missing or has a different size
@@ -46,11 +47,11 @@ prepare() {
   want=$(stat -c %s "$MEDIA_DIR/$file")
   have=$("${SSH[@]}" "$host" "stat -c %s $REMOTE_DIR/media/$file 2>/dev/null || echo 0")
   if [ "$want" != "$have" ]; then
-    echo "[$host] copying $file"
+    echo "[$(label "$host")] copying $file"
     scp -q -o BatchMode=yes "$MEDIA_DIR/$file" "$host:$REMOTE_DIR/media/"
   fi
   "${SSH[@]}" "$host" "printf 'CAM=%s\nIMAGE=%s\nRTSP_PORT=%s\n' '$cam' '$IMAGE' '$RTSP_PORT' > $REMOTE_DIR/.env"
-  echo "[$host] pulling image (if missing)"
+  echo "[$(label "$host")] pulling image (if missing)"
   "${SSH[@]}" "$host" "cd $REMOTE_DIR && docker compose pull -q"
 }
 
@@ -58,7 +59,7 @@ launch() {
   local host=$1
   # stop any previous run first so ports are free
   "${SSH[@]}" "$host" "cd $REMOTE_DIR && docker compose down -t 2 >/dev/null 2>&1; START_AT=$T docker compose up -d" \
-    >/dev/null 2>&1 || echo "[$host] FAILED to start" >&2
+    >/dev/null 2>&1 || echo "[$(label "$host")] FAILED to start" >&2
 }
 
 report() {
@@ -82,9 +83,9 @@ cmd_up() {
   echo "Consume with these URLs (TCP). Frame 0 repeats every ~61.9 s."
 }
 
-stop_one() { "${SSH[@]}" "$1" "cd $REMOTE_DIR && docker compose down -t 2" 2>&1 | tail -1 | sed "s/^/[$1] /"; }
+stop_one() { "${SSH[@]}" "$1" "cd $REMOTE_DIR && docker compose down -t 2" 2>&1 | tail -1 | sed "s/^/[$(label "$1")] /"; }
 status_one() {
-  echo "== $1"
+  echo "== $(label "$1")"
   "${SSH[@]}" "$1" "cd $REMOTE_DIR && docker compose ps -a --format 'table {{.Service}}\t{{.Status}}' && docker compose logs --no-log-prefix --tail 3 2>&1" || true
 }
 

@@ -13,7 +13,7 @@ set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
-[ ! -f "$ROOT/lab.env" ] || { set -a; . "$ROOT/lab.env"; set +a; }
+. "$ROOT/src/lib/label.sh"
 NODE_HOST=${NODE_HOST:-${SSH_USER:+${M4_LAB_IP:+$SSH_USER@$M4_LAB_IP}}}
 [ -n "$NODE_HOST" ] || { echo "traffic-node: no host (set SSH_USER and M4_LAB_IP in lab.env); skipping"; exit 0; }
 : "${M1_NOISE_IP:?set M1_NOISE_IP in lab.env}" "${M4_NOISE_IP:?set M4_NOISE_IP in lab.env}"
@@ -26,14 +26,14 @@ COMPOSE=(docker compose -f "$HERE/docker-compose.yml")
 
 case "${1:-}" in
   up)
-    echo "[$NODE_HOST] building and copying the load agent image"
+    echo "[$(label "$NODE_HOST")] building and copying the load agent image"
     DOCKER_HOST= docker build -q -t tsn-load-agent:local "$HERE/agent" >/dev/null
     DOCKER_HOST= docker save tsn-load-agent:local | docker load >/dev/null
     # containers of the earlier hand-started / docker-run versions would hold the metrics port
     docker rm -f metrics-manager tsn-metrics-manager >/dev/null 2>&1 || true
-    "${COMPOSE[@]}" up -d 2>&1 | tail -3 | sed "s/^/[$NODE_HOST] /"
+    "${COMPOSE[@]}" up -d 2>&1 | tail -3 | sed "s/^/[$(label "$NODE_HOST")] /"
     ;;
-  down) "${COMPOSE[@]}" down -t 2 2>&1 | tail -2 | sed "s/^/[$NODE_HOST] /" ;;
-  status) echo "== $NODE_HOST"; "${COMPOSE[@]}" ps -a --format 'table {{.Service}}\t{{.Status}}' ;;
+  down) "${COMPOSE[@]}" down -t 2 2>&1 | tail -2 | sed "s/^/[$(label "$NODE_HOST")] /" ;;
+  status) echo "== $(label "$NODE_HOST")"; "${COMPOSE[@]}" ps -a --format 'table {{.Service}}\t{{.Status}}' ;;
   *) sed -n '4,6p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

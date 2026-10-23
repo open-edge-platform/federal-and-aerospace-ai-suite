@@ -7,7 +7,7 @@
 #   make fake                          feed the dashboard with fake inference messages
 #   make test                          unit tests (throwaway venv)
 #   make dev-backend                   run the backend from source (simulated controls)
-# The use cases have their own Makefiles (../usecase1, ../usecase2); ../Makefile starts everything.
+# ../../Makefile starts everything.
 
 SHELL := /bin/bash
 SWITCH_HOST ?= tsndemo@10.106.147.105
@@ -35,7 +35,7 @@ logs:
 
 deploy-switch:
 	ssh -o BatchMode=yes $(SWITCH_HOST) 'mkdir -p ~/moxa'
-	scp -o BatchMode=yes ../common/moxa/get_port_mode.py ../common/moxa/tas_config.py $(SWITCH_HOST):moxa/
+	scp -o BatchMode=yes ../switch/get_port_mode.py ../switch/tas_config.py $(SWITCH_HOST):moxa/
 
 fake:
 	python3 -I tools/fake_publisher.py --port $$(grep ^MQTT_PORT= .env | cut -d= -f2) --api http://$$(grep ^DASHBOARD_BIND= .env | cut -d= -f2):8080

@@ -113,7 +113,7 @@
     $('system-rows').appendChild(el);
     const ctx = el.querySelector('canvas').getContext('2d');
     const datasets = SERIES.map((s) => {
-      const g = ctx.createLinearGradient(0, 0, 0, 110);
+      const g = ctx.createLinearGradient(0, 0, 0, 300);
       g.addColorStop(0, s.color + '33'); g.addColorStop(1, s.color + '05');
       return { label: s.label, data: [], borderColor: s.color, backgroundColor: g, tension: 0.35,
         fill: s.key === 'cpu' || s.key === 'mem', pointRadius: 0, borderWidth: 2, spanGaps: true };
@@ -126,6 +126,7 @@
     const panel = { el, chart, note: el.querySelector('.sys-note'),
       vals: Object.fromEntries(SERIES.map((s) => [s.key, el.querySelector(`[data-key="${s.key}"]`)])) };
     sysPanels.set(name, panel);
+    new ResizeObserver(() => chart.resize()).observe(el.querySelector('.sys-chart'));
     const sel = $('system-select');
     sel.add(new Option(name, name));
     sel.hidden = sysPanels.size < 2;
@@ -253,7 +254,7 @@
 
   function renderControls(msg) {
     const mq = $('chip-mqtt');
-    mq.textContent = msg.mqtt_connected ? 'MQTT: connected' : 'MQTT: disconnected';
+    mq.textContent = msg.mqtt_connected ? 'Connected' : 'Disconnected';
     mq.className = 'chip ' + (msg.mqtt_connected ? 'chip-ok' : 'chip-bad');
 
     const t = msg.traffic;

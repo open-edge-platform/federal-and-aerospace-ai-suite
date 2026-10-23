@@ -1,14 +1,14 @@
-usecase2/src/secrets/*
-!usecase2/src/secrets/generate_secrets.sh
-!usecase2/src/secrets/openssl.cnf
-usecase2/src/nginx/ssl/
+src/scene/secrets/*
+!src/scene/secrets/generate_secrets.sh
+!src/scene/secrets/openssl.cnf
+src/scene/nginx/ssl/
 .env
 .venv-test/
-usecase2/tests/artifacts/
+src/scene/tests/artifacts/
 
 __pycache__/
 .pytest_cache/
 .venv/
 
 lab.env
-usecase2/src/mediamtx/mediamtx.yml
+src/scene/mediamtx/mediamtx.yml

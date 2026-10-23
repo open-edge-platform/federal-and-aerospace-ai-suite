@@ -3,7 +3,7 @@
 # One DL Streamer Pipeline Server per camera machine (machine-2 / machine-3): reads the local RTSP
 # camera, stamps frames with the PTP time, detects people and publishes the result over MQTT to the
 # dashboard host on the TSN VLAN. Normally driven by deploy.sh, which renders config.json.
-name: tsn-usecase1-edge
+name: tsn-camera-pipeline
 
 services:
   dlsps:

@@ -104,7 +104,7 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 
 /* ---- fixed-height layout: both tabs fill the window, so the left control card is the same height on
    both and the charts / videos share what is left (no page scroll) ---- */
-:root { --hdr: 51px; }
+:root { --hdr: 55px; }
 .layout { height: calc(100vh - var(--hdr)); box-sizing: border-box; align-items: stretch; }
 
 .main { min-height: 0; }
@@ -140,8 +140,8 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 .side { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
 .side .panel { padding: 12px 14px; }
 .side h2 { margin-top: 0; }
-.sysload { margin-top: auto; }
-.sys-rows { display: flex; flex-direction: column; gap: 8px; }
+.sysload { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.sys-rows { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; min-height: 0; }
 .sys-machine.stale { opacity: .5; }
 .sys-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .sys-name { color: var(--text); font-weight: 600; font-size: 13px; }
@@ -163,7 +163,7 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 
 /* System utilization: natural height under the other cards; the chart keeps a sensible aspect ratio
    (a chart stretched to the whole column height is far taller than it is wide) */
-.sys-chart { height: 230px; }
+.sys-chart { flex: 1 1 auto; min-height: 130px; }
 .sys-chart canvas { position: absolute; inset: 0; }
 
 /* ---- Architecture overlay (js/arch.js): topology with live, animated traffic ---- */
@@ -204,3 +204,35 @@ output { min-width: 84px; text-align: right; font-variant-numeric: tabular-nums;
 #arch-svg .clock { cursor: help; }
 #arch-svg .clock circle.hit { fill: transparent; stroke: none; pointer-events: all; }
 #arch-svg .clock text.ptp { fill: #3ecf8e; font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+
+/* tabs: filled pills; the left column starts below the tab strip, level with the first card of the tab */
+:root { --tabs-h: 40px; }
+.tabs { height: var(--tabs-h); box-sizing: border-box; border-bottom: 0; gap: 8px; align-items: stretch; }
+.tab { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 0 16px; font-weight: 600; }
+.tab:hover { border-color: var(--accent); }
+.tab[aria-selected="true"] { background: rgba(77, 163, 255, .16); border-color: var(--accent); color: #fff;
+  box-shadow: 0 0 0 1px var(--accent) inset, 0 0 12px rgba(77, 163, 255, .25); }
+.side { padding-top: calc(var(--tabs-h) + 16px); box-sizing: border-box; }
+@media (max-width: 900px) { .side { padding-top: 0; } }
+.sys-machine { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.sys-machine[hidden] { display: none; }
+
+/* the Network load card is as tall as the first row of cards of the tab */
+:root { --top-h: 124px; }
+#card-load { height: var(--top-h); box-sizing: border-box; flex: none; overflow: hidden; }
+.uc1-top .kpi, .uc2-left .kpis .kpi { min-height: var(--top-h); box-sizing: border-box; }
+.side { gap: 16px; }
+
+/* subtle divider between the controls column and the tabs area */
+@media (min-width: 901px) {
+  .main { position: relative; }
+  .main::before { content: ""; position: absolute; left: -8px; top: 0; bottom: 0; width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(139, 152, 167, .28) 8%, rgba(139, 152, 167, .28) 92%, transparent); pointer-events: none; }
+}
+
+/* topbar controls use the same rounded-rectangle outline as the tabs */
+.topbar .chip, .topbar .btn { border-radius: 8px; min-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 12px; }
+
+.chips { align-items: center; }
+.brand-moxa { height: 14px; width: auto; margin-left: 8px; padding: 8px 12px; background: #fff; border-radius: 8px; box-sizing: content-box; }
+.topbar { box-sizing: border-box; height: var(--hdr); }

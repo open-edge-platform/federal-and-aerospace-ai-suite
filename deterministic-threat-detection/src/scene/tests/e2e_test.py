@@ -22,7 +22,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 BASE = "https://localhost"
 SCENE = "hota-scene"
 CAMERAS = ["Cam_x1_0", "Cam_x2_0"]
-PASSWORD = (ROOT / "src/secrets/supass").read_text().strip()
+PASSWORD = (ROOT / "secrets/supass").read_text().strip()
 OUT = ROOT / "tests" / "artifacts"
 OUT.mkdir(exist_ok=True, parents=True)
 results = []

@@ -5,7 +5,7 @@
 # SceneScape + DLStreamer Pipeline Server reading two RTSP streams published
 # by tsn-machine-2 / tsn-machine-3 over the TSN VLAN.
 
-name: tsn-usecase2
+name: tsn-scene
 
 x-proxy-env: &proxy-env
   http_proxy: ${http_proxy:-}
@@ -33,7 +33,7 @@ services:
     environment:
       <<: *proxy-env
     volumes:
-      - ./src/mosquitto/mosquitto-secure.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/mosquitto-secure.conf:/mosquitto/config/mosquitto.conf
     secrets:
       - root-cert
       - broker-cert
@@ -55,7 +55,7 @@ services:
   pgserver:
     image: postgres:17.6
     env_file:
-      - ./src/secrets/pgserver/pgserver.env
+      - ./secrets/pgserver/pgserver.env
     networks:
       - scenescape
     environment:
@@ -103,7 +103,7 @@ services:
     volumes:
       - pgserver-media:/workspace/media
       - pgserver-migrations:/workspace/migrations
-      - ./src/webserver/user_access_config.json:/home/scenescape/Scenescape/user_access_config.json
+      - ./webserver/user_access_config.json:/home/scenescape/Scenescape/user_access_config.json
     secrets:
       - source: root-cert
         target: certs/scenescape-ca.pem
@@ -132,8 +132,8 @@ services:
       DBPORT: 5432
     volumes:
       - pgserver-media:/workspace/media
-      - ./src/webserver/load_scene.sh:/opt/load_scene.sh:ro
-      - ./src/webserver/hota-scene-appdata.tar.bz2:/opt/appdata.tar.bz2:ro
+      - ./webserver/load_scene.sh:/opt/load_scene.sh:ro
+      - ./webserver/hota-scene-appdata.tar.bz2:/opt/appdata.tar.bz2:ro
     secrets:
       - django
       - browser.auth
@@ -219,7 +219,7 @@ services:
       # address of this host as the browser sees it, advertised in the WebRTC ICE candidates
       MTX_WEBRTCADDITIONALHOSTS: ${LAB_IP:-}
     volumes:
-      - ./src/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - ./mediamtx/mediamtx.yml:/mediamtx.yml:ro
     restart: on-failure:5
 
   dlstreamer-pipeline-server:
@@ -255,10 +255,10 @@ services:
       - no_proxy=.scenescape.intel.com,mediamtx,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
       - NO_PROXY=.scenescape.intel.com,mediamtx,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
     volumes:
-      - ./src/dlstreamer-pipeline-server/config.json:/home/pipeline-server/config.json:ro
-      - ./src/dlstreamer-pipeline-server/gstplugins:/home/sscape/python:ro
-      - ./src/dlstreamer-pipeline-server/sei_parser.py:/home/pipeline-server/user_scripts/gvapython/sscape/sei_parser.py:ro
-      - ../common/models:/home/pipeline-server/models:ro
+      - ./dlstreamer-pipeline-server/config.json:/home/pipeline-server/config.json:ro
+      - ./dlstreamer-pipeline-server/gstplugins:/home/sscape/python:ro
+      - ./dlstreamer-pipeline-server/sei_parser.py:/home/pipeline-server/user_scripts/gvapython/sscape/sei_parser.py:ro
+      - ../data/models:/home/pipeline-server/models:ro
       - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999
     secrets:
       - source: root-cert
@@ -273,8 +273,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - "./src/nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro"
-      - "./src/nginx/ssl:/etc/nginx/ssl:ro"
+      - "./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro"
+      - "./nginx/ssl:/etc/nginx/ssl:ro"
     networks:
       - scenescape
     depends_on:
@@ -305,22 +305,22 @@ volumes:
 
 configs:
   tracker-config:
-    file: ./src/controller/tracker-config.json
+    file: ./controller/tracker-config.json
 
 secrets:
   root-cert:
-    file: ./src/secrets/certs/scenescape-ca.pem
+    file: ./secrets/certs/scenescape-ca.pem
   broker-cert:
-    file: ./src/secrets/certs/scenescape-broker.crt
+    file: ./secrets/certs/scenescape-broker.crt
   broker-key:
-    file: ./src/secrets/certs/scenescape-broker.key
+    file: ./secrets/certs/scenescape-broker.key
   web-cert:
-    file: ./src/secrets/certs/scenescape-web.crt
+    file: ./secrets/certs/scenescape-web.crt
   web-key:
-    file: ./src/secrets/certs/scenescape-web.key
+    file: ./secrets/certs/scenescape-web.key
   django:
-    file: ./src/secrets/django
+    file: ./secrets/django
   browser.auth:
-    file: ./src/secrets/browser.auth
+    file: ./secrets/browser.auth
   controller.auth:
-    file: ./src/secrets/controller.auth
+    file: ./secrets/controller.auth

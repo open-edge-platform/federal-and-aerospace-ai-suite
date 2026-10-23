@@ -24,6 +24,16 @@ control and (soon) the system load. Each part can also be run on its own with it
 | Folder | What it holds |
 |--------|---------------|
 | `Makefile` | `make up / down / status / test` for everything |
+| `src/dashboard/` | Machine-1: the web UI + backend (latency, live HOTA, load and Qbv control) and the MQTT broker for the camera results |
+| `src/scene/` | Machine-1: SceneScape, DL Streamer, the mediamtx relay and nginx, plus the record/replay tools and e2e test |
+| `src/camera-node/` | Machines 2/3: the RTSP stream publishers (`streams/`) and the DL Streamer camera pipelines (`pipeline/`) |
+| `src/traffic-node/` | Machine-4: the load agent and metrics |
+| `src/switch/` | Moxa switch scripts (Qbv) |
+| `src/data/` | Test videos (`media/`), the detection model (`models/`) and the ground truth |
+| `docs/`, `usecases/` | The earlier guides and implementation (kept until the new documentation replaces them) |
+
+--------|---------------|
+| `Makefile` | `make up / down / status / test` for everything |
 | `dashboard/` | The shared web UI + backend (latency, live HOTA, load and Qbv control) and the MQTT broker for the camera results |
 | `usecase1/` | Use case 1 (latency): the camera pipelines that run on the camera machines (DL Streamer, detection plus decoded frame over MQTT) |
 | `usecase2/` | Use case 2 (tracking quality): the SceneScape stack, the mediamtx relay, the ground truth and the record/replay tools |

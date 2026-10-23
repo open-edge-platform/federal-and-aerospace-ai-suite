@@ -18,15 +18,15 @@ HOST_IP ?= $(or $(shell ip -4 -o addr show dev $(TSN_IFACE) 2>/dev/null | awk '{
 SVC ?=
 # Address of this machine on the lab network (default route), advertised for WebRTC
 LAB_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($$i=="src") print $$(i+1)}')
-# Remote RTSP cameras (host:camera pairs), started in lockstep over ssh by ../common/streams/start-synced-streams.sh
+# Remote RTSP cameras (host:camera pairs), started in lockstep over ssh by ../camera-node/streams/start-synced-streams.sh
 STREAMS ?= 1
 STREAM_HOSTS ?= tsn-machine-2:Cam_x1_0 tsn-machine-3:Cam_x2_0
 export STREAM_HOSTS
 # Hosts the web UI accepts (Django ALLOWED_HOSTS). '*' = any host/IP; restrict with make up ALLOWED_HOSTS=a,b
 ALLOWED_HOSTS ?= *
 
-SECRETS_DIR := src/secrets
-SSL_DIR := src/nginx/ssl
+SECRETS_DIR := secrets
+SSL_DIR := nginx/ssl
 
 .PHONY: up down clean distclean status logs env secrets nginx-cert pull test streams-up streams-down streams-status
 
@@ -38,13 +38,13 @@ up: env nginx-cert
 	@[ "$(STREAMS)" = 1 ] || echo "STREAMS=0: the RTSP streams on CAMERA1_HOST/CAMERA2_HOST (see .env) must already be running."
 
 streams-up:
-	../common/streams/start-synced-streams.sh up
+	../camera-node/streams/start-synced-streams.sh up
 
 streams-down:
-	../common/streams/start-synced-streams.sh down
+	../camera-node/streams/start-synced-streams.sh down
 
 streams-status:
-	../common/streams/start-synced-streams.sh status
+	../camera-node/streams/start-synced-streams.sh status
 
 secrets: $(SECRETS_DIR)/browser.auth
 

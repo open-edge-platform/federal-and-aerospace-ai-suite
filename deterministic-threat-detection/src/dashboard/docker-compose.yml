@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 # The shared dashboard (one web UI, a tab per use case) and the MQTT broker that receives the camera
-# machines' results (use case 1). Independent of the scene stack in ../usecase2: own compose project,
+# machines' results (use case 1). Independent of the scene stack in ../scene: own compose project,
 # own broker on port ${MQTT_PORT} (1884), dashboard on the lab address.
 name: tsn-dashboard
 
@@ -41,7 +41,7 @@ services:
     depends_on:
       - broker
     env_file:
-      - ../lab.env  # machine addresses (SSH_USER, M*_LAB_IP, M*_NOISE_IP, SWITCH_IP)
+      - ../../lab.env  # machine addresses (SSH_USER, M*_LAB_IP, M*_NOISE_IP, SWITCH_IP)
     environment:
       MQTT_HOST: 127.0.0.1
       MQTT_PORT: ${MQTT_PORT:-1884}
@@ -58,6 +58,6 @@ services:
     volumes:
       - ${HOME}/.ssh:/home/app/.ssh:ro
       # use case 2: ground truth for the live HOTA and the SceneScape broker CA (TLS)
-      - ../usecase2/data:/data:ro
-      - ../usecase2/src/secrets/certs/scenescape-ca.pem:/certs/scenescape-ca.pem:ro
+      - ../data:/data:ro
+      - ../scene/secrets/certs/scenescape-ca.pem:/certs/scenescape-ca.pem:ro
     restart: unless-stopped
