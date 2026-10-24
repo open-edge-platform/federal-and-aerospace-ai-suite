@@ -2,18 +2,15 @@
 
 ## Prerequisites
 
-Ensure the MOXA switch is set to its default configuration, as per the
-[MOXA TSN Switch configuration guide](./configure-moxa-switch.md),
-before proceeding with VLAN configuration.
+Switch reachable as in [Configure the Moxa TSN switch](./configure-moxa-switch.md).
 
 ## MOXA Switch VLAN Configuration
 
 Identify the switch port for each connected machine. You will then configure each port to
 handle tagged VLAN traffic for the specific VLAN IDs the connected machine requires.
 
-> **For example:** if machine 1 is connected to port 2 of the MOXA switch, and machine 1 can handle
->the traffic on the VLAN ID 1, 3, and 5, then set the port 2 as tagged VLAN for VLAN ID 1, 3,
-> and 5.
+> **In this demo:** ports 1 to 4 (machines 1 to 4) carry VLANs 1, 3 and 5 tagged. Ports 5 and 6
+> (Basler cameras) are untagged members of VLAN 3 with PVID 3.
 
 1. Access the MOXA switch web interface by entering the switch's IP address(`192.168.127.253`)
    in a web browser.
