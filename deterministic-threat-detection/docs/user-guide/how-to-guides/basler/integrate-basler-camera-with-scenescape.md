@@ -37,7 +37,16 @@ make down
 Always pass `SOURCE=basler` (a plain `docker compose up` has no camera plugin and the pipelines
 fail with `no element "gencamsrc"`).
 
-![Dashboard with Basler cameras](../../_assets/dashboard-uc2-basler.png)
+![Dashboard with Basler cameras](../../_assets/uc2-tracking-basler.gif)
+
+The Architecture view shows the two cameras on switch ports 5 and 6. With Qbv off, the load
+starves them; with Qbv on, both keep their frame rate.
+
+![Basler, no load](../../_assets/architecture-basler-idle.gif)
+
+![Basler, load, Qbv off](../../_assets/architecture-basler-load-qbv-off.gif)
+
+![Basler, load, Qbv on](../../_assets/architecture-basler-load-qbv-on.gif)
 
 The dashboard shows the tracker rate and the decoded frames. HOTA is not meaningful here: there
 is no ground truth and no frame number.

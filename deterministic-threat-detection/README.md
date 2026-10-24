@@ -12,7 +12,7 @@ A slider on the dashboard injects load (UDP, up to 1 Gbit/s) from a fourth machi
 IEEE 802.1Qbv Time-Aware Shaper on the switch. With the shaper off the load starves both use cases;
 with it on they are not affected.
 
-![Dashboard: use case 1](./docs/user-guide/_assets/dashboard-uc1-latency.png)
+![Dashboard: use case 1](./docs/user-guide/_assets/uc1-latency.gif)
 
 ## Quick start
 

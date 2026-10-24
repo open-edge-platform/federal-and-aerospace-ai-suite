@@ -24,7 +24,7 @@ Clone it on machine-1 only. `make up` copies what the other machines need.
 
 ## Architecture diagram
 
-![Architecture](./_assets/dashboard-architecture.png)
+![Architecture: live traffic, no load](./_assets/architecture-video-idle.gif)
 
 ```mermaid
 flowchart LR
@@ -74,9 +74,24 @@ The certificate is self-signed; accept the browser warning.
 Try it:
 
 1. **Use case 1** shows latency per camera (about 2 ms idle).
-2. Switch off Qbv and move **Network load** to 1000 Mbit/s: latency climbs from milliseconds to
-   seconds and the tracker rate (use case 2) and HOTA collapse.
-3. Switch Qbv on: the load is confined to its slot and both recover.
+
+   ![Use case 1: latency](./_assets/uc1-latency.gif)
+
+2. **Use case 2** shows the live tracking quality (HOTA) and the frames the tracker sees. The
+   dip to about 0 once per minute is the 62 s test video restarting.
+
+   ![Use case 2: tracking](./_assets/uc2-tracking-video.gif)
+
+3. Switch off Qbv and move **Network load** to 1000 Mbit/s: latency climbs from milliseconds to
+   seconds and the tracker rate (use case 2) and HOTA collapse. The Architecture view shows the
+   streams stalling and frames lost.
+
+   ![Load with Qbv off](./_assets/architecture-video-load-qbv-off.gif)
+
+4. Switch Qbv on: the load is confined to its slot (about 95 Mbit/s gets through) and both
+   recover.
+
+   ![Load with Qbv on](./_assets/architecture-video-load-qbv-on.gif)
 
 Qbv takes about 10 s to turn on and up to 30 s to turn off; the toggle shows the real switch state.
 
