@@ -25,8 +25,8 @@ export STREAM_HOSTS
 # Hosts the web UI accepts (Django ALLOWED_HOSTS). '*' = any host/IP; restrict with make up ALLOWED_HOSTS=a,b
 ALLOWED_HOSTS ?= *
 
-# Camera source: video (default) or basler. An explicit value is remembered in .env.
-SOURCE ?= $(or $(shell sed -n 's/^SOURCE=//p' .env 2>/dev/null),video)
+# Camera source: video (default) or basler, from the command line only.
+SOURCE ?= video
 export SOURCE
 # The Basler source adds the pylon image and a macvlan on the TSN VLAN
 ifeq ($(SOURCE),basler)
@@ -89,7 +89,7 @@ pull:
 	docker compose pull
 
 down:
-	docker compose down
+	COMPOSE_FILE=docker-compose.yml:docker-compose.basler.yml docker compose down
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-down
 
 clean:

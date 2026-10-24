@@ -33,4 +33,4 @@ camera hosts in `.env` and `mediamtx/mediamtx.yml` if they differ.
 - `scene` and `analytics` load scenes only at startup, so they wait for `scene-loader`.
 - The UI shows Rate and per-camera FPS only with "Show Telemetry" enabled.
 - Autocalibration is not deployed (the UI logs a failing `/api/v1/autocalibration` websocket); not needed for HOTA.
-- Detection frames carry the SEI `frame` number (patched `sscape_post_inference_data_publish.py`).
+- Detection frames carry the SEI `frame` number (`sscape_adapter.py`, a reduced copy of SceneScape's adapter).

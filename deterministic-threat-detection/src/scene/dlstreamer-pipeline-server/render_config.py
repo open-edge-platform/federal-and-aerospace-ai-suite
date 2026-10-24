@@ -18,6 +18,7 @@ import sys
 MODEL = "/home/pipeline-server/models/omz/person-detection-retail-0013/FP32/person-detection-retail-0013.xml"
 MODEL_PROC = "/home/pipeline-server/models/object_detection/person/person-detection-retail-0013.json"
 SEI_PARSER = "/home/pipeline-server/user_scripts/gvapython/sscape/sei_parser.py"
+ADAPTER = "/home/pipeline-server/user_scripts/gvapython/sscape/sscape_adapter.py"
 
 # Defaults per source: frame size the cameras are calibrated for in the scene
 DEFAULT_SIZE = {"video": (800, 600), "basler": (1920, 1080)}
@@ -54,29 +55,17 @@ def head(source, n, width, height):
 
 
 def pipeline(source, n, width, height):
-  timesync = "sscape_timestamp_capture name=timesync"
+  def adapter(cls, *args):
+    arg = f" arg={json.dumps(list(args)).replace(' ', '')}" if args else ""
+    return f"gvapython class={cls}{arg} function=processFrame module={ADAPTER}"
+
   # Camera sources get their own thread per stage; a leaky queue drops stale frames instead of stalling the camera
   q = " ! queue max-size-buffers=2 leaky=downstream" if source == "basler" else ""
-  return (f"{head(source, n, width, height)}{q} ! {timesync}"
+  return (f"{head(source, n, width, height)}{q} ! {adapter('PostDecodeTimestampCapture')}"
           f" ! gvadetect threshold={env('DETECT_THRESHOLD', '0.4')} model={MODEL} model-proc={MODEL_PROC}"
           f"{q} ! gvametaconvert add-tensor-data=true name=metaconvert"
-          " ! sscape_post_inference_data_publish name=datapublisher"
+          f" ! {adapter('PostInferenceDataPublish', env(f'CAMERA{n}_ID', f'Cam_x{n}_0'))}"
           " ! gvametapublish name=destination method=file file-path=/dev/null ! appsink sync=true")
-
-
-def parameters(source):
-  props = {
-    "cameraid": {"element": {"name": "datapublisher", "property": "cameraid"}, "type": "string"},
-    "metadatagenpolicy": {"element": {"name": "datapublisher", "property": "metadatagenpolicy"}, "type": "string"},
-    "detection_labels": {"element": {"name": "datapublisher", "property": "detection-labels"}, "type": "string"},
-  }
-  return {"type": "object", "properties": props}
-
-
-def payload(source, n):
-  params = {"cameraid": env(f"CAMERA{n}_ID", f"Cam_x{n}_0"), "metadatagenpolicy": "detectionPolicy",
-            "detection_labels": "person"}
-  return {"parameters": params}
 
 
 def render(source):
@@ -85,8 +74,8 @@ def render(source):
   width = int(env("FRAME_WIDTH", str(DEFAULT_SIZE[source][0])))
   height = int(env("FRAME_HEIGHT", str(DEFAULT_SIZE[source][1])))
   pipelines = [{
-    "name": f"hota-cam{n}", "source": "gstreamer", "pipeline": pipeline(source, n, width, height), "auto_start": True,
-    "parameters": parameters(source), "payload": payload(source, n)} for n in (1, 2)]
+    "name": f"hota-cam{n}", "source": "gstreamer", "pipeline": pipeline(source, n, width, height), "auto_start": True}
+    for n in (1, 2)]
   return {"config": {"logging": {"C_LOG_LEVEL": "INFO", "PY_LOG_LEVEL": "INFO"}, "pipelines": pipelines}}
 
 

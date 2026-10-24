@@ -251,7 +251,6 @@ services:
       start_period: 10s
     environment:
       - RUN_MODE=EVA
-      - ADDITIONAL_GST_PLUGIN_PATH=/home/sscape
       - DETECTION_DEVICE=CPU
       - ADD_UTCTIME_TO_METADATA=true
       - APPEND_PIPELINE_NAME_TO_PUBLISHER_TOPIC=false
@@ -264,7 +263,7 @@ services:
       - NO_PROXY=.scenescape.intel.com,mediamtx,${CAMERA1_HOST},${CAMERA2_HOST},${no_proxy:-}
     volumes:
       - ./dlstreamer-pipeline-server/config.generated.json:/home/pipeline-server/config.json:ro
-      - ./dlstreamer-pipeline-server/gstplugins:/home/sscape/python:ro
+      - ./dlstreamer-pipeline-server/sscape_adapter.py:/home/pipeline-server/user_scripts/gvapython/sscape/sscape_adapter.py:ro
       - ./dlstreamer-pipeline-server/sei_parser.py:/home/pipeline-server/user_scripts/gvapython/sscape/sei_parser.py:ro
       - ../data/models:/home/pipeline-server/models:ro
       - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999

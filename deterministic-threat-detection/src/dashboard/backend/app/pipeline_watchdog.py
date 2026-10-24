@@ -56,12 +56,8 @@ class PipelineWatchdog:
     def _camera_for(self, instance_id):
         if instance_id not in self._camera_of:
             info = self._http("GET", f"{self.base_url}/pipelines/{instance_id}") or {}
-            info_params = info.get("params") or {}
-            # applied parameters, or the ones from the start request (sources without a stream URL, e.g. gencamsrc)
-            cam = ((info_params.get("parameters") or {}).get("cameraid")
-                   or ((info_params.get("request") or {}).get("parameters") or {}).get("cameraid"))
-            if cam is None:  # fall back to the stream name in the launch command
-                cam = next((c for c in self.cameras if f"/{c} " in info.get("launch_command", "") + " "), None)
+            name = (info.get("params") or {}).get("version")  # the pipeline name, e.g. hota-cam1
+            cam = next((c for c, n in self.cameras.items() if n == name), None)
             self._camera_of[instance_id] = cam
         return self._camera_of[instance_id]
 
@@ -75,9 +71,7 @@ class PipelineWatchdog:
             for cam, name in self.cameras.items():
                 if cam in active or now - self._last_start.get(cam, 0) < self.cooldown_s:
                     continue
-                self._http("POST", f"{self.base_url}/pipelines/user_defined_pipelines/{name}", {
-                    "parameters": {"cameraid": cam, "metadatagenpolicy": "detectionPolicy",
-                                   "detection_labels": "person"}})
+                self._http("POST", f"{self.base_url}/pipelines/user_defined_pipelines/{name}", {})
                 self._last_start[cam] = now
                 self.restarts[cam] += 1
                 started.append(cam)

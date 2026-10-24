@@ -17,14 +17,12 @@ class FakeServer:
         if url.endswith("/pipelines/status"):
             return [{"id": i, "state": v["state"]} for i, v in self.instances.items()]
         if "/pipelines/user_defined_pipelines/" in url and method == "POST":
-            cam = body["parameters"]["cameraid"]
+            cam = next(c for c, n in CAMS.items() if n == url.rsplit("/", 1)[1])
             self.instances[f"new-{cam}"] = {"state": "RUNNING", "camera": cam}
             return f"new-{cam}"
         if method == "GET" and "/pipelines/" in url:
             inst = self.instances[url.rsplit("/", 1)[1]]
-            if inst.get("request_only"):  # e.g. gencamsrc: the camera id only appears in the start request
-                return {"params": {"parameters": {}, "request": {"parameters": {"cameraid": inst["camera"]}}}}
-            return {"params": {"parameters": {"cameraid": inst["camera"]}}}
+            return {"params": {"version": CAMS[inst["camera"]]}}
         raise AssertionError((method, url))
 
 
@@ -35,14 +33,13 @@ def test_nothing_is_restarted_while_both_cameras_run():
     assert not any(c[0] == "POST" for c in srv.calls)
 
 
-def test_completed_pipeline_is_restarted_once_with_the_right_parameters():
+def test_completed_pipeline_is_restarted_once_by_pipeline_name():
     srv = FakeServer({"a": {"state": "COMPLETED", "camera": "Cam_x1_0"}, "b": {"state": "RUNNING", "camera": "Cam_x2_0"}})
     wd = PipelineWatchdog("http://x:8082", CAMS, cooldown_s=10, http=srv)
     assert wd.check(now=100) == ["Cam_x1_0"]
     post = [c for c in srv.calls if c[0] == "POST"]
     assert post == [("POST", "/pipelines/user_defined_pipelines/hota-cam1",
-                     {"parameters": {"cameraid": "Cam_x1_0", "metadatagenpolicy": "detectionPolicy",
-                                     "detection_labels": "person"}})]
+                     {})]
     assert wd.restarts == {"Cam_x1_0": 1, "Cam_x2_0": 0}
     assert wd.check(now=101) == []  # the new instance runs now: nothing to do
 
