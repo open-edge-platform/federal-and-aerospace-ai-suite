@@ -9,6 +9,7 @@
 #                  scene stack (SceneScape, DL Streamer, mediamtx)
 #   make down      stop everything (all machines at the same time)
 #   make status    what is running
+#   make models    download the detection model (done automatically by `make up`)
 #   make help      this text
 #
 # SOURCE: where use case 2 gets its video. Give it on the command line, not in a file.
@@ -31,12 +32,12 @@ export SOURCE
 LAB_IP ?= $(or $(M1_LAB_IP),$(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($$i=="src") print $$(i+1)}'))
 STREAMS_SCRIPT := src/camera-node/streams/start-synced-streams.sh
 
-.PHONY: help up down status test test-e2e streams-up streams-down streams-status
+.PHONY: help up down status models test test-e2e streams-up streams-down streams-status
 
 help:
 	@awk 'NR>=4 { if ($$0 !~ /^#/) exit; sub(/^# ?/, ""); print }' Makefile
 
-up:
+up: models
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-up
 	# the dashboard mounts the SceneScape broker's CA certificate, which the secrets step creates
 	$(MAKE) -C src/scene secrets
@@ -63,6 +64,10 @@ status:
 	@echo "== traffic node: metrics-manager + load agent (machine-4)"; src/traffic-node/deploy.sh status
 	@echo "== camera nodes (machine-2/3)"; src/camera-node/pipeline/deploy.sh status
 	@echo "== scene stack"; $(MAKE) -s -C src/scene status
+
+# downloads the detection model on first use (needs internet access on machine-1)
+models:
+	src/data/download_models.sh
 
 test:
 	$(MAKE) -C src/dashboard test

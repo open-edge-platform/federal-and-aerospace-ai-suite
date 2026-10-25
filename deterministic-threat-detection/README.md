@@ -37,7 +37,7 @@ Machines, VLANs, PTP and switch are set up once: [First-time setup](./docs/user-
 | `src/traffic-node/` | machine-4 | Load agent (iperf3) and metrics |
 | `src/switch/` | machine-2 (remote) | Moxa switch scripts (Qbv, port priority, PTP profile) |
 | `src/setup/` | every machine | One-time NIC/VLAN and PTP setup scripts |
-| `src/data/` | | Test videos, model, ground truth |
+| `src/data/` | | Test videos, ground truth, model config (the model itself is downloaded by `make up`) |
 | `docs/user-guide/` | | Documentation |
 
 ## Documentation

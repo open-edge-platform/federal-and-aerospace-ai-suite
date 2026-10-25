@@ -46,7 +46,7 @@ The dotted lab network is never shaped.
 - Docker Engine with Docker Compose V2 (all machines)
 - `linuxptp` and NetworkManager (installed or used by the setup scripts)
 - Passwordless `ssh` from machine-1 to machines 2, 3 and 4 (key based)
-- Internet or proxy access to pull the Docker images
+- Internet or proxy access on machine-1 to pull the Docker images and to download the detection model (`src/data/download_models.sh`, runs automatically in `make up`; Open Model Zoo, Apache-2.0)
 
 ## Network
 

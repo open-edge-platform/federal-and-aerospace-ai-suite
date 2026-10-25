@@ -63,7 +63,7 @@ make up
 ```
 
 `make up` starts the test-video streams, the dashboard, the load agent, the camera pipelines and
-SceneScape. The first run pulls images and takes several minutes. When it finishes it prints:
+SceneScape. The first run pulls images and downloads the detection model, and takes several minutes. When it finishes it prints:
 
 - Dashboard: `https://<machine-1 lab address>/dashboard/`
 - SceneScape: `https://<machine-1 lab address>/` (user `admin`, password in
