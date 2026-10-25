@@ -33,6 +33,8 @@ die() { echo "error: $*" >&2; exit 1; }
 
 each() { local fn=$1 pair; for pair in $EDGE_HOSTS; do "$fn" "${pair%:*}" "${pair##*:}"; done; }
 
+each_parallel() { local fn=$1 pair; for pair in $EDGE_HOSTS; do "$fn" "${pair%:*}" "${pair##*:}" & done; wait; }
+
 streams() {
   [ "$STREAMS" = 1 ] || return 0
   STREAM_HOSTS="$EDGE_HOSTS" "$HERE/../streams/start-synced-streams.sh" "$1"
@@ -66,7 +68,7 @@ status_one() {
 
 case "${1:-}" in
   up)     streams up; each prepare; each launch ;;
-  down)   each down_one; streams down ;;
+  down)   each_parallel down_one; streams down ;;
   status) each status_one ;;
   *) sed -n '4,12p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

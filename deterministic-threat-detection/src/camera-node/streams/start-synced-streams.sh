@@ -34,6 +34,12 @@ each() {  # each <fn>: run fn <host> <cam> for every pair
   for pair in $STREAM_HOSTS; do "$fn" "${pair%%:*}" "${pair##*:}"; done
 }
 
+each_parallel() {  # same as each, but all hosts at once
+  local fn=$1 pair
+  for pair in $STREAM_HOSTS; do "$fn" "${pair%%:*}" "${pair##*:}" & done
+  wait
+}
+
 prepare() {
   local host=$1 cam=$2 file="${2}_1k_sei.ts"
   [ -r "$MEDIA_DIR/$file" ] || die "missing $MEDIA_DIR/$file"
@@ -89,7 +95,7 @@ status_one() {
 
 case "${1:-}" in
   up)     cmd_up ;;
-  down)   each stop_one ;;
+  down)   each_parallel stop_one ;;
   status) each status_one ;;
   *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac
