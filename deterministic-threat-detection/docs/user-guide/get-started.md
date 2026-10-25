@@ -107,12 +107,13 @@ Use two Basler GigE cameras instead of the test videos for use case 2. Prepare t
 [Integrate Basler cameras with SceneScape](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md).
 
 ```bash
-make up SOURCE=basler STREAMS=0
+make up SOURCE=basler
 make down
 ```
 
-`STREAMS=0` skips the test-video publishers. Always pass `SOURCE=basler` on the command line;
-the default is `video`. HOTA is not shown for Basler (no ground truth); the tracker rate is.
+The test-video streams still start: use case 1 needs them on machines 2 and 3 (do not pass
+`STREAMS=0`). Always pass `SOURCE=basler` on the command line; the default is `video`.
+HOTA is not shown for Basler (no ground truth); the tracker rate is.
 
 ## Troubleshooting
 

@@ -18,7 +18,7 @@ with it on they are not affected.
 
 ```bash
 cp lab.env.example lab.env      # fill in the addresses (once)
-make up                         # test videos; or: make up SOURCE=basler STREAMS=0
+make up                         # test videos; or: make up SOURCE=basler
 make down
 ```
 

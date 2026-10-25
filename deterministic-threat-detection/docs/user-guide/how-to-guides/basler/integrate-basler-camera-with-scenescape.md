@@ -30,7 +30,7 @@ and wiring; below are the one-time preparation and what the build does.
 ## Run
 
 ```bash
-make up SOURCE=basler STREAMS=0
+make up SOURCE=basler
 make down
 ```
 
@@ -62,6 +62,6 @@ is no ground truth and no frame number.
 ## Troubleshooting
 
 - `Device::open()` fails: the camera is still held. `docker stop -t 30` the pipeline container,
-  wait, then `make up SOURCE=basler STREAMS=0` again.
+  wait, then `make up SOURCE=basler` again.
 - 1970 timestamps: the camera's PTP is not locked yet (timestamp 0 is ignored by the adapter).
 - No cameras found: `ping 192.168.3.17` from machine-1 and check the camera IPs.
