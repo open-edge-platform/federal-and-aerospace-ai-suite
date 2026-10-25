@@ -41,6 +41,7 @@ SSL_DIR := nginx/ssl
 # Streams first: consumers get 404 until the publishers exist.
 up: env nginx-cert
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-up
+	@[ "$(SOURCE)" != basler ] || echo "Notice: SOURCE=basler builds an image that downloads the Basler pylon SDK, which is under Basler's own license (https://www.baslerweb.com/en/downloads/software/). Do not redistribute the built image."
 	docker compose up -d
 	@echo "Browse to https://localhost/ (admin / contents of $(SECRETS_DIR)/supass)."
 	@[ "$(STREAMS)" = 1 ] || echo "STREAMS=0: the RTSP streams on CAMERA1_HOST/CAMERA2_HOST (see .env) must already be running."

@@ -3,6 +3,13 @@
 Use two Basler GigE cameras as the sources for use case 2. `make up SOURCE=basler` does the build
 and wiring; below are the one-time preparation and what the build does.
 
+> **License notice:** the build downloads and installs the Basler pylon SDK, which is proprietary
+> software under Basler's own license terms (see <https://www.baslerweb.com/en/downloads/software/>).
+> It is not part of this project and not covered by its Apache-2.0 license. By building the image you
+> accept Basler's terms. Build it locally for your own cameras and do not publish or redistribute the
+> resulting `tsn-dlstreamer-pipeline-server-basler` image. `gst-plugin-pylon` (BSD-3-Clause) and
+> `gencamsrc` (Apache-2.0) are open source.
+
 ## Prepare (once)
 
 1. Configure the cameras: [Configure Basler PTP timestamps](./configure-basler-ptp-timestamps.md).
