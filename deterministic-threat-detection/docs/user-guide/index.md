@@ -14,6 +14,8 @@ with it on they are not affected.
 
 ![Dashboard: use case 1](./_assets/uc1-latency.gif)
 
+![Dashboard: use case 2](./_assets/uc2-tracking-video.gif)
+
 ## Learn more
 
 - [System requirements](./system-requirements.md)
