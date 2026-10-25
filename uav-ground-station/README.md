@@ -51,7 +51,6 @@ uav-ground-station/
 ├── configs/mediamtx.yml  # mediamtx settings (WebRTC only, 60 s on-demand timeouts)
 ├── docker-compose-vss.yml  # optional VSS search containers (make up-vss)
 ├── .env.example         # Copy to .env; all vars have loopback-safe defaults
-├── tests/               # dashboard (jsdom) and backend tests, see tests/README.md
 └── backend/             # FastAPI app: static UI + proxy/bridge APIs
     ├── main.py
     ├── vss_search.py    # /api/search* proxy to the separate VSS stack

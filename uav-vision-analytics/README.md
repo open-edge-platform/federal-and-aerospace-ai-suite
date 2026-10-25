@@ -18,7 +18,6 @@ Makefile                      Operational targets (init, model, vlm-model, pymav
 configs/                      Camera files (`cameras-*.yaml`), DL Streamer Pipeline Server pipeline configs, Mosquitto, mavlink-router and nginx configuration.
 gvapython/                    Telemetry overlay Python scripts (pymavlink and UAVSDK variants).
 scripts/                      Pipeline manager, camera configuration validator, MAVLink listener, video converter.
-tests/                        Offline and live tests (`tests/run_tests.sh`, see `tests/README.md`).
 docs/                         User guide.
 resources/                    Python requirements for `make model`, sample input video, the exported YOLO11s model (after running `make model`), and the VLM model under `ov_models/` (after running `make vlm-model`).
 benchmark/                    Stream density benchmarking tooling (`calc_stream_density.sh`).

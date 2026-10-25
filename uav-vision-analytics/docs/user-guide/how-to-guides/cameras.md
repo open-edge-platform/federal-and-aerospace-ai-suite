@@ -213,4 +213,4 @@ camera that was stopped a moment ago is still registered for a short while.
 `scripts/camera_config.py` has no dependency on MAVLink or on the manager, so other components can reuse it:
 `parse_config(dict)` validates a configuration (a web UI or REST endpoint passes its JSON body to it and gets every
 problem back), `build_plan(config)` returns the pipeline and the start request for each enabled camera, and `json_schema()`
-describes the file for forms. Tests: [`tests/`](../../../tests/README.md).
+describes the file for forms.
