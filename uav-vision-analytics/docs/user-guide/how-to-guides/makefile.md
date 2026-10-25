@@ -14,8 +14,9 @@ Run `make help` (or just `make`) to list all targets with descriptions.
 
 | Target | Description |
 | --- | --- |
-| `make init` | Create `.env` from template and auto-detect Intel GPU and NPU device paths |
+| `make init` | Create `.env` from template and auto-detect the host IP, Intel GPU and NPU device paths and USB cameras |
 | `make model` | Download YOLO11s checkpoint and export to OpenVINO FP16 |
+| `make vlm-model` | Download and convert the VLM captioning model (OpenVINO IR) for CPU, GPU and NPU |
 | `make pymav-up` | Start the standalone pymavlink stack (requires model — errors if missing) |
 | `make pymav-down` | Stop and remove the pymavlink stack (includes volumes) |
 | `make uavsdk-up` | Start the uav-mission-compute-sdk stack |
@@ -76,6 +77,13 @@ resources/
 > re-verifying GPU/NPU compatibility — newer versions use a `CumSum`-based
 > detection head that fails to compile on Intel GPU and NPU OpenVINO plugins.
 
+### `make vlm-model`
+
+Downloads `OpenGVLab/InternVL2-1B` and converts it to OpenVINO IR under `resources/ov_models/<device>/`. Needed for camera
+captions. The conversion script is fetched from the live-video-captioning app at a pinned commit and cached in `.cache/`
+(`FORCE_REFRESH=true` fetches it again). Overrides: `VLM_MODEL_ID`, `VLM_DEVICE` (for example `cpu,gpu`) and
+`VLM_WEIGHT_FORMAT` (the NPU always uses `int4`).
+
 ### `make pymav-up` / `make pymav-down`
 
 Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), which includes:
@@ -83,9 +91,9 @@ Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), whi
 - `dlstreamer-pipeline-server` — AI inference, REST API (:8081), RTSP output (:8555) — reached via `nginx`
 - `broker` — Eclipse Mosquitto MQTT broker (:1883)
 - `px4` — PX4 SITL flight controller simulator
-- `mavlink-router` — MAVLink routing sidecar (receives on :14550, broadcasts to :14541)
+- `mavlink-router` — MAVLink routing sidecar (receives from PX4 on :14550, broadcasts to :14541, serves a remote QGroundControl on UDP :14551 published on `HOST_IP`)
 - `metrics-manager` — system metrics endpoint (:9090) — reached via `nginx`
-- `nginx` — reverse proxy; the only service publishing ports to the host (`:80`, `:8555`)
+- `nginx` — reverse proxy; the only service publishing ports to the host (`:80`, `:443`, `:8555`, `:1883`)
 
 `down` passes `-v` to also remove named volumes (pipeline cache).
 

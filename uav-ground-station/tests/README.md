@@ -13,5 +13,5 @@ SPDX-License-Identifier: Apache-2.0
 
 Start the cameras on the UAV host first (`make start-rtsp` and arm, or `python3 pipeline_manager.py --start-now` in the
 pipeline-server container). `run_backend_tests.sh` uses a throwaway backend container from the working tree on a free local port;
-the running dashboard is untouched. The relay it configures (`relay-uav-<camera>` paths in the local mediamtx) is harmless
+the running dashboard is untouched. The relay it configures (`relay-<host>-<camera>` paths in the local mediamtx) is harmless
 and replaced the next time the dashboard connects.

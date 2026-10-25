@@ -75,7 +75,7 @@
       runs: "CPU — no models", image: "uav-ground-station-backend (built locally)",
       apis: ["GET /api/detect-pipelines, /api/pipeline-info", "GET /api/metrics-stream, /api/local-metrics-stream, /api/captions-stream (SSE)",
         "POST /api/relay-path", "POST /api/search, GET /api/search-video, /api/search-frame", "GET·POST·DELETE /api/search/live-sync"] },
-    "gs-mtx": { p: "oss", x: 476, y: 440, w: 140, h: 80, icon: "relay", t: "mediamtx", s: ["H.264 relay", "make up-relay"],
+    "gs-mtx": { p: "oss", x: 476, y: 440, w: 140, h: 80, icon: "relay", t: "mediamtx", s: ["H.264 relay", "make up"],
       kind: "Video relay (ground station)", role: "Pulls the UAV RTSP on demand and re-serves it as WebRTC (pure remux, no transcoding).",
       image: "bluenviron/mediamtx:1.21.2", apis: ["RTSP pull from UAV :8555", "WHEP out :8889", "REST /v3 — paths configured by viz-backend"] },
     "gs-metrics": { p: "oep", x: 636, y: 440, w: 140, h: 80, icon: "gauge", t: "Metrics Mgr", s: ["this machine", "CPU · GPU · NPU"],
@@ -139,7 +139,7 @@
       "Pipelines publish H.264 RTSP on :8555.",
       "viz-backend configures a path on the local mediamtx (REST /v3), which pulls the UAV RTSP on demand.",
       "mediamtx re-serves it to the browser as WebRTC (WHEP) — a pure remux, no transcoding.",
-      "Needs make up-relay (docker-compose-mediamtx.yml)."] },
+      "Started by make up (docker-compose-mediamtx.yml)."] },
     captions: { t: "Scene captions", edges: ["q1", "q2", "q3", "h2"], steps: [
       "Cameras with captioning on run InternVL2-1B on clean frames and publish captions on MQTT uav/caption/<camera>.",
       "viz-backend subscribes through nginx's :1883 passthrough.",

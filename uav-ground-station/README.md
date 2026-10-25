@@ -15,7 +15,7 @@ that host until you enter its IP in the dashboard and press **Connect**.
 
 - The live video stream, via **H.264 Relay**: the local viz-backend
   configures a mediamtx sidecar (`docker-compose-mediamtx.yml`, always
-  brought up alongside the base stack -- see `make up`) to pull the remote
+  brought up alongside the base stack -- see `make up`; `configs/mediamtx.yml` keeps on-demand sources alive for 60 s) to pull the remote
   UAV host's already-H.264 RTSP stream on demand and re-serve it to the
   browser as WebRTC (WHEP) -- pure remux, no transcoding. Requires the
   remote pipeline's RTSP output to be H.264, as uav-vision-analytics publishes;
@@ -31,7 +31,7 @@ that host until you enter its IP in the dashboard and press **Connect**.
   camera device in the top-right information icon's tooltip, along with the
   pipeline state and name (from the DL Streamer
   Pipeline Server's REST API and the start request of each pipeline).
-- CPU/GPU/NPU utilization, proxied from `metrics-manager`.
+- CPU/GPU/NPU utilization of the UAV host (proxied from its `metrics-manager`) and of this ground-station machine (the local `gs-metrics-manager` container).
 - **Live Natural Language Search**: the **Search Videos** button (top bar or side
   panel, or press `/`) opens a popup where you type a natural-language prompt
   (e.g. "a red car on the road") and get a ranked result list with thumbnails
@@ -48,11 +48,15 @@ that host until you enter its IP in the dashboard and press **Connect**.
 uav-ground-station/
 ├── docker-compose.yml   # viz-backend (FastAPI UI + proxy/bridge APIs)
 ├── docker-compose-mediamtx.yml  # mediamtx sidecar for H.264 Relay video (always used, see `make up`)
+├── configs/mediamtx.yml  # mediamtx settings (WebRTC only, 60 s on-demand timeouts)
 ├── docker-compose-vss.yml  # optional VSS search containers (make up-vss)
 ├── .env.example         # Copy to .env; all vars have loopback-safe defaults
+├── tests/               # dashboard (jsdom) and backend tests, see tests/README.md
 └── backend/             # FastAPI app: static UI + proxy/bridge APIs
     ├── main.py
     ├── vss_search.py    # /api/search* proxy to the separate VSS stack
+    ├── vss_live_sync.py # keeps VSS live-stream indexing in step with the running pipelines
+    ├── uav_naming.py    # host-qualified stream names and the host/camera registry (multi-UAV)
     ├── caption_log.py   # MQTT caption ring buffer, feeds vss_summary.py
     ├── vss_summary.py   # /api/summary* -- Flight Summary report (no VSS needed)
     ├── pdf_writer.py    # dependency-free PDF renderer used by vss_summary.py
@@ -90,6 +94,10 @@ All configuration is via `.env` (see `.env.example`):
 | `VIZ_CAMERA_ORDER` | `front,bottom,back` | Camera card order, by a word in the stream name; unlisted cameras follow alphabetically |
 | `VIZ_REMOTE_HTTPS_PORT` | `443` | UAV host's nginx HTTPS port |
 | `VIZ_REMOTE_MQTT_PORT` | `1883` | UAV host's nginx MQTT passthrough port |
+| `VIZ_REMOTE_RTSP_PORT` | `8555` | UAV host's raw RTSP port, pulled by the mediamtx relay |
+| `VIZ_PUBLIC_HOST` | `127.0.0.1` (`make init` sets the host's LAN IP) | Address browsers use to reach this machine; advertised as the WebRTC ICE candidate. Set it when `VIZ_HOST_IP` is `0.0.0.0` |
+| `MEDIAMTX_WEBRTC_PORT` / `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT` | `8889` / `8189` / `8189` | Published WebRTC (WHEP) port and ICE UDP/TCP ports of the relay |
+| `GPU_DEVICE` / `GPU_RENDER_DEVICE` / `NPU_DEVICE` | `/dev/null` (`make init` auto-detects) | Devices passed to `gs-metrics-manager` for this machine's utilization panel |
 | `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(required with `make up-vss`)_ | Credentials for the VSS overlay's MinIO and Postgres |
 | `VSS_INGEST_EMBEDDING_DEVICE` / `VSS_DETECTION_DEVICE` / `VSS_QUERY_EMBEDDING_DEVICE` | `CPU` | Devices for VSS indexing, object detection and query embedding |
 | `VSS_LIVE_SYNC_INTERVAL_SECONDS` | `15` | How often running UAV pipelines are synced to VSS live streams |
@@ -117,7 +125,7 @@ only when the VSS overlay is used. It is a separate compose file,
 `docker-compose-vss.yml`, that adds just the 8 containers VSS search needs
 (pipeline-manager, video-search, multimodal-dataprep,
 multimodal-embedding-serving, vector-retriever, vdms-vector-db, postgres,
-minio). With the default `make up` / `make up-relay` the search UI is hidden
+minio). With the default `make up` the search UI is hidden
 and the search routes return 404.
 
 1. Set the required `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials (and,
@@ -152,6 +160,7 @@ deployed separately with its own `setup.sh --search` instead, set
 | `POST /api/search` `{"query": "..."}` | `POST /manager/search/query`, `GET /manager/videos`, `GET /manager/streams` | Ranked hits, joined with filenames / live stream names |
 | `GET /api/search-video?path=<bucket>/<object>` | `GET /datastore/<bucket>/<object>` | Range-aware clip streaming (seekable `<video>`) |
 | `GET /api/search-frame?video_id=...&timestamp=...` | `GET /manager/frames` | Best-matching frame (thumbnail / fallback) |
+| `GET /api/search/sources` | _(local registry)_ | UAV hosts and cameras currently live-indexed, for the search popup's UAV / Camera filters |
 | `GET/POST/DELETE /api/search/live-sync` | `GET/POST/PATCH/DELETE /manager/streams` | Show / start (`{"host": ...}`) / stop live indexing of the UAV feeds |
 
 Quick check:
@@ -178,7 +187,8 @@ each host's streams are registered with VSS under a host-qualified name
 (`uav-<host>--<camera>`) so they never collide, and search results carry a
 `camera`/`host` field resolved back from that for display (and, optionally,
 for scoping a search to the currently-connected UAV's own footage via
-`POST /api/search {"query": "...", "host": "<ip>"}`).
+`POST /api/search {"query": "...", "host": "<ip>", "camera": "<camera>"}`; the
+search popup offers these as UAV and Camera filters, and both default to all footage).
 
 Clips whose codec the browser can't decode (for example some stored
 live-stream segments) fall back to VSS's
@@ -213,7 +223,7 @@ captioning on.
 4. **Download PDF** renders the same report via `pdf_writer.py` (a small,
    dependency-free PDF writer -- no extra system packages).
 
-If a search was just run, the report also appended the query and its matched
+If a search was just run, the report also appends the query and its matched
 clips as an "appendix", tying a natural-language search back to the raw
 caption evidence around the same time window.
 
@@ -221,6 +231,17 @@ caption evidence around the same time window.
 |---|---|
 | `POST /api/summary` `{"host", "cameras": [...], "window_minutes", "max_highlights"}` | JSON report, rendered inline in the modal |
 | `GET /api/summary.pdf?host=...&cameras=a,b&window_minutes=15&max_highlights=20` | Same report as a downloadable PDF |
+
+## Other backend routes
+
+| Route | Purpose |
+|---|---|
+| `GET /api/runtime-config` | Default host, remote HTTPS port and the relay's WebRTC host/port for the browser |
+| `GET /api/pipeline-info`, `GET /api/detect-pipelines` | Cameras and pipelines running on the UAV host |
+| `GET /api/captions-stream`, `/api/captions-stream-multi` | Scene captions as SSE |
+| `GET /api/metrics-stream`, `/api/metrics-stream-multi`, `/api/local-metrics-stream` | UAV host and ground-station utilization as SSE |
+| `POST /api/relay-path`, `GET /api/relay-status` | Configure and check the mediamtx path `relay-<host>-<camera>` |
+| `GET/POST/DELETE /api/sessions` | Connected UAV hosts, kept server-side so a page reload restores the tabs; a backend restart (new `boot_id`) starts with none connected |
 
 ## Notes
 

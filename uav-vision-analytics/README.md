@@ -14,10 +14,12 @@ The application is built on Intel DL Streamer Pipeline Server and supports two d
 docker-compose-pymavlink.yml  Standalone mode: PX4 SITL, mavlink-router, broker, DL Streamer Pipeline Server, metrics-manager, nginx.
 docker-compose-uavsdk.yml     UAV Mission Compute SDK mode: DL Streamer Pipeline Server + nginx (connects to an external SDK stack).
 .env.example                  Template for .env — HOST_IP, GPU/NPU/camera device paths, and image tags.
-Makefile                      Operational targets (init, model, vlm-model, pymav-*, uavsdk-*, start-rtsp).
-configs/                      Mosquitto and mavlink-router configuration, DL Streamer Pipeline Server pipeline configs, nginx reverse-proxy configs.
+Makefile                      Operational targets (init, model, vlm-model, pymav-*, uavsdk-*, start-rtsp, check-cameras, cameras-status).
+configs/                      Camera files (`cameras-*.yaml`), DL Streamer Pipeline Server pipeline configs, Mosquitto, mavlink-router and nginx configuration.
 gvapython/                    Telemetry overlay Python scripts (pymavlink and UAVSDK variants).
-scripts/                      Pipeline manager and MAVLink listener scripts.
+scripts/                      Pipeline manager, camera configuration validator, MAVLink listener, video converter.
+tests/                        Offline and live tests (`tests/run_tests.sh`, see `tests/README.md`).
+docs/                         User guide.
 resources/                    Python requirements for `make model`, sample input video, the exported YOLO11s model (after running `make model`), and the VLM model under `ov_models/` (after running `make vlm-model`).
 benchmark/                    Stream density benchmarking tooling (`calc_stream_density.sh`).
 ```
@@ -36,7 +38,7 @@ benchmark/                    Stream density benchmarking tooling (`calc_stream_
 | `broker` | `eclipse-mosquitto:2.0.22` | MQTT broker for telemetry and pipeline events |
 | `px4` | `px4io/px4-sitl:latest` | PX4 SITL flight controller simulation |
 | `mavlink-router` | Built from `uav-mission-compute-sdk/infra/px4-sim/mavlink-router` | Routes MAVLink telemetry between PX4 and the pipeline server; publishes UDP `14551` for a remote QGroundControl |
-| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.2.0-ubuntu24` (+ `pymavlink`) | Core inference engine — YOLO11s detection and telemetry overlay |
+| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-20261020-weekly-ubuntu24` (+ `pymavlink`) | Core inference engine — YOLO11s detection and telemetry overlay |
 | `metrics-manager` | `intel/metrics-manager:2026.2.0` | Host platform (CPU/GPU) metrics |
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy for HTTPS, RTSP and MQTT |
 
@@ -46,7 +48,7 @@ All services share the `app_network` Docker network and are defined in [`docker-
 
 | Service | Image | Role |
 |---------|-------|------|
-| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.2.0-ubuntu24` | Core inference engine — YOLO11s detection and telemetry overlay; connects to an externally running UAV Mission Compute SDK stack |
+| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-20261020-weekly-ubuntu24` | Core inference engine — YOLO11s detection and telemetry overlay; connects to an externally running UAV Mission Compute SDK stack |
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy — the only service that publishes ports to the host |
 
 Defined in [`docker-compose-uavsdk.yml`](docker-compose-uavsdk.yml). Requires the
@@ -166,7 +168,7 @@ and `metrics-manager` no longer publish ports directly to the host.
 |---------|-----------|-------|
 | DL Streamer Pipeline Server REST API | `https://<HOST_IP>/` | Pipeline control and status, proxied to `dlstreamer-pipeline-server:8081` |
 | RTSP annotated streams | `rtsp://<HOST_IP>:8555/uav-<camera>` | One stream per camera of `configs/cameras-pymavlink.yaml`: detection + telemetry overlay output (H.264; the overlay can be switched off per camera); TCP passthrough via nginx `stream {}` |
-| MQTT scene captions (cameras with captioning on) | `mqtt://<HOST_IP>:1883`, topic `uav/caption/<camera>` | VLM-generated natural-language scene description from the raw (non-overlaid) video; one topic per camera; TCP passthrough via nginx `stream {}` to the `broker` container (e.g. `mosquitto_sub -h <HOST_IP> -t uav/caption/cpu -v`) |
+| MQTT scene captions (cameras with captioning on) | `mqtt://<HOST_IP>:1883`, topic `uav/caption/<camera>` | VLM-generated natural-language scene description from the raw (non-overlaid) video; one topic per camera; TCP passthrough via nginx `stream {}` to the `broker` container (e.g. `mosquitto_sub -h <HOST_IP> -t uav/caption/<camera> -v`) |
 | Metrics manager SSE stream (Standalone mode only) | `https://<HOST_IP>/metrics/stream` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |
 | Metrics manager REST snapshot (Standalone mode only) | `https://<HOST_IP>/api/v1/metrics/latest` | Host platform (CPU/GPU) metrics, proxied to `metrics-manager:9090` |
 
@@ -190,7 +192,7 @@ make pymav-up       Start standalone pymavlink stack (PX4 SITL + broker + DL Str
 make pymav-down     Stop and remove pymavlink stack (includes volumes)
 make uavsdk-up      Start UAV Mission Compute SDK stack (requires uav-mission-compute-sdk running first)
 make uavsdk-down    Stop and remove UAV Mission Compute SDK stack (includes volumes)
-make start-rtsp     Start the cameras of configs/cameras-pymavlink.yaml when the vehicle is armed (the file is re-read at every arming)
+make start-rtsp     Start the cameras of configs/cameras-pymavlink.yaml when the vehicle is armed (the file is re-read at every arming); CAMERAS=<file> uses another file
 make check-cameras  Validate configs/cameras-pymavlink.yaml and show what would run
 make cameras-status Compare configs/cameras-pymavlink.yaml with the pipelines that are running
 make build          Alias: start the default pymavlink stack

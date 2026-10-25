@@ -186,7 +186,7 @@ vlm-model: _fetch_vlm_download_script ## Download/convert the VLM captioning mod
 
 # ── pymavlink stack ───────────────────────────────────────────────────────────
 
-pymav-up: _check_model _check_certs ## Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + mediamtx)
+pymav-up: _check_model _check_certs ## Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + metrics-manager + nginx)
 	docker compose -f $(COMPOSE_PYMAV) up -d
 
 pymav-down: ## Stop and remove pymavlink stack (includes volumes)
