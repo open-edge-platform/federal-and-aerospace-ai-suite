@@ -9,7 +9,7 @@
 #                  scene stack (SceneScape, DL Streamer, mediamtx)
 #   make down      stop everything (all machines at the same time)
 #   make status    what is running
-#   make models    download the detection model (done automatically by `make up`)
+#   make models    download the detection model (done by `make up`; asks to accept the license first)
 #   make help      this text
 #
 # SOURCE: where use case 2 gets its video. Give it on the command line, not in a file.

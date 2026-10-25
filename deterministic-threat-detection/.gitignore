@@ -16,3 +16,4 @@ src/scene/dlstreamer-pipeline-server/config.generated.json
 
 # downloaded by src/data/download_models.sh
 src/data/models/omz/
+src/data/models/.terms-accepted

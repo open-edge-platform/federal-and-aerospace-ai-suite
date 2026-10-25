@@ -63,7 +63,7 @@ make up
 ```
 
 `make up` starts the test-video streams, the dashboard, the load agent, the camera pipelines and
-SceneScape. The first run pulls images and downloads the detection model, and takes several minutes. When it finishes it prints:
+SceneScape. The first run pulls images and downloads the detection model, and takes several minutes. Before the first model download, `make up` asks you to accept the model license (Open Model Zoo, Apache-2.0); answering anything other than yes aborts the setup. The answer is remembered in `src/data/models/.terms-accepted`. For non-interactive runs, set `ACCEPT_MODEL_TERMS=yes`. When it finishes it prints:
 
 - Dashboard: `https://<machine-1 lab address>/dashboard/`
 - SceneScape: `https://<machine-1 lab address>/` (user `admin`, password in
