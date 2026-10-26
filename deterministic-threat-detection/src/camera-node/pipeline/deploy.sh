@@ -49,8 +49,10 @@ prepare() {
   scp -q -o BatchMode=yes "$HERE/docker-compose.yml" "$HERE/latency_stamp.py" "$host:$REMOTE_DIR/"
   tar -C "$MODELS" -cf - . | "${SSH[@]}" "$host" "tar -C $REMOTE_DIR/models -xf -"
   "${SSH[@]}" "$host" "printf 'MQTT_HOST=%s\nMQTT_PORT=%s\nDLSTREAMER_PIPELINE_SERVER_IMAGE=%s\n' '$MQTT_HOST' '$MQTT_PORT' '$IMAGE' > $REMOTE_DIR/.env"
-  echo "[$(label "$host")] pulling image (if missing)"
-  "${SSH[@]}" "$host" "cd $REMOTE_DIR && docker compose pull -q"
+  # `docker compose pull` always asks the registry; only pull when the image is not on the machine
+  "${SSH[@]}" "$host" "docker image inspect '$IMAGE' >/dev/null 2>&1" \
+    && echo "[$(label "$host")] image already present, not pulling" \
+    || { echo "[$(label "$host")] pulling image"; "${SSH[@]}" "$host" "cd $REMOTE_DIR && docker compose pull -q"; }
 }
 
 launch() {
