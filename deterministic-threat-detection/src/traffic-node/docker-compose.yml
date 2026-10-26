@@ -16,6 +16,30 @@ services:
       - /sys:/sys:ro
     ports:
       - "${METRICS_PORT:-19090}:9090"
+    # The image only checks /health, which still passes when the collector (telegraf) has stopped delivering
+    # (the stream then carries no metrics). This wrapper restarts the service after 3 empty checks (~1 min);
+    # `restart: unless-stopped` brings it back.
+    command:
+      - sh
+      - -c
+      - |
+        /entrypoint.sh &
+        pid=$$!
+        trap 'kill $$pid; wait $$pid; exit 0' TERM INT
+        sleep 60
+        bad=0
+        while kill -0 $$pid 2>/dev/null; do
+          if python -c "
+        import urllib.request, sys
+        r = urllib.request.urlopen('http://localhost:9090/metrics/stream', timeout=8)
+        for l in r:
+            if l.startswith(b'data:'):
+                sys.exit(0 if b'\"metrics\": [{' in l else 1)
+        sys.exit(1)"; then bad=0; else bad=$$((bad+1)); fi
+          if [ $$bad -ge 3 ]; then echo "metrics stream has no data, restarting"; kill $$pid; bad=0; fi
+          sleep 20
+        done
+        wait $$pid
     restart: unless-stopped
 
   load-agent:
