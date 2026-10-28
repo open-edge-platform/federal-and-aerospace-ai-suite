@@ -72,5 +72,5 @@ To let the dashboard toggle Qbv set `SWITCH_ALLOW_WRITE=1` in `src/dashboard/.en
 
 ## Basler only
 
-Camera PTP and the switch port priority are one-time steps too:
+Camera PTP, the switch port priority and building the Basler-enabled pipeline server image are one-time steps too:
 [Integrate Basler cameras with SceneScape](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md).

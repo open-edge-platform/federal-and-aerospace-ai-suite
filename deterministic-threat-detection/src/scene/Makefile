@@ -41,7 +41,9 @@ SSL_DIR := nginx/ssl
 # Streams first: consumers get 404 until the publishers exist.
 up: env nginx-cert
 	@[ "$(STREAMS)" != 1 ] || $(MAKE) streams-up
-	@[ "$(SOURCE)" != basler ] || echo "Notice: SOURCE=basler builds an image that downloads the Basler pylon SDK, which is under Basler's own license (https://www.baslerweb.com/en/downloads/software/). Do not redistribute the built image."
+	@if [ "$(SOURCE)" = basler ]; then v=$$(sed -n 's/^SCENESCAPE_VERSION=//p' .env); \
+	  docker image inspect "tsn-dlstreamer-pipeline-server-basler:$$v" >/dev/null 2>&1 || { \
+	  echo "Image tsn-dlstreamer-pipeline-server-basler:$$v not found. Build it first (it contains the Basler pylon SDK, under Basler's own license): docs/user-guide/how-to-guides/basler/integrate-basler-camera-with-scenescape.md"; exit 1; }; fi
 	docker compose up -d
 	@echo "Browse to https://localhost/ (admin / contents of $(SECRETS_DIR)/supass)."
 	@[ "$(STREAMS)" = 1 ] || echo "STREAMS=0: the RTSP streams on CAMERA1_HOST/CAMERA2_HOST (see .env) must already be running."

@@ -1,14 +1,14 @@
 # Integrate Basler Cameras with SceneScape
 
-Use two Basler GigE cameras as the sources for use case 2. `make up SOURCE=basler` does the build
-and wiring; below are the one-time preparation and what the build does.
+Use two Basler GigE cameras as the sources for use case 2. This project does not ship the image
+with the Basler camera SDK: you build it once yourself (below). After that `make up SOURCE=basler`
+does the wiring.
 
-> **License notice:** the build downloads and installs the Basler pylon SDK, which is proprietary
-> software under Basler's own license terms (see <https://www.baslerweb.com/en/downloads/software/>).
-> It is not part of this project and not covered by its Apache-2.0 license. By building the image you
-> accept Basler's terms. Build it locally for your own cameras and do not publish or redistribute the
-> resulting `tsn-dlstreamer-pipeline-server-basler` image. `gst-plugin-pylon` (BSD-3-Clause) and
-> `gencamsrc` (Apache-2.0) are open source.
+> **License notice:** the pylon SDK is proprietary software under Basler's own license terms (see
+> <https://www.baslerweb.com/en/downloads/software/>). It is not part of this project and not
+> covered by its Apache-2.0 license. By building the image you accept Basler's terms. Build it
+> locally for your own cameras and do not publish or redistribute it. `gst-plugin-pylon`
+> (BSD-3-Clause) and `gencamsrc` (Apache-2.0) are open source.
 
 ## Prepare (once)
 
@@ -24,7 +24,27 @@ and wiring; below are the one-time preparation and what the build does.
    python3 -I ~/moxa/port_priority.py get --host <switch address> --ports 5,6
    ```
 
-4. In `src/scene/.env` set the camera serial numbers (created from `.env.example` by the first
+4. Build the pipeline server image with the camera SDK. The standard DL Streamer Pipeline Server
+   image has neither the pylon SDK nor the `gencamsrc` GStreamer source. Follow
+   [Integrate Pylon SDK, Step 2: Create the Docker Image](https://docs.openedgeplatform.intel.com/dev/edge-ai-suites/ai-suite-manufacturing/industrial-edge-insights-vision/pallet-defect-detection/how-to-guides/integrate-camera-sdks.html#step-2-create-the-docker-image),
+   using the image from `DLSTREAMER_PIPELINE_SERVER_IMAGE` in `src/scene/.env` as the base, with
+   these points:
+
+   - Tag the result `tsn-dlstreamer-pipeline-server-basler:<SCENESCAPE_VERSION>` (the value from
+     `src/scene/.env`, for example `2026.3.0-20261020-weekly`). `make up SOURCE=basler` stops
+     with a message if this image does not exist.
+   - Build `gencamsrc` with `-DGENCAMSRC_ENABLE_HW_TIMESTAMP_META=ON`. It then attaches the
+     camera's PTP hardware timestamp to every frame (`GstReferenceTimestampMeta`), which the
+     SceneScape adapter uses as the frame time. This worked with the `edge-ai-libraries`
+     mainline at commit `cc2ac98fb0d3de12e5b12db37ce8fea34aa4d75a`.
+   - Install the pylon runtime (7.5 was used) and `gst-plugin-pylon`.
+   - Set `GENICAM_GENTL64_PATH=/opt/pylon/lib/gentlproducer/gtl` and make sure `GST_PLUGIN_PATH`
+     includes `/opt/intel/dlstreamer/lib`, `/opt/intel/dlstreamer/gstreamer/lib/gstreamer-1.0`,
+     `/opt/intel/dlstreamer/gstreamer/lib`, `/usr/lib/x86_64-linux-gnu/gstreamer-1.0` and
+     `/usr/local/lib/gstreamer-1.0`.
+   - End the image with the base image's non-root user (`intelmicroserviceuser`).
+
+5. In `src/scene/.env` set the camera serial numbers (created from `.env.example` by the first
    `make up`) and, if needed, the macvlan address (it must be free):
 
    ```text
@@ -58,10 +78,9 @@ starves them; with Qbv on, both keep their frame rate.
 The dashboard shows the tracker rate and the decoded frames. HOTA is not meaningful here: there
 is no ground truth and no frame number.
 
-## What the build does
+## What `make up SOURCE=basler` does
 
-- Builds `tsn-dlstreamer-pipeline-server-basler` from the DL Streamer Pipeline Server image plus
-  the pylon SDK (`src/scene/basler/BaslerDockerfile`).
+- Starts the pipeline server from your `tsn-dlstreamer-pipeline-server-basler` image.
 - Attaches the container to a macvlan network on `tsn0.3` so it can reach the cameras.
 - Runs `gencamsrc ... ! gvapython` with `src/scene/dlstreamer-pipeline-server/sscape_adapter.py`,
   which publishes the camera's PTP hardware timestamp as the frame time.
