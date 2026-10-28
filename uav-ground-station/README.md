@@ -98,6 +98,8 @@ All configuration is via `.env` (see `.env.example`):
 | `MEDIAMTX_WEBRTC_PORT` / `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT` | `8889` / `8189` / `8189` | Published WebRTC (WHEP) port and ICE UDP/TCP ports of the relay |
 | `GPU_DEVICE` / `GPU_RENDER_DEVICE` / `NPU_DEVICE` | `/dev/null` (`make init` auto-detects) | Devices passed to `gs-metrics-manager` for this machine's utilization panel |
 | `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(required with `make up-vss`)_ | Credentials for the VSS overlay's MinIO and Postgres |
+| `VSS_EMBEDDING_MODEL` | _(required with `make up-vss`)_ | Embedding model VSS uses for frames and queries, for example `CLIP/clip-vit-b-32` |
+| `DATAPREP_DETECTION_MODEL` | _(required with `make up-vss`)_ | Object detection model VSS dataprep uses for crop extraction, for example `yolox_s` |
 | `VSS_INGEST_EMBEDDING_DEVICE` / `VSS_DETECTION_DEVICE` / `VSS_QUERY_EMBEDDING_DEVICE` | `CPU` | Devices for VSS indexing, object detection and query embedding |
 | `VSS_LIVE_SYNC_INTERVAL_SECONDS` | `15` | How often running UAV pipelines are synced to VSS live streams |
 | `VSS_DATASTORE_BUCKET` | `video-summary` | VSS MinIO bucket for uploaded videos |
@@ -127,8 +129,9 @@ multimodal-embedding-serving, vector-retriever, vdms-vector-db, postgres,
 minio). With the default `make up` the search UI is hidden
 and the search routes return 404.
 
-1. Set the required `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials (and,
-   optionally, devices) in `.env` -- see `.env.example`.
+1. Set the required `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials, plus
+   `VSS_EMBEDDING_MODEL` and `DATAPREP_DETECTION_MODEL` (no defaults), and,
+   optionally, devices in `.env` -- see `.env.example`.
 2. `make up-vss` (base + mediamtx + VSS overlay). The first start downloads
    the CLIP embedding model (and YOLOX, for object crops) into Docker volumes.
 3. Open the dashboard and **Connect** to the UAV. Every RUNNING pipeline

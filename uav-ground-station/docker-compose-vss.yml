@@ -21,7 +21,8 @@
 #   (or: make up-vss)
 #
 # Required in .env: VSS_MINIO_USER, VSS_MINIO_PASSWORD, VSS_POSTGRES_USER,
-# VSS_POSTGRES_PASSWORD (see .env.example). The first start downloads the
+# VSS_POSTGRES_PASSWORD, VSS_EMBEDDING_MODEL, DATAPREP_DETECTION_MODEL (see
+# .env.example). The first start downloads the
 # embedding/detection models into the vss-ov-models / vss-yolox-models volumes,
 # which takes a few minutes.
 #
@@ -106,7 +107,7 @@ services:
       <<: *vss-proxy-env
       no_proxy_env: ${no_proxy:-},localhost,multimodal-embedding-serving,multimodal-dataprep,minio-service,vdms-vector-db,vector-retriever,pipeline-manager
       EMBEDDINGS_ENDPOINT: http://multimodal-embedding-serving:8000/embeddings
-      EMBEDDINGS_MODEL_NAME: ${VSS_EMBEDDING_MODEL:-CLIP/clip-vit-b-32}
+      EMBEDDINGS_MODEL_NAME: ${VSS_EMBEDDING_MODEL:?set VSS_EMBEDDING_MODEL in .env}
       INDEX_NAME: video_frame_embeddings
       RETRIEVER_ENDPOINT: http://vector-retriever:8000/query
       VIDEO_UPLOAD_ENDPOINT: http://pipeline-manager:3000
@@ -138,13 +139,14 @@ services:
       MM_DATAPREP_MINIO_SECURE: "false"
       MM_DATAPREP_DEFAULT_BUCKET_NAME: video-summary
       MM_DATAPREP_DB_COLLECTION: video_frame_embeddings
-      MM_DATAPREP_EMBEDDING_MODEL_NAME: ${VSS_EMBEDDING_MODEL:-CLIP/clip-vit-b-32}
+      MM_DATAPREP_EMBEDDING_MODEL_NAME: ${VSS_EMBEDDING_MODEL:?set VSS_EMBEDDING_MODEL in .env}
       MM_DATAPREP_USE_OPENVINO: "true"
       MM_DATAPREP_EMBEDDING_DEVICE: ${VSS_INGEST_EMBEDDING_DEVICE:-CPU}
       MM_DATAPREP_OV_MODELS_DIR: /app/ov_models
       MM_DATAPREP_FRAME_INTERVAL: ${VSS_FRAME_INTERVAL:-15}
       MM_DATAPREP_ENABLE_OBJECT_DETECTION: ${VSS_ENABLE_OBJECT_DETECTION:-true}
       MM_DATAPREP_DETECTION_MODEL_DIR: /app/models/yolox
+      MM_DATAPREP_DETECTION_MODEL_NAME: ${DATAPREP_DETECTION_MODEL:?set DATAPREP_DETECTION_MODEL in .env}
       MM_DATAPREP_DETECTION_DEVICE: ${VSS_DETECTION_DEVICE:-CPU}
       MM_DATAPREP_FRAMES_TEMP_DIR: /tmp/dataprep
       MM_DATAPREP_LIVE_STREAM_ENABLED: "true"
@@ -189,7 +191,7 @@ services:
     environment:
       <<: *vss-proxy-env
       no_proxy_env: ${no_proxy:-},localhost,minio-service,multimodal-dataprep
-      EMBEDDING_MODEL_NAME: ${VSS_EMBEDDING_MODEL:-CLIP/clip-vit-b-32}
+      EMBEDDING_MODEL_NAME: ${VSS_EMBEDDING_MODEL:?set VSS_EMBEDDING_MODEL in .env}
       EMBEDDING_DEVICE: ${VSS_QUERY_EMBEDDING_DEVICE:-CPU}
       EMBEDDING_USE_OV: "true"
       EMBEDDING_OV_MODELS_DIR: /app/ov_models
@@ -219,7 +221,7 @@ services:
       RETRIEVER_BACKEND: vdms
       INDEX_NAME: video_frame_embeddings
       EMBEDDINGS_ENDPOINT: http://multimodal-embedding-serving:8000/embeddings
-      EMBEDDING_MODEL_NAME: ${VSS_EMBEDDING_MODEL:-CLIP/clip-vit-b-32}
+      EMBEDDING_MODEL_NAME: ${VSS_EMBEDDING_MODEL:?set VSS_EMBEDDING_MODEL in .env}
       DEFAULT_TOP_K: 1000
       MAX_TOP_K: 1000
       VDMS_VDB_HOST: vdms-vector-db

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-.PHONY: help init up up-vss down down-vss clean-vss-index delete-vss-volumes logs
+.PHONY: help init up up-vss _check_vss_env down down-vss clean-vss-index delete-vss-volumes logs
 
 ifneq (,$(wildcard .env))
   include .env
@@ -59,7 +59,21 @@ down: ## Stop and remove the ground-station viewer + mediamtx relay sidecar
 
 VSS_COMPOSE = docker compose -f docker-compose.yml -f docker-compose-mediamtx.yml -f docker-compose-vss.yml
 
-up-vss: init ## Relay mode + VSS search containers (enables Live Natural Language Search)
+VSS_REQUIRED_VARS = VSS_MINIO_USER VSS_MINIO_PASSWORD VSS_POSTGRES_USER VSS_POSTGRES_PASSWORD VSS_EMBEDDING_MODEL DATAPREP_DETECTION_MODEL
+
+# One message listing everything missing, instead of one compose error per use.
+_check_vss_env:
+	@missing=""; \
+	for v in $(VSS_REQUIRED_VARS); do \
+		eval "val=\$$$$v"; \
+		[ -n "$$val" ] || missing="$$missing $$v"; \
+	done; \
+	if [ -n "$$missing" ]; then \
+		echo "ERROR: set these in .env before make up-vss (see .env.example):$$missing" >&2; \
+		exit 1; \
+	fi
+
+up-vss: init _check_vss_env ## Relay mode + VSS search containers (enables Live Natural Language Search)
 	$(VSS_COMPOSE) up -d --build
 
 down-vss: ## Stop the relay + VSS stack, keeping indexed footage/embeddings
