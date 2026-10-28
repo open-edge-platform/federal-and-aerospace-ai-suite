@@ -16,26 +16,7 @@ Machine-1 needs about 8 CPU cores for the full stack.
 
 ## Network topology
 
-```mermaid
-flowchart LR
-    subgraph SW["Moxa TSN switch (PTP grandmaster, Qbv on port 1)"]
-        P1[port 1]
-        P2[port 2]
-        P3[port 3]
-        P4[port 4]
-        P56[ports 5, 6]
-    end
-    M1["machine-1<br/>dashboard, SceneScape"] --- P1
-    M2["machine-2<br/>camera 1"] --- P2
-    M3["machine-3<br/>camera 2"] --- P3
-    M4["machine-4<br/>load injector"] --- P4
-    B["Basler cameras<br/>(optional)"] --- P56
-    LAB(("lab network<br/>ssh, control, browser"))
-    M1 -.- LAB
-    M2 -.- LAB
-    M3 -.- LAB
-    M4 -.- LAB
-```
+![Network topology: four machines, the Moxa TSN switch, optional Basler cameras and the lab network](_assets/network-topology.svg)
 
 Ports 1 to 4 carry VLAN 1 (camera data, priority 1), VLAN 3 (Basler) and VLAN 5 (load, priority 5).
 The dotted lab network is never shaped.
