@@ -17,7 +17,7 @@
 # returns 404.
 #
 # Bring up with the base stack (and mediamtx, if you use H.264 Relay):
-#   docker compose -f docker-compose.yml -f docker-compose-mediamtx.yml -f docker-compose-vss.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose-mediamtx.yml -f docker-compose-vss.yml up -d
 #   (or: make up-vss)
 #
 # Required in .env: VSS_MINIO_USER, VSS_MINIO_PASSWORD, VSS_POSTGRES_USER,

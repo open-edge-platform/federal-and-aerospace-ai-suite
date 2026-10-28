@@ -15,14 +15,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py vss_search.py vss_live_sync.py vss_summary.py caption_log.py pdf_writer.py uav_naming.py ./
-COPY static ./static
-
 # Vendor Chart.js for the utilization chart (js/utils/charts.js) instead of
 # loading it from a CDN at browser runtime -- keeps this a fully offline,
 # LAN-only tool. Same version/source as live-video-captioning's own vendoring.
 RUN mkdir -p static/js/vendor && \
     curl -fsSL -o static/js/vendor/chart.js https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js
+
+COPY main.py vss_search.py vss_live_sync.py vss_summary.py caption_log.py pdf_writer.py uav_naming.py ./
+COPY static ./static
 
 USER appuser
 
