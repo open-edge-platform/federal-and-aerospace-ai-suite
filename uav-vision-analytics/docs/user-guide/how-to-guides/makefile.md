@@ -53,6 +53,8 @@ this avoids the manual `.env` edit.
 
 ### `make model`
 
+Both `make model` and `make vlm-model` show the model license and ask for confirmation first (`[y/N]`). Set `ACCEPT_LICENSE=y` to accept without the prompt.
+
 Creates a Python virtual environment under `resources/venv/`, installs
 dependencies from `resources/requirements.txt`, downloads the `yolo11s.pt`
 checkpoint from Ultralytics, and exports it to OpenVINO FP16 IR format.

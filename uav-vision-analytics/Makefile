@@ -28,7 +28,7 @@ VLM_DOWNLOAD_SCRIPT_PATH := metro-ai-suite/live-video-analysis/live-video-captio
 VLM_DOWNLOAD_SCRIPT_URL  ?= https://raw.githubusercontent.com/$(VLM_DOWNLOAD_SCRIPT_REPO)/$(VLM_DOWNLOAD_SCRIPT_REF)/$(VLM_DOWNLOAD_SCRIPT_PATH)
 VLM_DOWNLOAD_SCRIPT      := $(CURDIR)/.cache/download_models.sh
 
-.PHONY: help init build model vlm-model _check_model _check_certs _check_venv_pkg \
+.PHONY: help init build model _confirm_model_license vlm-model _check_model _check_certs _check_venv_pkg \
         _fetch_vlm_download_script \
         pymav-up pymav-down \
         uavsdk-up uavsdk-down \
@@ -143,7 +143,25 @@ _check_venv_pkg: ## Verify python3-venv (ensurepip) is installed; fail fast with
 	echo "❌ Install it manually (e.g., sudo apt-get update && sudo apt-get install -y $$VENV_PKG) and re-run 'make model'."; \
 	exit 1
 
-model: _check_venv_pkg ## Download YOLO11s (COCO-pretrained) and export to OpenVINO FP16
+# Asks the user to accept the model license. ACCEPT_LICENSE=y answers yes (for scripts and CI).
+_confirm_model_license:
+	@echo "This sample uses the $(LICENSE_NAME) model."; \
+	if [ -n "$(LICENSE_BY)" ]; then \
+		echo "This model is provided by $(LICENSE_BY) and is subject to its license:"; \
+		echo "$(LICENSE_URL)"; \
+	else \
+		echo "This model is provided by its publisher and is subject to the license published with it."; \
+	fi; \
+	echo "Disclaimer: by downloading and using this model, you confirm that you accept the"; \
+	echo "license terms and agree to comply with any applicable model-use and privacy requirements."; \
+	if [ "$(ACCEPT_LICENSE)" = "y" ]; then ANSWER=y; \
+	else printf "Proceed with the $(LICENSE_NAME) model download and usage? [y/N]: "; read ANSWER || ANSWER=N; fi; \
+	case "$$ANSWER" in y|Y|yes|YES) ;; *) echo "$(LICENSE_NAME) model download cancelled. Exiting."; exit 1;; esac
+
+model: LICENSE_NAME = YOLO11s
+model: LICENSE_BY = Ultralytics
+model: LICENSE_URL = https://github.com/ultralytics/ultralytics/blob/main/LICENSE
+model: _confirm_model_license _check_venv_pkg ## Download YOLO11s (COCO-pretrained) and export to OpenVINO FP16
 	@echo "[model] Creating virtualenv..."
 	python3 -m venv $(VENV)
 	@echo "[model] Installing dependencies..."
@@ -174,7 +192,8 @@ _fetch_vlm_download_script: ## (internal) Fetch+cache the canonical download_mod
 		echo "[vlm-model] Using cached download_models.sh at $(VLM_DOWNLOAD_SCRIPT) (FORCE_REFRESH=true to re-fetch)"; \
 	fi
 
-vlm-model: _fetch_vlm_download_script ## Download/convert the VLM captioning model (OpenVINO IR) for CPU, GPU, and NPU. Override VLM_MODEL_ID/VLM_DEVICE/VLM_WEIGHT_FORMAT to customize.
+vlm-model: LICENSE_NAME = $(VLM_MODEL_ID)
+vlm-model: _confirm_model_license _fetch_vlm_download_script ## Download/convert the VLM captioning model (OpenVINO IR) for CPU, GPU, and NPU. Override VLM_MODEL_ID/VLM_DEVICE/VLM_WEIGHT_FORMAT to customize.
 	@echo "[vlm-model] Downloading '$(VLM_MODEL_ID)' (weight-format=$(VLM_WEIGHT_FORMAT)) for device(s): $(VLM_DEVICE)"
 	@echo "[vlm-model] NOTE: NPU conversion always uses int4 regardless of VLM_WEIGHT_FORMAT (enforced by the script)."
 	MODEL_PATH="$(VLM_MODEL_PATH)" "$(VLM_DOWNLOAD_SCRIPT)" \
@@ -206,7 +225,7 @@ start-rtsp: ## Start the cameras in configs/cameras-pymavlink.yaml when the vehi
 	-docker exec -it \
 	  -e HOST_IP=$(HOST_IP) \
 	  $(DLSPS) bash -c \
-	  "python3 /home/pipeline-server/scripts/pipeline_manager.py $(if $(CAMERAS),--config $(CAMERAS))"
+	  "python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now $(if $(CAMERAS),--config $(CAMERAS))"
 
 check-cameras: ## Validate configs/cameras-pymavlink.yaml and show what would run (nothing is started). CAMERAS=<file> checks another file.
 	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/camera_config.py check $(CAMERAS)
