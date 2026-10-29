@@ -214,8 +214,7 @@ dlstreamer-pipeline-server:
 > ```
 >
 > Binding to `${HOST_IP:-127.0.0.1}` (not `0.0.0.0`) scopes the published ports to the
-> specific interface in `HOST_IP` instead of every interface on the host — see
-> `references/SECURITY.md`-style guidance in `docs/user-guide/how-to-guides/security-considerations.md`.
+> specific interface in `HOST_IP` instead of every interface on the host.
 
 **For UAVSDK mode** mount the UAVSDK overlay and manager instead:
 ```yaml

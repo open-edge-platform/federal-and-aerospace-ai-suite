@@ -47,6 +47,9 @@ fi
 HOST_IP="${HOST_IP:-127.0.0.1}"
 NPU_DEVICE="${NPU_DEVICE:-/dev/null}"
 BBOX_THICKNESS="${BBOX_THICKNESS:-6}"
+# Guard against a non-numeric .env override: it's interpolated unquoted into the
+# "thickness" JSON field below, so anything but an integer would break that payload.
+[[ "${BBOX_THICKNESS}" =~ ^[0-9]+$ ]] || { echo "[ERROR] BBOX_THICKNESS must be a positive integer (got '${BBOX_THICKNESS}')" >&2; exit 1; }
 ALL_DEVICES=(cpu gpu npu)
 
 log()  { echo "[INFO ] $*"; }

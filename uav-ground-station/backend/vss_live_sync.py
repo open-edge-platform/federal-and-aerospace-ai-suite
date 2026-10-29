@@ -3,38 +3,33 @@
 
 """Keep VSS live-stream indexing in step with the UAV's running pipelines.
 
-When the dashboard connects to a UAV host, every camera (a RUNNING pipeline with an
-RTSP stream) is registered with VSS as a live RTSP stream, so its footage
-becomes searchable while the drone flies. A background loop then reconciles
-every ``VSS_LIVE_SYNC_INTERVAL_SECONDS``, independent of any open browser.
+When the dashboard connects to a UAV host, every camera (a RUNNING pipeline
+with an RTSP stream) is registered with VSS as a live RTSP stream so its
+footage becomes searchable while the drone flies. A background loop
+reconciles every ``VSS_LIVE_SYNC_INTERVAL_SECONDS``, independent of any open
+browser.
 
-**Multiple UAV hosts at once**: the dashboard supports one tab per connected
-UAV host, and each host's cameras are tracked and reconciled independently
-here (``_hosts: dict[host, state]``) -- connecting to a second UAV does not
-disturb the first's sync. Because camera names are arbitrary, operator-chosen
-strings (not a fixed cpu/gpu/npu set), a VSS stream for host A's
-"uav-front-camera" and host B's own "uav-front-camera" would collide if both
-were registered under the bare camera name; streams are therefore registered
-as ``uav-<host_tag>--<camera>`` (see uav_naming.py) so every host's cameras
-get their own namespace, and uav_naming's small registry remembers which
-(host, camera) a given stream_name belongs to -- used by vss_search.py to
-scope a search to one UAV's own footage.
+**Multiple UAV hosts at once**: each connected host's cameras are tracked and
+reconciled independently (``_hosts: dict[host, state]``). Since camera names
+are arbitrary operator-chosen strings, two hosts could both have a
+"uav-front-camera" -- streams are registered as ``uav-<host_tag>--<camera>``
+(see uav_naming.py) so every host's cameras get their own namespace, and
+uav_naming's registry remembers which (host, camera) a stream_name belongs to.
 
 Per host, per reconciliation pass:
   * pipeline running, no VSS stream     -> register it (``POST /streams``)
   * pipeline running, VSS stream paused -> resume it (``PATCH state=running``)
   * pipeline running, stream URL differs (host changed) or stream gave up
-    (``error``/``stopped``) -> deregister and register again (the URL of a
-    VSS stream cannot be changed in place)
+    (``error``/``stopped``) -> deregister and register again (a VSS stream's
+    URL can't be changed in place)
   * pipeline stopped, or host disconnected -> pause the VSS stream
 
-A stream registered by hand under the ``uav-<host_tag>--<camera>`` naming
-convention is adopted instead of duplicated; the older, pre-multi-UAV
-convention (bare ``uav-<camera>``, no embedded host) is still recognized and
-reconciled too, so footage indexed before this feature existed keeps being
-managed, it just can't be attributed to a specific host for search scoping
-(see uav_naming.LEGACY_NAME). Other VSS streams are never touched.
-Deregistering keeps the already indexed footage and embeddings (no purge).
+A hand-registered ``uav-<host_tag>--<camera>`` stream is adopted instead of
+duplicated. The older, pre-multi-UAV convention (bare ``uav-<camera>``, no
+embedded host) is still recognized and reconciled, it just can't be
+attributed to a specific host for search scoping (see
+uav_naming.LEGACY_NAME). Other VSS streams are never touched. Deregistering
+keeps the already-indexed footage and embeddings (no purge).
 
 Routes:
   * ``GET    /api/search/live-sync`` -- all tracked hosts, their last sync and streams.
@@ -175,16 +170,9 @@ async def _reconcile_host(client: httpx.AsyncClient, host: str) -> None:
         return
     active_cameras = sorted({c["camera"] for c in detected.get("cameras", []) if isinstance(c, dict) and c.get("camera")})
 
-    # Update the (host, camera) registry *before* touching any VSS API below
-    # -- vss_search.py's /api/search/sources (the dashboard's "UAV"/"Camera"
-    # search filters) and its per-result host/camera attribution both read
-    # straight from this registry, not from whether reconciliation below
-    # actually succeeds. Previously this was only done at the very end of
-    # this function, so any failure in between (a slow/erroring VSS -- e.g.
-    # from the very duplicate-stream pileup this function now cleans up
-    # below -- would abort the whole pass early and leave a freshly
-    # connected UAV's registry entries never populated, which is exactly
-    # what made the search filter dropdowns show no UAVs at all.
+    # Update the registry before touching the VSS API below: vss_search.py's
+    # /api/search/sources and per-result attribution both read straight from
+    # it, so a mid-pass failure below must not leave it unpopulated.
     wanted = {uav_naming.stream_name(host, camera): camera for camera in active_cameras}
     uav_naming.replace_host_registry(host, wanted)
 
@@ -194,19 +182,9 @@ async def _reconcile_host(client: httpx.AsyncClient, host: str) -> None:
         name = stream.get("stream_name") if isinstance(stream, dict) else None
         if name and uav_naming.is_managed_name(name) and _is_managed_for_host(name, host):
             managed.setdefault(name, stream)
-            # A legacy (pre-multi-UAV, no embedded host) stream only passes
-            # via its "unclaimed -> true for anyone" fallback. Claim it for
-            # this host right now, the first time any host's reconciliation
-            # pass sees it unclaimed -- otherwise every other connected host
-            # would *also* match that same fallback on its own next pass
-            # (nothing was ever recorded to stop it), and the exact same
-            # orphaned stream would show up duplicated across every UAV's
-            # live-index list / count towards every UAV's search scope,
-            # forever, since legacy names carry no host of their own
-            # to disambiguate by. One-time, first-come: once claimed here,
-            # `uav_naming.info_for()` ties it to this host from now on, so
-            # `_is_managed_for_host` correctly returns False for every other
-            # host afterwards.
+            # Legacy (no embedded host) streams are unclaimed-for-anyone until
+            # the first host to see them claims it here, so a different host's
+            # later pass doesn't also treat the same orphaned stream as its own.
             if uav_naming.LEGACY_NAME.fullmatch(name) and uav_naming.info_for(name) is None:
                 uav_naming.register(name, host, name)
 
@@ -253,10 +231,8 @@ async def _reconcile_host(client: httpx.AsyncClient, host: str) -> None:
         except (RuntimeError, httpx.HTTPError) as exc:
             errors.append(str(exc))
 
-    # Clean up *any* other VSS stream -- whatever its name, whether it was
-    # ever "managed" by this feature's naming convention at all -- that
-    # points at the exact same RTSP URL as a camera we just confirmed is
-    # correctly registered under its canonical host-qualified name.
+    # Clean up any other VSS stream pointing at the same RTSP URL as a camera
+    # we just confirmed is registered under its canonical host-qualified name.
     wanted_urls = {
         f"rtsp://{host}:{_rtsp_port}/{camera}".rstrip("/"): name
         for name, camera in wanted.items()

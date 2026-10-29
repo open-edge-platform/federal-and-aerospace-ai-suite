@@ -22,7 +22,10 @@ that host until you enter its IP in the dashboard and press **Connect**.
   if the remote stream is not H.264, the dashboard shows a placeholder message ("No video
   stream — start this camera's pipeline on the remote host.").
   Each card's expand button (or the player's own full-screen control)
-  shows that feed full screen; Esc or "Exit full screen" returns.
+  shows that feed full screen; Esc or "Exit full screen" returns. If a feed
+  drops partway through viewing -- for example the remote RTSP publisher
+  restarts -- the card notices and recovers on its own within a few
+  seconds, without needing a manual page refresh.
 - Scene captions (`uav/caption/<camera>` over MQTT, bridged to the browser via
   SSE), shown under the video of cameras whose pipeline has captioning on.
 - One card per camera (a running pipeline with an RTSP stream, shown as `uav-<name>`),
@@ -98,9 +101,14 @@ All configuration is via `.env` (see `.env.example`):
 | `MEDIAMTX_WEBRTC_PORT` / `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT` | `8889` / `8189` / `8189` | Published WebRTC (WHEP) port and ICE UDP/TCP ports of the relay |
 | `GPU_DEVICE` / `GPU_RENDER_DEVICE` / `NPU_DEVICE` | `/dev/null` (`make init` auto-detects) | Devices passed to `gs-metrics-manager` for this machine's utilization panel |
 | `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(required with `make up-vss`)_ | Credentials for the VSS overlay's MinIO and Postgres |
+| `VSS_MANAGER_PORT` | `3001` | Host port (bound to `VIZ_HOST_IP`) for the VSS pipeline-manager API |
+| `VIDEO_GROUP_ID` / `RENDER_GROUP_ID` | `44` / `992` | Host's `video`/`render` group ids (`getent group video render`), needed for GPU/NPU VSS devices |
 | `VSS_EMBEDDING_MODEL` | _(required with `make up-vss`)_ | Embedding model VSS uses for frames and queries, for example `CLIP/clip-vit-b-32` |
 | `DATAPREP_DETECTION_MODEL` | _(required with `make up-vss`)_ | Object detection model VSS dataprep uses for crop extraction, for example `yolox_s` |
+| `VSS_ENABLE_OBJECT_DETECTION` | `true` | Run object-detection crops alongside embedding during ingestion |
 | `VSS_INGEST_EMBEDDING_DEVICE` / `VSS_DETECTION_DEVICE` / `VSS_QUERY_EMBEDDING_DEVICE` | `CPU` | Devices for VSS indexing, object detection and query embedding |
+| `VSS_FRAME_INTERVAL` | `15` | Live ingest embeds one frame every N frames |
+| `VSS_LIVE_RETENTION_HOURS` | `24` | How long indexed live footage/embeddings are kept before being purged |
 | `VSS_LIVE_SYNC_INTERVAL_SECONDS` | `15` | How often running UAV pipelines are synced to VSS live streams |
 | `VSS_DATASTORE_BUCKET` | `video-summary` | VSS MinIO bucket for uploaded videos |
 | `VSS_SEARCH_TIMEOUT_SECONDS` | `60` | Timeout for one search request to VSS |
@@ -114,6 +122,7 @@ All configuration is via `.env` (see `.env.example`):
 | `VSS_PREVIEW_PREWARM` | `3` | Top results transcoded as soon as a search returns |
 | `CAPTION_BUFFER_SIZE` | `1000` | Max scene captions kept per (host, camera) for the Flight Summary report |
 | `CAPTION_LOG_IDLE_TTL_SECONDS` | `120` | Drop a (host, camera) caption subscriber after this many seconds of not being observed captioning |
+| `VSS_MAX_RESULTS` | `50` | `video-search`'s `AGGREGATION_MAX_RESULTS` -- how many top non-overlapping time windows VSS keeps, across *all* indexed streams |
 
 The remote-port defaults assume the standard nginx-published ports from
 `uav-vision-analytics/docker-compose-pymavlink.yml`; only change them if that
@@ -186,11 +195,21 @@ active.
 Because camera names are operator-chosen (`configs/cameras-*.yaml`), two UAVs
 could configure the same camera name (e.g. both have a `uav-front-camera`);
 each host's streams are registered with VSS under a host-qualified name
-(`uav-<host>--<camera>`) so they never collide, and search results carry a
-`camera`/`host` field resolved back from that for display (and, optionally,
-for scoping a search to the currently-connected UAV's own footage via
-`POST /api/search {"query": "...", "host": "<ip>", "camera": "<camera>"}`; the
-search popup offers these as UAV and Camera filters, and both default to all footage).
+(`uav-<host>--<camera>`) so they never collide.
+
+Each search result's `camera`/`host` fields are resolved in order from: the
+embedding's own `sensor_id` metadata; failing that, the stream's
+registration-time `tags` (`["uav", "<host>", "<camera>"]`, also visible in
+each result's own "Tags" detail); and failing that, looking the result's
+`video_id` up in VSS's current stream list as a last resort. A result VSS
+still has indexed from a UAV that has since disconnected may still show
+"Unknown camera" if none of these resolve.
+
+The dashboard's search popup puts two filter controls — UAV and Camera dropdown.
+The full, unfiltered result set is fetched once when the search runs, and every
+subsequent filter toggle — whether switching UAVs, changing cameras, or resetting
+selections — simply reshapes that same in-memory dataset without firing any 
+additional network request.
 
 Clips whose codec the browser can't decode (for example some stored
 live-stream segments) fall back to VSS's

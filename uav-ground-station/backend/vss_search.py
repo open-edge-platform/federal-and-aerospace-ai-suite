@@ -3,28 +3,18 @@
 
 """Proxy routes for the Video Search and Summarization (VSS) search feature.
 
-VSS runs as its own containers, normally the minimal search-only set in
-``docker-compose-vss.yml`` (which also sets ``VSS_ENABLED=true``). It can also
-be a full VSS deployment started with VSS's own ``setup.sh``. This module only
-talks to VSS's Pipeline Manager API and its object store over HTTP, the same
-read-only proxy pattern the rest of viz-backend uses for the remote UAV host.
-The browser never reaches VSS directly.
+VSS runs as its own containers (the minimal search-only set in
+``docker-compose-vss.yml``, which also sets ``VSS_ENABLED=true``), or as a
+full VSS deployment started with VSS's own ``setup.sh``. This module only
+talks to VSS's Pipeline Manager API and object store over HTTP; the browser
+never reaches VSS directly. When ``VSS_ENABLED`` is not true, every route
+below except ``/api/search/status`` returns 404.
 
-When ``VSS_ENABLED`` is not true, the dashboard hides the search UI and every
-route below except ``/api/search/status`` returns 404:
-
-  * ``GET  /api/search/status`` -- whether search is configured, VSS
-    reachability, the VSS search feature flag and playback-quality options.
-  * ``POST /api/search``        -- natural-language query; results are
-    flattened and joined with filenames from Pipeline Manager's ``GET /videos``.
-  * ``GET  /api/search-video``  -- Range-aware stream of a result's video
-    object from VSS's object store (MinIO), so <video> can seek. With
-    ``preview=1`` it serves a cached, low-bitrate transcode instead (see
-    "Playback previews" below), falling back to the original on failure.
-  * ``GET  /api/search-frame``  -- best-matching frame as JPEG via
-    Pipeline Manager's ``GET /frames``; used as the result thumbnail and as the fallback
-    when the browser can't decode the clip (e.g. some stored live-stream segments).
-    ``width`` downscales it so a result list doesn't pull full 1080p frames.
+  * ``GET  /api/search/status`` -- VSS reachability, search feature flag, playback options.
+  * ``POST /api/search``        -- natural-language query, joined with filenames from ``GET /videos``.
+  * ``GET  /api/search-video``  -- range-aware stream of a result's video from VSS's object store;
+    ``preview=1`` serves a cached low-bitrate transcode (see "Playback previews" below).
+  * ``GET  /api/search-frame``  -- best-matching frame as a JPEG thumbnail/fallback, via ``GET /frames``.
 """
 
 import asyncio
@@ -60,40 +50,29 @@ VSS_DATASTORE_BUCKET = os.environ.get("VSS_DATASTORE_BUCKET", "video-summary")
 VSS_SEARCH_TIMEOUT_SECONDS = float(os.environ.get("VSS_SEARCH_TIMEOUT_SECONDS", "60"))
 
 # --- Relevance filtering ----------------------------------------------------
-# VSS's relevance_score is min-max normalized per query (the top hit is always
-# 1.0), so it ranks hits but cannot tell a real match from the best of a set of
-# unrelated clips. score_breakdown.max_frame_score -- the raw query-to-frame
-# similarity of the segment's best frame -- is the only absolute signal, so
-# filtering is done on that:
-#   1. Drop hits whose peak frame score is below VSS_SEARCH_MIN_PEAK_SCORE. This
-#      is what turns "an elephant" over road footage into zero results.
-#   2. Of the rest, keep hits whose peak is within VSS_SEARCH_RELATIVE_CUTOFF of
-#      the best peak, trimming a weak tail behind a strong match.
-# Both depend on the embedding model VSS runs (0.25 suits CLIP ViT-B/32), so
-# both are tunable via env. Set VSS_SEARCH_MIN_PEAK_SCORE=0 and
-# VSS_SEARCH_RELATIVE_CUTOFF=0 to show everything VSS returns.
+# relevance_score is min-max normalized per query (top hit is always 1.0), so
+# it ranks hits but can't tell a real match from the best of a bad set.
+# score_breakdown.max_frame_score (raw query-to-frame similarity) is the
+# absolute signal used instead: drop hits below VSS_SEARCH_MIN_PEAK_SCORE, then
+# keep only those within VSS_SEARCH_RELATIVE_CUTOFF of the best peak. Tuned for
+# CLIP ViT-B/32; set both to 0 to show everything VSS returns.
 VSS_SEARCH_MIN_PEAK_SCORE = float(os.environ.get("VSS_SEARCH_MIN_PEAK_SCORE", "0.25"))
 VSS_SEARCH_RELATIVE_CUTOFF = float(os.environ.get("VSS_SEARCH_RELATIVE_CUTOFF", "0.90"))
 
 # --- Playback previews / thumbnails ------------------------------------------
-# Stored clips are full-resolution (live segments are 1080p at ~4 Mbps), which
-# stalls playback for a browser on a slow or lossy link (VPN, WAN). With ffmpeg
-# available, the player is served a cached H.264 transcode at
-# VSS_PREVIEW_HEIGHT and at most VSS_PREVIEW_MAX_KBPS, with its index at the
-# front of the file so playback starts after the first few KB. "Download clip"
-# still returns the original. Set VSS_PREVIEW_ENABLED=false to always stream
-# originals.
+# Stored clips are full-resolution (live segments ~1080p/4Mbps), which stalls
+# playback on a slow link. With ffmpeg available, the player gets a cached
+# H.264 transcode at VSS_PREVIEW_HEIGHT/VSS_PREVIEW_MAX_KBPS instead; "Download
+# clip" always returns the original. VSS_PREVIEW_ENABLED=false always streams originals.
 FFMPEG = shutil.which("ffmpeg")
-# Quality the player starts in: "sd" (the preview) or "hd" (the original).
-# Users can switch per clip, and the browser remembers their last choice.
+# Quality the player starts in; users can switch per clip and the choice is remembered.
 VSS_PLAYBACK_DEFAULT = "hd" if os.environ.get("VSS_PLAYBACK_DEFAULT", "sd").strip().lower() == "hd" else "sd"
 VSS_PREVIEW_ENABLED = os.environ.get("VSS_PREVIEW_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on")
 VSS_PREVIEW_HEIGHT = max(144, min(1080, int(os.environ.get("VSS_PREVIEW_HEIGHT", "360"))))
 VSS_PREVIEW_MAX_KBPS = max(100, min(8000, int(os.environ.get("VSS_PREVIEW_MAX_KBPS", "800"))))
 VSS_PREVIEW_CACHE_DIR = Path(os.environ.get("VSS_PREVIEW_CACHE_DIR", os.path.join(tempfile.gettempdir(), "vss-preview-cache")))
 VSS_PREVIEW_CACHE_MB = max(50, int(os.environ.get("VSS_PREVIEW_CACHE_MB", "1024")))
-# Results whose previews are transcoded as soon as a search returns, so the
-# clip the player opens first is usually ready by the time it's requested.
+# Top N results transcoded as soon as a search returns, so playback starts ready.
 VSS_PREVIEW_PREWARM = max(0, min(10, int(os.environ.get("VSS_PREVIEW_PREWARM", "3"))))
 PREVIEW_SOURCE_MAX_BYTES = 1024 * 1024 * 1024
 PREVIEW_TIMEOUT_SECONDS = 180.0
@@ -232,21 +211,11 @@ def _camera_and_host(stream_name: Optional[str]) -> tuple:
 
 
 def _attribute_result(metadata: dict, stream: Optional[dict]) -> tuple:
-    """(camera, host) for one search hit, preferring sources that survive a
-    VSS live stream being deleted and re-registered (which vss_live_sync.py's
-    reconciliation does whenever the remote RTSP source moves or errors out).
-
-    Each embedding's own stored metadata is far more durable:
-    ``sensor_id`` is set (by vss_live_sync.py's stream registration, as the
-    canonical ``uav-<host_tag>--<camera>`` name) on every embedding created
-    under that registration and is documented by the ingestion service
-    itself as a "stable logical source identity; outlives live_stream_id" --
-    exactly this problem. It's baked into the embedding at index time, so it
-    keeps resolving correctly no matter how many times the underlying VSS
-    stream object has since been deleted/recreated, and does not depend on
-    this process's in-memory ``uav_naming`` registry still being populated
-    either (so it also survives a viz-backend restart, unlike the old
-    registry-only path).
+    """(camera, host) for one search hit. Prefers ``sensor_id`` (baked into
+    the embedding at index time by vss_live_sync.py, so it survives a VSS
+    stream being deleted/re-registered or a viz-backend restart), then the
+    stream's registration-time ``tags`` (``["uav", host, camera]``), then the
+    live stream list's current ``stream_name`` as a last resort.
     """
     sensor_id = metadata.get("sensor_id") or metadata.get("live_stream_name")
     if sensor_id:
@@ -254,16 +223,7 @@ def _attribute_result(metadata: dict, stream: Optional[dict]) -> tuple:
         if camera is not None:
             return camera, host
 
-    # Fall back to the stream's own registration-time ``tags`` (["uav", host,
-    # camera], set in vss_live_sync.py's POST /streams call). These are
-    # VIDEO-level metadata (tied to the video/stream record, not baked into
-    # every frame the way ``sensor_id`` is), so they could in theory also go
-    # stale across a stream delete+recreate -- but in practice they've shown
-    # up reliably even in cases where ``sensor_id`` attribution still fell
-    # back to "Unknown camera" (the same result's own "Tags" detail panel
-    # kept showing the correct uav/host/camera throughout). Only trusted when
-    # they match the exact 3-element ["uav", host, camera] shape this app
-    # itself writes -- any other tags (user- or VSS-added) are left alone.
+    # Only trusted in the exact 3-element ["uav", host, camera] shape this app writes.
     tags = _as_tag_list(metadata.get("tags"))
     if len(tags) == 3 and tags[0] == "uav":
         return tags[2], tags[1]
@@ -273,19 +233,10 @@ def _attribute_result(metadata: dict, stream: Optional[dict]) -> tuple:
 
 
 def _belongs_to_host(result: dict, host: str) -> bool:
-    """True if `result` should be shown when the caller has explicitly asked
-    to scope search to `host` (only called when ``SearchRequest.host`` is
-    set -- an *unfiltered* search is never scoped at all, see ``search()``).
-
-    Only live results are scoped -- a result from an uploaded/recorded video
-    has no "owning" UAV host to filter by, so it's always kept.
-
-    A live result whose host could not be resolved (``result.get("host") is
-    None`` -- e.g. a stream registered before this feature's in-memory
-    registry existed/restarted, or already-indexed footage left behind by a
-    UAV that has since been disconnected: pausing a stream on disconnect
-    intentionally does NOT purge its already-indexed embeddings, see
-    vss_live_sync.py's module docstring) is now EXCLUDED rather than kept.
+    """True if `result` passes an explicit host scope (only called when
+    ``SearchRequest.host`` is set). Uploaded/recorded videos have no owning
+    UAV host and always pass. A live result whose host couldn't be resolved
+    is excluded.
     """
     if result.get("source") != "live":
         return True
@@ -293,12 +244,7 @@ def _belongs_to_host(result: dict, host: str) -> bool:
 
 
 def _belongs_to_camera(result: dict, camera: str) -> bool:
-    """Same reasoning as `_belongs_to_host`, scoped to one camera name
-    instead of one host -- lets the dashboard's "Camera" filter narrow a
-    search to e.g. just the front camera, across whichever UAV(s) the host
-    filter (if any) still allows. Also strict: a live result whose camera
-    couldn't be resolved no longer passes an active camera filter (see
-    ``_belongs_to_host``'s docstring for why)."""
+    """Same as `_belongs_to_host`, scoped to one camera name instead."""
     if result.get("source") != "live":
         return True
     return result.get("camera") == camera
@@ -323,15 +269,8 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=MAX_QUERY_LENGTH)
     tags: Optional[str] = Field(None, max_length=500)
     timeFilter: Optional[TimeFilter] = None
-    # Optional: scope results to one UAV's own footage and/or one of its
-    # cameras (the dashboard's "UAV" / "Camera" search filters -- see
-    # search.js). By default (both omitted/empty) a search covers every
-    # connected UAV's footage; this is the normal case, not scoping-by-host,
-    # since one operator may be watching several drones at once and wants a
-    # single query to search all of them. Only affects *live* results -- a
-    # result from an uploaded/recorded video that isn't tied to any host's
-    # live stream is never filtered out, since it isn't "someone else's
-    # drone".
+    # Optional host/camera scope for direct API callers; the dashboard's own
+    # UAV/Camera filters fetch the unfiltered set and filter client-side instead.
     host: Optional[str] = Field(None, min_length=1, max_length=253, pattern=HOST_PATTERN)
     camera: Optional[str] = Field(None, min_length=1, max_length=128)
 
@@ -473,6 +412,7 @@ async def search(req: SearchRequest):
         results = [r for r in results if _belongs_to_camera(r, req.camera)]
 
     results, raw_count = _filter_and_score(results)
+    results = _diversify_by_camera(results)
     _prewarm_previews(results)
     return {
         "query": query,
@@ -735,6 +675,26 @@ def _filter_and_score(results: list) -> tuple:
     kept = [r for r in results if r.get("peak_score") is None or r["peak_score"] >= threshold]
     kept.sort(key=lambda r: (r.get("score") is not None, r.get("score") or 0.0), reverse=True)
     return kept, raw_count
+
+
+def _diversify_by_camera(results: list) -> list:
+    """Round-robin `results` (already score-sorted) across (host, camera)
+    groups so one camera with disproportionately many indexed segments
+    doesn't crowd every other camera out of the visible list -- VSS's own
+    aggregation picks its top matches globally across all streams, not
+    per-camera, so a dominant camera can otherwise fill the whole result set.
+    Keeps each group's internal score order; uploads are kept as one group.
+    """
+    groups: "OrderedDict[tuple, list]" = OrderedDict()
+    for r in results:
+        key = (r.get("host"), r.get("camera")) if r.get("source") == "live" and r.get("camera") else ("upload",)
+        groups.setdefault(key, []).append(r)
+    interleaved = []
+    while any(groups.values()):
+        for bucket in groups.values():
+            if bucket:
+                interleaved.append(bucket.pop(0))
+    return interleaved
 
 
 def _upstream_message(resp: httpx.Response) -> str:

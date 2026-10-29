@@ -3,23 +3,15 @@
 
 """Shared host/stream naming + registry for multi-UAV support.
 
-The ground station can be connected to more than one UAV companion board at
-once (one dashboard tab per host). Every one of those hosts' cameras gets
-registered as its own VSS live stream (see vss_live_sync.py); those streams
-need a name that is unique *across hosts*, both so two drones that happen to
-use the same camera name (e.g. both configured with a "uav-front-camera" in
-their own configs/cameras-*.yaml) don't collide in VSS, and so vss_search.py
-can filter search results back down to "only this UAV's footage".
-
-Unlike a fixed cpu/gpu/npu device set, camera names here are arbitrary,
-operator-chosen strings (``CAMERA_PATTERN`` in main.py/vss_summary.py), so a
-single combined string like ``uav-<host_tag>-<camera>`` cannot be reliably
-split back into its two parts by regex alone (both halves can contain
-dashes). Rather than guessing, this module keeps a small in-memory registry,
-written by vss_live_sync.py as it registers/deregisters streams and read by
-vss_search.py to resolve a VSS stream_name back to (host, camera) -- kept
-here, rather than in either of those modules, so both can import it without a
-circular dependency (vss_live_sync.py already imports vss_search.py).
+Each connected UAV host's cameras are registered as their own VSS live stream
+(see vss_live_sync.py) under a host-qualified name, since two drones can reuse
+the same camera name (e.g. both "uav-front-camera"). Camera names are
+arbitrary operator-chosen strings, so a combined ``uav-<host_tag>-<camera>``
+string can't be split back into its parts by regex alone -- this module keeps
+a small in-memory registry instead: written by vss_live_sync.py as it
+registers/deregisters streams, read by vss_search.py to resolve a stream_name
+back to (host, camera). Lives here (not in either of those modules) to avoid
+a circular import.
 """
 
 from __future__ import annotations
@@ -64,14 +56,11 @@ _registry: dict = {}
 
 
 def register(name: str, host: str, camera: str) -> None:
-    """Claim `name` for `host`. For a host-tagged name this is just called
-    every reconciliation pass. For a legacy (no embedded host) name, this
-    is a one-time, first-come claim made by the first time any host's 
-    reconciliation pass sees it unclaimed -- once claimed, ``info_for()`` 
-    ties it to that one host from then on, so a *different* host reconciling
-    later does NOT also treat it as its own. Without this, every connected 
-    host's live-index / search-scoping would show the same orphaned legacy
-    streams as if they belonged to it too."""
+    """Claim `name` for `host`. For a host-tagged name this is called every
+    reconciliation pass; for a legacy (no embedded host) name, it's a
+    one-time first-come claim so a different host's later reconciliation
+    doesn't also treat the same orphaned stream as its own.
+    """
     _registry[name] = (host, camera)
 
 
@@ -80,19 +69,11 @@ def unregister(name: str) -> None:
 
 
 def replace_host_registry(host: str, entries: dict) -> None:
-    """Replace every registered entry for `host` with `entries`
-    (stream_name -> camera) in one go -- used at the end of each
-    reconciliation pass so a camera that stopped being registered (pipeline
-    stopped, camera removed from config) drops out of the registry too.
-
-    Only touches *host-tagged* (``MANAGED_NAME``) entries -- a legacy
-    (pre-multi-UAV, no embedded host) entry claimed for this host via
-    ``register()`` below is deliberately left alone here: `entries` only
-    ever contains host-tagged names (built from ``stream_name()``), so
-    wiping every registry row for `host` unconditionally would immediately
-    un-claim that host's legacy adoption again on the very next
-    reconciliation pass, defeating the whole point of claiming it in the
-    first place (see ``register()``'s docstring).
+    """Replace every host-tagged registry entry for `host` with `entries`
+    (stream_name -> camera) -- used at the end of each reconciliation pass so
+    a camera no longer configured drops out of the registry too. Leaves any
+    legacy (no embedded host) entry claimed for this host alone, since
+    `entries` never contains those names.
     """
     for name, (h, _camera) in list(_registry.items()):
         if h == host and MANAGED_NAME.fullmatch(name):

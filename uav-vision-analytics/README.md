@@ -111,7 +111,7 @@ detect objects, whether a VLM writes scene captions (device, model, prompt) and 
 The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`), detection on the NPU and captions from
 the VLM on the GPU, so arming the vehicle is all that is needed. After editing the file, `make check-cameras` validates
 it, `make start-rtsp` (or disarm and arm again) applies it, and `make cameras-status` compares the file with what is
-running. See [Configure the Cameras](docs/user-guide/how-to-guides/cameras.md).
+running. See [Configure the Cameras](docs/user-guide/how-to-customize/camera-management/configure-cameras.md).
 
 Streams are published as `rtsp://<HOST_IP>:8555/uav-<camera>` (for example `uav-front-camera`) and the captions of a
 camera on MQTT `uav/caption/<camera>`. Captions need the VLM models: run `make vlm-model` once.
@@ -132,7 +132,7 @@ whole GOPs so the loop point is clean, and verifies the result. If you have seve
 Other options: `--bitrate`, `--fps`, `--size WxH`, `--gop`, `--no-trim`; run it with `--help`.
 It uses `ffmpeg` from the host if installed, otherwise the DL Streamer image from `.env`, so only Docker is
 required. Restart the cameras (`make start-rtsp`) after replacing a file. See
-[Use Your Own Videos](docs/user-guide/how-to-guides/convert-videos.md) for the full steps.
+[Use Your Own Videos](docs/user-guide/how-to-customize/model-and-video-management/use-your-own-video.md) for the full steps.
 
 ### Starting pipelines without arming the drone
 

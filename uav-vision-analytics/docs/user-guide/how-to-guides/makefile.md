@@ -131,9 +131,10 @@ make start-rtsp        # start the cameras on arming
 make cameras-status    # file versus running pipelines
 ```
 
-See [Configure the Cameras](./cameras.md) for the file format. Requires the DL Streamer Pipeline Server container to
-already be running (`make pymav-up` first). Not used in UAV Mission Compute SDK mode, which has its own pipeline manager
-(`DEVICE=cpu|gpu|npu|all` selects its pipeline).
+See [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md) for the file format. Requires the DL Streamer Pipeline Server container to
+already be running (`make pymav-up` first). Also used in UAV Mission Compute SDK mode: the
+container's `CAMERAS_CONFIG` env var (set to `configs/cameras-uavsdk.yaml` by
+`docker-compose-uavsdk.yml`) is the default file read there; `CAMERAS=<file>` overrides it in either mode.
 
 ### `make build`
 

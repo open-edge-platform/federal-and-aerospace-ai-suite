@@ -5,13 +5,13 @@ SPDX-License-Identifier: Apache-2.0
 
 # Intel RealSense — UAV Vision Analytics
 
-A RealSense (or any UVC webcam) is a live camera in [`configs/cameras-pymavlink.yaml`](../../../configs/cameras-pymavlink.yaml): the camera has a
-`device` instead of a `video` file. The settings are described in [Configure the cameras](./cameras.md#live-cameras-realsense-usb-webcams);
+A RealSense (or any UVC webcam) is a live camera in [`configs/cameras-pymavlink.yaml`](../../../../configs/cameras-pymavlink.yaml): the camera has a
+`device` instead of a `video` file. The settings are described in [Configure the cameras](./configure-cameras.md#live-cameras-realsense-usb-webcams);
 this page is the short walk-through.
 
 ## Prerequisites
 
-See [System Requirements](../get-started/system-requirements.md) for the full list of software and hardware prerequisites.
+See [System Requirements](../../get-started/system-requirements.md) for the full list of software and hardware prerequisites.
 
 ## Steps
 
@@ -49,10 +49,10 @@ See [System Requirements](../get-started/system-requirements.md) for the full li
 
 Live cameras use `uav_camera_<det>` and `uav_camera_<det>_<vlm>`. `configs/config-pymavlink.json` has `uav_camera_npu` and
 `uav_camera_npu_gpu`; for a CPU or GPU camera copy the pipeline you need from
-[`configs/config-pymavlink-realsense.json`](../../../configs/config-pymavlink-realsense.json) (all nine) into it and recreate the
+[`configs/config-pymavlink-realsense.json`](../../../../configs/config-pymavlink-realsense.json) (all nine) into it and recreate the
 container. `make check-cameras` says which pipeline is missing.
 
 ## UAV Mission Compute SDK stack
 
 The SDK stack streams its cameras over RTSP and uses `configs/cameras-uavsdk.yaml`; see
-[Get started with the UAV Mission Compute SDK](../get-started/get-started-uavsdk.md).
+[Get started with the UAV Mission Compute SDK](../../get-started/get-started-uavsdk.md).

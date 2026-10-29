@@ -32,6 +32,14 @@ rtsp://<HOST_IP>:8555/uav-back-camera
 ![QGroundControl RTSP stream](../_assets/QGC-rtsp.gif)
 
 > [!NOTE]
+> If QGroundControl is running on a **remote Windows machine** (connecting to a
+> UAV host on another machine) and that Windows machine has a system/corporate
+> HTTP(S) proxy configured, the RTSP video stream may never render even though
+> telemetry/MAVLink connects fine — see
+> [Troubleshooting: RTSP video stream does not play on a remote Windows machine](./troubleshooting.md#rtsp-video-stream-does-not-play-on-a-remote-windows-machine-system-proxy-configured)
+> for the `no_proxy` fix.
+
+> [!NOTE]
 > Make sure `make start-rtsp` is running in the DL Streamer Pipeline Server container before
 > attempting to connect QGroundControl to the RTSP stream.
 
@@ -62,4 +70,5 @@ before `make pymav-up`.
 
 ## Troubleshooting
 
-- [QGroundControl — "Network Not Available" warnings](./troubleshooting.md#qgroundcontrol--network-not-available-warnings)
+- ["Network Not Available" warnings](./troubleshooting.md#network-not-available-warnings)
+- [RTSP video stream does not play on a remote Windows machine (system proxy configured)](./troubleshooting.md#rtsp-video-stream-does-not-play-on-a-remote-windows-machine-system-proxy-configured)

@@ -39,7 +39,7 @@ unless `enabled: true`).
 | --- | --- |
 | `id` | Camera name: lowercase letters, digits and `_`. Also names the RTSP stream (`uav-<id>` with `_` replaced by `-`) and the caption topic. |
 | `enabled` | `false` leaves the camera out. |
-| `video` / `device` / `rtsp` | The source: one of `video`, `device` for a live camera ([below](#live-cameras-realsense-usb-webcams)) or `rtsp` for an RTSP stream ([below](#rtsp-streams-uav-mission-compute-sdk)), never two. `video` is a file in `resources/videos` (`.avi`, `.mp4`, `.mkv` or `.ts`, no folders). Prepare your own with [`scripts/convert_video.sh`](./convert-videos.md). |
+| `video` / `device` / `rtsp` | The source: one of `video`, `device` for a live camera ([below](#live-cameras-realsense-usb-webcams)) or `rtsp` for an RTSP stream ([below](#rtsp-streams-uav-mission-compute-sdk)), never two. `video` is a file in `resources/videos` (`.avi`, `.mp4`, `.mkv` or `.ts`, no folders). Prepare your own with [`scripts/convert_video.sh`](../model-and-video-management/use-your-own-video.md). |
 | `overlay` | `false` removes the detection boxes and the telemetry text from the stream. |
 | `detection.device` / `.model` | Where and with which model objects are detected. The model path is relative to `resources/models`. Cameras with the same device and model share one loaded model. |
 | `captioning.enabled` | `true` adds captions. They are published on MQTT `uav/caption/<id>`. |
@@ -108,7 +108,7 @@ its detection device, so the file chooses a pipeline and never edits one.
    `NO` means the file asks for something the running pipeline does not have, for example after an edit while armed.
 
 4. **On the stream and in the dashboard.** The telemetry text at the top left of the stream names the camera and its
-   devices (for example `front-camera-NPU-GPU-Caption`). In the [ground-station dashboard](../../../../uav-ground-station/README.md)
+   devices (for example `front-camera-NPU-GPU-Caption`). In the [ground-station dashboard](../../../../../uav-ground-station/README.md)
    every camera has a card with its devices as badges (`NPU`, `VLM GPU`, `no overlay`); hover the card header for the
    models, prompt and video. Streams are `rtsp://<HOST_IP>:8555/uav-<camera>`, captions
    `mosquitto_sub -h <HOST_IP> -t uav/caption/<camera>`.
@@ -146,7 +146,7 @@ cameras on one USB controller can exceed its bandwidth; spread them over differe
 ## RTSP streams (UAV Mission Compute SDK)
 
 A camera can read an RTSP stream instead of a file or a device. The UAV Mission Compute SDK stack (`make uavsdk-up`) does
-this: it mounts [`configs/cameras-uavsdk.yaml`](../../../configs/cameras-uavsdk.yaml) (`CAMERAS_CONFIG`) with the same format and the
+this: it mounts [`configs/cameras-uavsdk.yaml`](../../../../configs/cameras-uavsdk.yaml) (`CAMERAS_CONFIG`) with the same format and the
 same tools (`make check-cameras`, `make start-rtsp`, `make cameras-status`):
 
 ```yaml
@@ -203,7 +203,7 @@ camera that was stopped a moment ago is still registered for a short while.
 
 * The streams are named after the cameras (`uav-front-camera`), no longer after the devices (`uav-mavlink-cpu`). Update
   QGroundControl, VLC or script URLs; the caption topics are `uav/caption/<camera>` as well.
-* Captions need the VLM models: `make vlm-model` (see the [README](../../../README.md)).
+* Captions need the VLM models: `make vlm-model` (see the [README](../../../../README.md)).
 * Detection on the CPU cannot keep up with a 30 fps video (about 17 to 25 fps); the NPU and the GPU can.
 * The pipelines publish no per-frame detection log. To keep one when starting a pipeline by hand, add a
   `destination.metadata` file destination to the start request.
