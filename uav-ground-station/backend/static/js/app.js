@@ -541,7 +541,7 @@
       iframe.allowFullscreen = true;
       iframe.src = `http://${mediamtxWebrtcHost}:${mediamtxWebrtcPort}/${path}/`;
       card.videoContainer.appendChild(iframe);
-      setStatus("connected");
+      setStatus(host, "connected");
       startRelayWatchdog(host, card);
     } catch (err) {
       card.videoContainer.innerHTML = "";

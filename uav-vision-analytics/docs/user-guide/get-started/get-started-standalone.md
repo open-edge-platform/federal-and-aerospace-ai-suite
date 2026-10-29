@@ -111,7 +111,7 @@ Download and export the YOLO11s model to OpenVINO FP16 IR:
 make model
 ```
 
-> See the [AI Model guide](../how-to-guides/model.md) for model details.
+> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) for model details.
 
 ### 3. Standalone mode (pymavlink)
 
@@ -127,7 +127,7 @@ Two options are available depending on your use case:
 
 Runs `pipeline_manager.py` inside the DL Streamer Pipeline Server container. It monitors the drone's ARMED/DISARMED state and automatically starts and stops inference pipelines. Annotated frames are served as RTSP on port `8555`.
 
-`make start-rtsp` starts the cameras listed in [`configs/cameras-pymavlink.yaml`](../../../configs/cameras-pymavlink.yaml): one pipeline per camera, each streaming on `rtsp://<HOST_IP>:8555/uav-<camera>`. The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`) with detection on the NPU and scene captions from the VLM on the GPU. Edit the file to choose the video, the detection and captioning devices and models, the prompt and the overlay of each camera, see [Configure the Cameras](../how-to-guides/cameras.md):
+`make start-rtsp` starts the cameras listed in [`configs/cameras-pymavlink.yaml`](../../../configs/cameras-pymavlink.yaml): one pipeline per camera, each streaming on `rtsp://<HOST_IP>:8555/uav-<camera>`. The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`) with detection on the NPU and scene captions from the VLM on the GPU. Edit the file to choose the video, the detection and captioning devices and models, the prompt and the overlay of each camera, see [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md):
 
 ```bash
 make check-cameras     # validate configs/cameras-pymavlink.yaml and show what would run (nothing is started)
@@ -135,11 +135,11 @@ make start-rtsp        # start the cameras when the vehicle is armed (the file i
 make cameras-status    # compare the file with the running pipelines
 ```
 
-> To arm the drone and trigger streaming, connect with QGroundControl (QGC) and press takeoff — see the [QGroundControl guide](../how-to-guides/qgroundcontrol.md) for setup and connection details. Only the selected `DEVICE` pipeline is active (unless `DEVICE=all`) — see [Step 5 — View the output stream](#5-view-the-output-stream) for the RTSP URLs.
+> To arm the drone and trigger streaming, connect with QGroundControl (QGC) and press takeoff — see the [QGroundControl guide](../how-to-guides/qgroundcontrol.md) for setup and connection details. Every enabled camera in `configs/cameras-pymavlink.yaml` starts together once armed — see [Step 5 — View the output stream](#5-view-the-output-stream) for the RTSP URLs.
 
 #### Option B — Manual REST API
 
-Start a single pipeline directly without the pipeline manager. Useful for testing individual pipelines or custom configurations. The pipeline is chosen by name (`uav_object_detection_<det>` for detection only, `uav_object_detection_<det>_<vlm>` with captions, see [Configure the Cameras](../how-to-guides/cameras.md)); everything in `parameters` is optional and defaults to the pipeline's own values.
+Start a single pipeline directly without the pipeline manager. Useful for testing individual pipelines or custom configurations. The pipeline is chosen by name (`uav_object_detection_<det>` for detection only, `uav_object_detection_<det>_<vlm>` with captions, see [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md)); everything in `parameters` is optional and defaults to the pipeline's own values.
 
 ```bash
 # detection on the GPU, no captions
@@ -219,7 +219,7 @@ make pymav-down
 
 All of them publish RTSP on `:8555`. The camera pipelines for the CPU and GPU are in `configs/config-pymavlink-realsense.json`.
 `make start-rtsp` picks the pipeline for each camera in `configs/cameras-pymavlink.yaml`
-([Configure the cameras](../how-to-guides/cameras.md)).
+([Configure the cameras](../how-to-customize/camera-management/configure-cameras.md)).
 
 > [!NOTE]
 > **Using different or your own aerial footage:** The bundled video `uav_sample.avi` is a placeholder. To see detection on a different aerial footage, replace `uav-vision-analytics/resources/videos/uav_sample.avi` with your own video containing vehicles/pedestrians in appropriate file format (keep the same filename). If the stack is already running with the old video, run [Step 6 — Stop all services](#6-stop-all-services), then restart from [Step 3 — Standalone mode (pymavlink)](#3-standalone-mode-pymavlink) and [Step 4 — Start inference pipelines](#4-start-inference-pipelines) — the file is only read when a pipeline starts.
@@ -263,13 +263,15 @@ only on the internal `app_network`.
 
 ## RealSense Camera Support
 
-Intel RealSense camera setup and pipelines details are provided in the [RealSense guide](../how-to-guides/realsense-guide.md).
+Intel RealSense camera setup and pipelines details are provided in the [RealSense guide](../how-to-customize/camera-management/realsense-guide.md).
 
 ## Documentation
 
 | Document | Description |
 | --- | --- |
 | [index.md](../index.md) | Application overview and component block diagrams |
+| [how-to-guides.md](../how-to-guides.md) | Operating the application: QGroundControl, ground station, deployment modes |
+| [how-to-customize.md](../how-to-customize.md) | Changing cameras, models, pipelines, overlay and search tuning |
 | [benchmark.md](../benchmark.md) | Performance benchmarking guide |
 | [makefile.md](../how-to-guides/makefile.md) | Makefile target reference |
 | [troubleshooting.md](../how-to-guides/troubleshooting.md) | Known issues and resolutions |

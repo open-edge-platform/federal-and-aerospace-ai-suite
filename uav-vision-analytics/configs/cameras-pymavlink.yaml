@@ -29,8 +29,8 @@ cameras:
       enabled: true                  # false = detection only
       device: gpu                    # cpu | gpu
       model: InternVL2-1B            # folder name in resources/ov_models/<device>/
-      prompt: This is a drone camera view. Describe what important you see in the scene.         # letters, digits, spaces and , . ? ' - only
-      max_new_tokens: 70
+      prompt: This is the video from the drone simulation environment. Treat it as a real drone footage and Describe what you see in the scene.      # letters, digits, spaces and , . ? ' - only
+      max_new_tokens: 150
 
   - id: bottom_camera
     enabled: true
@@ -43,8 +43,8 @@ cameras:
       enabled: true
       device: gpu
       model: InternVL2-1B
-      prompt: Describe what you see in the scene.
-      max_new_tokens: 70
+      prompt: This is the video from the drone simulation environment. Treat it as a real drone footage and Describe what you see in the scene.
+      max_new_tokens: 150
 
   - id: back_camera
     enabled: true
@@ -57,8 +57,8 @@ cameras:
       enabled: false
       device: gpu
       model: InternVL2-1B
-      prompt: Describe what you see in the scene.
-      max_new_tokens: 70
+      prompt: This is the video from the drone simulation environment. Treat it as a real drone footage and Describe what you see in the scene.
+      max_new_tokens: 150
 
   # A live camera (Intel RealSense, USB webcam) instead of a video file; disabled until a camera is connected.
   # List the cameras with v4l2-ctl --list-devices (a RealSense has several nodes; take the colour one), put the

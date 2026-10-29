@@ -4,34 +4,21 @@
 """Remote viewer backend for the UAV Vision Analytics stack.
 
 Runs on a machine *separate* from the UAV stack. Given the IP/hostname of a
-host already running the uav-vision-analytics stack (docker-compose-pymavlink
-or docker-compose-uavsdk, with nginx publishing its usual ports), this
-service:
+host already running uav-vision-analytics (pymavlink or UAVSDK, with nginx
+publishing its usual ports), this service:
 
-  * Looks up which DL Streamer pipeline/model is currently serving a given
-    camera's RTSP stream, via the Pipeline Server's REST API (through nginx). A camera is a
-    running pipeline with an RTSP frame destination, identified by its stream path (uav-<name>).
-  * Proxies the metrics-manager SSE stream so the browser never needs direct,
-    cross-origin, self-signed-TLS access to the remote host.
-  * Also streams this ground-station machine's *own* CPU/RAM utilization
-    (via /api/local-metrics-stream, read from /proc) so the dashboard can
-    show how much local compute "H.264 Relay" mode's mediamtx remux costs
-    on this box -- see the "UAV Ground Station Utilization" panel.
-  * Bridges MQTT scene captions (topic uav/caption/<camera>, taken from pipeline-info) to the browser
-    over SSE.
-  * "H.264 Relay" video -- the only video path: whenever a remote pipeline
-    is publishing RTSP for a camera (see pipeline_info's "rtsp_available";
-    uav-vision-analytics publishes H.264), the local viz-backend configures a mediamtx sidecar
-    (docker-compose-mediamtx.yml, always brought up alongside this
-    service -- see `make up`) to pull that already-H.264 RTSP stream on
-    demand and re-serve it as WebRTC -- pure remux, no transcoding: see
-    /api/relay-path, and the dashboard iframes that local mediamtx's own
-    WHEP viewer page, so this stack's own compute/network footprint for
-    video is visible.
-  * When no remote pipeline is publishing for a camera, the dashboard
-    shows a "No video stream" placeholder instead of video.
-  * Natural-language video search via a separately deployed Video Search
-    and Summarization (VSS) stack -- see vss_search.py.
+  * Looks up which DL Streamer pipeline/model serves a given camera's RTSP
+    stream, via the Pipeline Server's REST API (through nginx). A camera is a
+    running pipeline with an RTSP frame destination (stream path `uav-<name>`).
+  * Proxies the metrics-manager SSE stream, and streams this ground-station
+    machine's own CPU/RAM utilization (`/api/local-metrics-stream`).
+  * Bridges MQTT scene captions (`uav/caption/<camera>`) to the browser over SSE.
+  * "H.264 Relay" video: whenever a remote pipeline publishes RTSP for a
+    camera, the local viz-backend configures a mediamtx sidecar
+    (`docker-compose-mediamtx.yml`) to pull that H.264 RTSP stream on demand
+    and re-serve it as WebRTC -- pure remux, no transcoding (see `/api/relay-path`).
+  * Natural-language video search via a separately deployed Video Search and
+    Summarization (VSS) stack -- see vss_search.py.
 
 Only ever makes outbound, read-only requests to the user-supplied host; it
 never starts/stops pipelines on the remote stack.
@@ -91,6 +78,10 @@ LOCAL_METRICS_MANAGER_BASE = os.environ.get("LOCAL_METRICS_MANAGER_BASE", "http:
 # A camera is identified by its RTSP stream path (for example "uav-front-camera"); the MQTT caption
 # topic of a camera is "uav/caption/<name>". Both end up in URLs / subscriptions, so they are validated.
 CAMERA_PATTERN = r"^[A-Za-z0-9_-]{1,48}$"
+# IPv4 address or DNS hostname; the host ends up in HTTPS/RTSP/MQTT connections built from an f-string
+# below.
+HOST_PATTERN = r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$"
+HOST_PATTERN_RE = re.compile(HOST_PATTERN)
 TOPIC_PATTERN = r"^uav/caption/[A-Za-z0-9_-]{1,48}$"
 TOPIC_PATTERN_RE = re.compile(TOPIC_PATTERN)
 # uav_object_detection_<det>[_<vlm>] (video file) or uav_camera_<det>[_<vlm>] (live camera); the older uav_object_detection_<device>_caption
@@ -238,13 +229,13 @@ def _camera_sort_key(camera: dict) -> tuple:
 
 
 class SessionUpsert(BaseModel):
-    host: str = Field(..., min_length=1, max_length=253)
+    host: str = Field(..., min_length=1, max_length=253, pattern=HOST_PATTERN)
     label: Optional[str] = Field(None, max_length=64)
     boot_id: Optional[str] = None
 
 
 class SessionDelete(BaseModel):
-    host: str = Field(..., min_length=1, max_length=253)
+    host: str = Field(..., min_length=1, max_length=253, pattern=HOST_PATTERN)
 
 
 _sessions: dict = {}  # host -> {"label": str|None, "connected_at": iso str}
@@ -348,7 +339,7 @@ async def runtime_config():
 
 
 @app.get("/api/pipeline-info")
-async def pipeline_info(host: str = Query(...), camera: str = Query(..., pattern=CAMERA_PATTERN)):
+async def pipeline_info(host: str = Query(..., pattern=HOST_PATTERN), camera: str = Query(..., pattern=CAMERA_PATTERN)):
     """Report which pipeline, devices and models currently serve the given camera's RTSP stream."""
     info = {
         "reachable": False,
@@ -386,7 +377,7 @@ async def pipeline_info(host: str = Query(...), camera: str = Query(..., pattern
 
 
 @app.get("/api/detect-pipelines")
-async def detect_pipelines(host: str = Query(...)):
+async def detect_pipelines(host: str = Query(..., pattern=HOST_PATTERN)):
     """Every camera (RUNNING pipeline with an RTSP stream) on the host, so the UI can show one card per
     camera and notice, by re-polling, when a pipeline is started, stopped or replaced."""
     return await _detect_running_cameras(host)
@@ -434,7 +425,7 @@ async def local_metrics_stream():
 
 
 @app.get("/api/metrics-stream")
-async def metrics_stream(host: str = Query(...)):
+async def metrics_stream(host: str = Query(..., pattern=HOST_PATTERN)):
     """Proxy metrics-manager's SSE stream (via the remote nginx) to the browser."""
     base = _remote_base(host)
     url = f"{base}/metrics/stream"
@@ -470,6 +461,9 @@ async def metrics_stream_multi(hosts: str = Query(...)):
     host_list = [h for h in hosts.split(",") if h]
     if not host_list:
         raise HTTPException(status_code=400, detail="hosts must be a non-empty comma-separated list")
+    for h in host_list:
+        if not HOST_PATTERN_RE.match(h):
+            raise HTTPException(status_code=400, detail=f"invalid host: {h}")
 
     queue: asyncio.Queue = asyncio.Queue(maxsize=200)
     loop = asyncio.get_event_loop()
@@ -515,7 +509,7 @@ async def metrics_stream_multi(hosts: str = Query(...)):
 
 
 @app.get("/api/captions-stream")
-async def captions_stream(host: str = Query(...), topic: str = Query(..., pattern=TOPIC_PATTERN)):
+async def captions_stream(host: str = Query(..., pattern=HOST_PATTERN), topic: str = Query(..., pattern=TOPIC_PATTERN)):
     """Bridge a caption topic (uav/caption/<name>, from pipeline-info's caption_topic) of the remote MQTT broker to the browser over SSE.
 
     With several cameras per UAV and several UAVs connected, one persistent
@@ -525,7 +519,7 @@ async def captions_stream(host: str = Query(...), topic: str = Query(..., patter
 
 
 @app.get("/api/captions-stream-multi")
-async def captions_stream_multi(host: str = Query(...), topics: str = Query(...)):
+async def captions_stream_multi(host: str = Query(..., pattern=HOST_PATTERN), topics: str = Query(...)):
     """Bridge *all* of one host's caption topics over a single MQTT
     connection / single SSE stream, each event tagged with which topic it
     came from. `topics` is a comma-separated list of `uav/caption/<name>`
@@ -588,40 +582,29 @@ async def _captions_stream_impl(host: str, topics: list):
 
 
 @app.post("/api/relay-path")
-async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CAMERA_PATTERN)):
+async def relay_path(host: str = Query(..., pattern=HOST_PATTERN), camera: str = Query(..., pattern=CAMERA_PATTERN)):
     """(Re)configure the local mediamtx sidecar's "relay-<host_tag>-<camera>"
     path to pull the remote host's H.264 RTSP stream on demand, for "H.264
     Relay" video mode.
 
-    The path name is namespaced by host, not just by camera name, because 
-    different UAVs commonly reuse the same camera names (e.g. "uav-front-camera"). 
-    Without the host in the path name, connecting a second UAV with the same camera
-    names would PATCH the *same* mediamtx path that the first UAV's card is
-    already viewing, silently repointing its `source` RTSP URL out from
-    under it -- video for whichever host loses that race goes blank/stale.
+    Namespaced by host, not just camera name: different UAVs commonly reuse
+    the same camera names, and without the host in the path, a second UAV
+    would silently repoint the first UAV's already-viewed mediamtx path.
 
-    Idempotent/cheap to call on every connect (e.g. the user switching the
-    host field, or re-polling pipeline-info) -- mediamtx's config API
-    accepts repeat PATCHes to the same path name. Returns the path name for
-    the dashboard to build its local WHEP viewer iframe URL; raises 502 if
-    the mediamtx sidecar isn't reachable (e.g. docker-compose-mediamtx.yml
-    wasn't brought up).
+    Idempotent/cheap to call on every connect -- mediamtx's config API
+    accepts repeat PATCHes to the same path. Returns the path name for the
+    dashboard's WHEP viewer iframe; raises 502 if mediamtx isn't reachable.
     """
     path_name = f"relay-{uav_naming.host_tag(host)}-{camera}"
     source = f"rtsp://{host}:{REMOTE_RTSP_PORT}/{camera}"
-    # rtspTransport=tcp: the UAV host's nginx only forwards RTSP over TCP, so the default
-    # "automatic" mode wastes several seconds trying UDP ("no UDP packets received,
-    # switching to TCP") every time a viewer opens a stream.
+    # rtspTransport=tcp: the UAV host's nginx only forwards RTSP over TCP, so
+    # "automatic" mode wastes several seconds trying UDP first on every connect.
     #
-    # sourceOnDemandStartTimeout/sourceOnDemandCloseAfter ARE valid per-path
-    # keys, and these are the ones that were actually firing in practice
-    # The UAV's RTSP encoder pipeline is rebuilt from scratch on every client
-    # (re)connect and can occasionally take longer than 10s under
-    # concurrent GPU/NPU load (detection + VLM captioning), which triggered
-    # a reconnect-storm (torn down -> on-demand rebuild -> stalls again)
-    # that showed up in the UI as a stuck "source has timed out" error.
-    # Set explicitly per-path here (in addition to configs/mediamtx.yml's
-    # matching global default) so it holds regardless of the global config.
+    # sourceOnDemandStartTimeout/CloseAfter raised from mediamtx's 10s default:
+    # the UAV's RTSP encoder is rebuilt on every (re)connect and can take
+    # longer than 10s under concurrent GPU/NPU load, which was tripping a
+    # reconnect-storm seen as a stuck "source has timed out" error. Set here
+    # per-path in addition to configs/mediamtx.yml's matching global default.
     body = {
         "source": source,
         "sourceOnDemand": True,
@@ -643,7 +626,7 @@ async def relay_path(host: str = Query(...), camera: str = Query(..., pattern=CA
 
 
 @app.get("/api/relay-status")
-async def relay_status(host: str = Query(...), camera: str = Query(..., pattern=CAMERA_PATTERN)):
+async def relay_status(host: str = Query(..., pattern=HOST_PATTERN), camera: str = Query(..., pattern=CAMERA_PATTERN)):
     """Lightweight health check for a "H.264 Relay" path, polled by the
     dashboard, so a dead WHEP session can be recovered automatically
     instead of only on a manual refresh click.
