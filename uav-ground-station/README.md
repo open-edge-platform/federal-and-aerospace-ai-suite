@@ -54,7 +54,6 @@ uav-ground-station/
 ├── configs/mediamtx.yml  # mediamtx settings (WebRTC only, 60 s on-demand timeouts)
 ├── docker-compose-vss.yml  # optional VSS search containers (make up-vss)
 ├── .env.example         # Copy to .env; all vars have loopback-safe defaults
-├── tests/               # dashboard (jsdom) and backend tests, see tests/README.md
 └── backend/             # FastAPI app: static UI + proxy/bridge APIs
     ├── main.py
     ├── vss_search.py    # /api/search* proxy to the separate VSS stack
@@ -104,7 +103,8 @@ All configuration is via `.env` (see `.env.example`):
 | `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(required with `make up-vss`)_ | Credentials for the VSS overlay's MinIO and Postgres |
 | `VSS_MANAGER_PORT` | `3001` | Host port (bound to `VIZ_HOST_IP`) for the VSS pipeline-manager API |
 | `VIDEO_GROUP_ID` / `RENDER_GROUP_ID` | `44` / `992` | Host's `video`/`render` group ids (`getent group video render`), needed for GPU/NPU VSS devices |
-| `VSS_EMBEDDING_MODEL` | `CLIP/clip-vit-b-32` | Embedding model used for indexing and query |
+| `VSS_EMBEDDING_MODEL` | _(required with `make up-vss`)_ | Embedding model VSS uses for frames and queries, for example `CLIP/clip-vit-b-32` |
+| `DATAPREP_DETECTION_MODEL` | _(required with `make up-vss`)_ | Object detection model VSS dataprep uses for crop extraction, for example `yolox_s` |
 | `VSS_ENABLE_OBJECT_DETECTION` | `true` | Run object-detection crops alongside embedding during ingestion |
 | `VSS_INGEST_EMBEDDING_DEVICE` / `VSS_DETECTION_DEVICE` / `VSS_QUERY_EMBEDDING_DEVICE` | `CPU` | Devices for VSS indexing, object detection and query embedding |
 | `VSS_FRAME_INTERVAL` | `15` | Live ingest embeds one frame every N frames |
@@ -138,8 +138,9 @@ multimodal-embedding-serving, vector-retriever, vdms-vector-db, postgres,
 minio). With the default `make up` the search UI is hidden
 and the search routes return 404.
 
-1. Set the required `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials (and,
-   optionally, devices) in `.env` -- see `.env.example`.
+1. Set the required `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials, plus
+   `VSS_EMBEDDING_MODEL` and `DATAPREP_DETECTION_MODEL` (no defaults), and,
+   optionally, devices in `.env` -- see `.env.example`.
 2. `make up-vss` (base + mediamtx + VSS overlay). The first start downloads
    the CLIP embedding model (and YOLOX, for object crops) into Docker volumes.
 3. Open the dashboard and **Connect** to the UAV. Every RUNNING pipeline
@@ -270,3 +271,11 @@ caption evidence around the same time window.
   `-k`/`--insecure` curl examples in `uav-vision-analytics`'s own README).
 - This project makes outbound, read-only requests to whatever host you enter;
   it never starts/stops pipelines on the remote stack.
+
+## Notice for FFmpeg
+
+FFmpeg is an open source project licensed under LGPL and GPL. See
+<https://www.ffmpeg.org/legal.html>. You are solely responsible for determining
+if your use of FFmpeg requires any additional licenses. Intel is not
+responsible for obtaining any such licenses, nor liable for any licensing fees
+due, in connection with your use of FFmpeg.

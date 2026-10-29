@@ -73,7 +73,9 @@ conversion script as the bundled model):
 make vlm-model VLM_MODEL_ID=<org>/<model> VLM_DEVICE=CPU,GPU VLM_WEIGHT_FORMAT=int8
 ```
 
-The result is `resources/ov_models/<device>/<model>/` for each device
+The target shows the model's license and asks for confirmation first
+(`ACCEPT_LICENSE=y` skips the prompt). The result is
+`resources/ov_models/<device>/<model>/` for each device
 listed. `VLM_WEIGHT_FORMAT` accepts `int8` (default, smallest and fastest to
 load), `int4` or `fp16`.
 

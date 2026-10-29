@@ -37,7 +37,9 @@ python3.12-venv` on Ubuntu 24.04), and internet access (set
 make model
 ```
 
-The target creates `resources/venv/`, installs `resources/requirements.txt`,
+The target first shows the model's license and asks for confirmation
+(`ACCEPT_LICENSE=y` skips the prompt, for scripts). It then creates
+`resources/venv/`, installs `resources/requirements.txt`,
 downloads `yolo11s.pt` and runs `yolo export format=openvino half=True
 dynamic=True imgsz=640`. Output:
 

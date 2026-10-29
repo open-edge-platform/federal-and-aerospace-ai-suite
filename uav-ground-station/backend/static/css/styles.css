@@ -164,10 +164,15 @@ code { color: var(--accent); }
 
 .cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  /* Keep the cards side by side on every screen size; on very narrow windows
+     the row scrolls horizontally instead of wrapping. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(300px, 1fr);
   gap: 16px;
   align-content: stretch;
-  overflow-y: auto;
+  /* Keep the row tall enough for the video and the caption timeline. */
+  grid-auto-rows: minmax(520px, 1fr);
+  overflow: auto;
   min-height: 0;
 }
 
