@@ -16,7 +16,7 @@ pipeline. To start/stop/check pipelines, see
 
 ## Anatomy of a pipeline entry
 
-```jsonc
+```bash
 {
   "name": "uav_object_detection_cpu",
   "source": "gstreamer",
@@ -88,7 +88,7 @@ Add an entry to `parameters.properties` with a `type`, a `default`, and a
 `pattern` or `minimum`/`maximum` that restricts what callers can set, then
 reference it in the string as `{parameters[<name>]}`:
 
-```jsonc
+```bash
 "frame_width": {"type": "integer", "minimum": 0, "default": 896}
 ```
 
