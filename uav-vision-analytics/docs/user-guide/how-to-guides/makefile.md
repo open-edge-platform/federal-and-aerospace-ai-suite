@@ -14,13 +14,16 @@ Run `make help` (or just `make`) to list all targets with descriptions.
 
 | Target | Description |
 | --- | --- |
-| `make init` | Create `.env` from template and auto-detect Intel GPU and NPU device paths |
+| `make init` | Create `.env` from template and auto-detect the host IP, Intel GPU and NPU device paths and USB cameras |
 | `make model` | Download YOLO11s checkpoint and export to OpenVINO FP16 |
+| `make vlm-model` | Download and convert the VLM captioning model (OpenVINO IR) for CPU, GPU and NPU |
 | `make pymav-up` | Start the standalone pymavlink stack (requires model — errors if missing) |
 | `make pymav-down` | Stop and remove the pymavlink stack (includes volumes) |
 | `make uavsdk-up` | Start the uav-mission-compute-sdk stack |
 | `make uavsdk-down` | Stop and remove the uav-mission-compute-sdk stack (includes volumes) |
-| `make start-rtsp` | Start inference pipeline(s) with RTSP output. `DEVICE=cpu\|gpu\|npu\|all` (default: `gpu`) |
+| `make start-rtsp` | Start the cameras of `configs/cameras-pymavlink.yaml` (RTSP output) when the vehicle is armed |
+| `make check-cameras` | Validate `configs/cameras-pymavlink.yaml` and show what would run |
+| `make cameras-status` | Compare `configs/cameras-pymavlink.yaml` with the running pipelines |
 | `make build` | Alias for `pymav-up` |
 
 ## Target Details
@@ -50,6 +53,8 @@ this avoids the manual `.env` edit.
 
 ### `make model`
 
+Both `make model` and `make vlm-model` show the model license and ask for confirmation first (`[y/N]`). Set `ACCEPT_LICENSE=y` to accept without the prompt.
+
 Creates a Python virtual environment under `resources/venv/`, installs
 dependencies from `resources/requirements.txt`, downloads the `yolo11s.pt`
 checkpoint from Ultralytics, and exports it to OpenVINO FP16 IR format.
@@ -74,6 +79,13 @@ resources/
 > re-verifying GPU/NPU compatibility — newer versions use a `CumSum`-based
 > detection head that fails to compile on Intel GPU and NPU OpenVINO plugins.
 
+### `make vlm-model`
+
+Downloads `OpenGVLab/InternVL2-1B` and converts it to OpenVINO IR under `resources/ov_models/<device>/`. Needed for camera
+captions. The conversion script is fetched from the live-video-captioning app at a pinned commit and cached in `.cache/`
+(`FORCE_REFRESH=true` fetches it again). Overrides: `VLM_MODEL_ID`, `VLM_DEVICE` (for example `cpu,gpu`) and
+`VLM_WEIGHT_FORMAT` (the NPU always uses `int4`).
+
 ### `make pymav-up` / `make pymav-down`
 
 Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), which includes:
@@ -81,16 +93,16 @@ Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), whi
 - `dlstreamer-pipeline-server` — AI inference, REST API (:8081), RTSP output (:8555) — reached via `nginx`
 - `broker` — Eclipse Mosquitto MQTT broker (:1883)
 - `px4` — PX4 SITL flight controller simulator
-- `mavlink-router` — MAVLink routing sidecar (receives on :14550, broadcasts to :14541)
+- `mavlink-router` — MAVLink routing sidecar (receives from PX4 on :14550, broadcasts to :14541, serves a remote QGroundControl on UDP :14551 published on `HOST_IP`)
 - `metrics-manager` — system metrics endpoint (:9090) — reached via `nginx`
-- `nginx` — reverse proxy; the only service publishing ports to the host (`:80`, `:8555`)
+- `nginx` — reverse proxy; the only service publishing ports to the host (`:80`, `:443`, `:8555`, `:1883`)
 
 `down` passes `-v` to also remove named volumes (pipeline cache).
 
 ### `make uavsdk-up` / `make uavsdk-down`
 
 Manages the **uav-mission-compute-sdk stack** (`docker-compose-uavsdk.yml`),
-which requires the `uav-mission-compute-sdk`
+which requires the `federal-and-aerospace-ai-suite/uav-mission-compute-sdk`
 project to already be running.
 
 Start order:
@@ -107,23 +119,22 @@ make uavsdk-up
 
 ### `make start-rtsp`
 
-Executes `pipeline_manager.py --sink rtsp` inside the running
-`dlstreamer-pipeline-server` container. This script monitors MAVLink ARMED/DISARMED
-state and automatically starts/stops inference pipeline(s) with
-**RTSP frame output** on port `8555`.
-
-By default, only the **GPU** pipeline starts. Pass `DEVICE=cpu|gpu|npu|all` to choose:
+Executes `pipeline_manager.py` inside the running `dlstreamer-pipeline-server` container. It monitors the MAVLink
+ARMED/DISARMED state and starts/stops one inference pipeline per camera of `configs/cameras-pymavlink.yaml`, each with
+**RTSP frame output** on port `8555` (`rtsp://<HOST_IP>:8555/uav-<camera>`). The file is read when the manager starts
+and again at every arming, so after an edit you either run `make start-rtsp` again or disarm and arm. `CAMERAS=<file>`
+uses another configuration file.
 
 ```bash
-make start-rtsp                # GPU only (default)
-make start-rtsp DEVICE=cpu     # CPU only
-make start-rtsp DEVICE=npu     # NPU only
-make start-rtsp DEVICE=all     # CPU + GPU + NPU simultaneously
+make check-cameras     # validate the file and show what would run (nothing is started)
+make start-rtsp        # start the cameras on arming
+make cameras-status    # file versus running pipelines
 ```
 
-`DEVICE=npu` falls back to GPU if `NPU_DEVICE` was not detected during `make init`.
-
-Requires the DL Streamer Pipeline Server container to already be running (`make pymav-up` or `make uavsdk-up` first).
+See [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md) for the file format. Requires the DL Streamer Pipeline Server container to
+already be running (`make pymav-up` first). Also used in UAV Mission Compute SDK mode: the
+container's `CAMERAS_CONFIG` env var (set to `configs/cameras-uavsdk.yaml` by
+`docker-compose-uavsdk.yml`) is the default file read there; `CAMERAS=<file>` overrides it in either mode.
 
 ### `make build`
 

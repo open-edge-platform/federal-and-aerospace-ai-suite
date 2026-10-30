@@ -200,25 +200,14 @@ inference device, model path).
 
 ### File-source pipelines (recommended for benchmarking)
 
-These use `uav_sample.avi` as a looping file source — ideal for repeatable,
-controlled benchmarks with deterministic input:
+These loop a video file (`parameters.video`: `uav_sample_front.avi`, `uav_sample_bottom.avi` and `uav_sample_back.avi` for the
+CPU, GPU and NPU pipelines) — ideal for repeatable, controlled benchmarks with deterministic input:
 
 | Pipeline name | Device | Source |
 | --- | --- | --- |
-| `uav_object_detection_cpu` | CPU | `uav_sample.avi` (loop) |
-| `uav_object_detection_gpu` | GPU | `uav_sample.avi` (loop) |
-| `uav_object_detection_npu` | NPU | `uav_sample.avi` (loop) |
-
-### RealSense camera pipelines
-
-These use a live Intel RealSense D-series camera (`/dev/video4`). The camera
-must be physically attached and accessible inside the container.
-
-| Pipeline name | Device | Source |
-| --- | --- | --- |
-| `uav_realsense_cpu` | CPU | RealSense (v4l2) |
-| `uav_realsense_gpu` | GPU | RealSense (v4l2) |
-| `uav_realsense_npu` | NPU | RealSense (v4l2) |
+| `uav_object_detection_cpu` | CPU | `uav_sample_front.avi` (loop) |
+| `uav_object_detection_gpu` | GPU | `uav_sample_bottom.avi` (loop) |
+| `uav_object_detection_npu` | NPU | `uav_sample_back.avi` (loop) |
 
 All pipelines use the **YOLO11s** model (FP16 OpenVINO IR) at 640×640
 resolution for drone object detection (pedestrian, car, van, truck, bus, bicycle, etc.).
