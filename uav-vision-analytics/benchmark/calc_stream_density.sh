@@ -25,6 +25,9 @@ fi
 #   stream-density : Exponential + bisect search to find max streams sustaining
 #                    target FPS.
 #   nstreams       : Run fixed stream counts per pipeline; measure throughput.
+#   SHARED_MODEL_INSTANCE_ID=<id> : (env) let every stream share one detection model instance
+#                    (for example instnpu_yolo11s) instead of the default of one unique instance
+#                    per stream. A lowercase id of letters, digits and _ (the pipeline's schema).
 #   --all-devices  : Run density search sequentially for all specified pipelines
 #                    (CPU + GPU + NPU) and print a unified claim-statement table.
 #
@@ -564,7 +567,8 @@ function generate_stream_payloads() {
     --arg pipeline "$pipeline_name" \
     --arg run_ts "$run_ts" \
     --arg mode "$mode" \
-    --argjson count "$count" ' 
+    --argjson count "$count" \
+    --arg shared_id "${SHARED_MODEL_INSTANCE_ID:-}" ' 
       range(1; $count + 1) as $x
       | .
       | if .destination then
@@ -579,8 +583,10 @@ function generate_stream_payloads() {
             | .destination.frame.path = ("bm-" + $run_ts + "-" + ($pipeline[0:3]) + "-s" + ($x|tostring))
           end
         else . end
-      | .parameters["detection-properties"]["model-instance-id"] =
-          (if $mode == "density"
+      | .parameters["detection_instance_id"] =
+          (if $shared_id != ""
+           then $shared_id
+           elif $mode == "density"
            then "inst_benchmark_" + $pipeline + "_stream_" + ($x|tostring)
            else "inst_bm_" + $pipeline + "_" + $run_ts + "_" + ($x|tostring)
            end)
@@ -641,7 +647,7 @@ function run_pipelines() {
     # ── Unique model-instance-id per stream ────────────────────────────────
     # The pipeline template uses a shared model-instance-id (instcpu0/instgpu0/instnpu0).
     # Running N concurrent streams all with the same ID causes stream 2+ to ERROR.
-    # Override via detection-properties so each stream gets its own model instance.
+    # Override detection_instance_id (a pipeline parameter) so each stream gets its own model instance.
     post_pipeline "$pipeline_name" "$current_payload" "$x" || return 1
     sleep 0.5
   done < <(generate_stream_payloads "$payload_data" "$pipeline_name" "$num_pipelines" "$RUN_TS" density)

@@ -43,6 +43,7 @@ sequenceDiagram
 | Service | Image | Ports | Role |
 | --- | --- | --- | --- |
 | `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server` | `8081`, `8555` | AI inference, RTSP output |
+| `metrics-manager` (container `uav-metrics-manager`) | `intel/metrics-manager` | `9090` (internal; through nginx at `/metrics/stream` and `/api/v1/metrics/latest`) | CPU, GPU, NPU and memory metrics for the ground-station dashboard (the container is not named `metrics-manager`, which the SDK's observability profile uses) |
 | `nginx` | `nginx:1.27-alpine` | `80` (redirects to 443), `443` (HTTPS, self-signed cert), `8555` (RTSP passthrough) — published to `HOST_IP` | Reverse proxy / TLS termination — the only service that publishes ports to the host |
 
 > `dlstreamer-pipeline-server` no longer publishes ports directly — it is reachable only
@@ -75,7 +76,7 @@ There are two options available to get the application source:
 Download the compressed file and get into the directory:
 
 ```bash
-curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/uav-mission-apps.zip
+curl -OjL https://github.com/open-edge-platform/edge-ai-suites/releases/download/fedaero-latest/uav-mission-apps.zip
 ```
 
 Decompress the downloaded file:
@@ -90,8 +91,8 @@ cd  uav-mission-compute-sdk/
 Clone the repo, get into the directory and start the SDK's core infrastructure (PX4, MQTT broker, MediaMTX RTSP server).
 
 ```bash
-git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
-cd uav-mission-compute-sdk
+git clone https://github.com/open-edge-platform/edge-ai-suites.git --branch main
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
 ```
 
 Then, for either option, initialize the environment:
@@ -100,7 +101,7 @@ Then, for either option, initialize the environment:
 make init                # create .env, detect GPU
 ```
 
-> Follow only **Step 0** (configure credentials) and **Step 1+2** (`make up-sim-camera`) from the [get-started guide](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/docs/user-guide/get-started.md) / [SDK README](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/README.md). Do **not** run `make apps` (SDK Step 3) — that starts the SDK's own AI vision-processor and dashboard, which is not needed here since `uav-vision-analytics` runs its own inference via DL Streamer Pipeline Server.
+> Follow only **Step 0** (configure credentials) and **Step 1+2** (`make up-sim-camera`) from the [get-started guide](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/docs/user-guide/get-started.md) / [SDK README](https://github.com/open-edge-platform/edge-ai-suites/blob/main/federal-and-aerospace-ai-suite/uav-mission-compute-sdk/README.md). Do **not** run `make apps` (SDK Step 3) — that starts the SDK's own AI vision-processor and dashboard, which is not needed here since `uav-vision-analytics` runs its own inference via DL Streamer Pipeline Server.
 
 The SDK's `.env` defaults to `HOST_IP=127.0.0.1`, which binds MQTT, RTSP, and all other published ports to loopback only. Since `uav-vision-analytics` runs in a separate Docker container/network, it cannot reach loopback-bound ports. Set the SDK's `.env` to bind on all interfaces before starting it:
 
@@ -120,7 +121,7 @@ cd ../uav-vision-analytics/
 Or, If Cloned whole repo then Get into the directory with:
 
 ```bash
-cd uav-vision-analytics
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
 ```
 
 Then, for either option, initialize the environment:
@@ -129,7 +130,7 @@ Then, for either option, initialize the environment:
 make init
 ```
 
-`make init` creates `.env` from the template and **auto-detects your Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`REALSENSE_DEVICE`). It skips if `.env` already exists.
+`make init` creates `.env` from the template and **auto-detects your Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
 
 Then set your host IP address in `.env`:
 
@@ -145,14 +146,14 @@ Download and export the YOLO11s model to OpenVINO FP16 IR:
 make model
 ```
 
-> See the [AI Model guide](../how-to-guides/model.md) for model details.
+> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) for model details.
 
 ### 4. Start the uav-vision-analytics application
 
 The SDK's core infrastructure (step 1) must already be running.
 
 ```bash
-cd uav-vision-analytics
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
 make uavsdk-up
 ```
 
@@ -180,50 +181,42 @@ Two options are available depending on your use case:
 
 #### Option A — Managed RTSP output (recommended)
 
-Runs `pipeline_manager.py` inside the DL Streamer Pipeline Server container. It monitors the drone's ARMED/DISARMED state and automatically starts and stops inference pipelines. Annotated frames are served as RTSP on port `8555`.
+Runs `pipeline_manager.py` inside the DL Streamer Pipeline Server container. It watches the SDK's MQTT status topic `uav/<UAV_ID>/telemetry/status` (`{"armed": true|false}`), starts the cameras of [`configs/cameras-uavsdk.yaml`](../../../configs/cameras-uavsdk.yaml) when the drone arms and stops them when it disarms. Annotated frames are served as RTSP on port `8555`.
 
-`make start-rtsp` starts **one camera pipeline at a time** (default: GPU/forward camera). Pass `DEVICE=cpu|gpu|npu|all` to choose:
+The cameras are RTSP streams from the SDK (`rtsp://host.docker.internal:8554/<UAV_ID>/<camera>`, `UAV_ID` from `.env`, default `uav-1`). By default `nadir_camera` detects on the CPU, `forward_camera` on the GPU and `rear_camera` on the NPU (skipped when the host has no NPU). A camera whose RTSP source is not available is skipped. Edit the file to change the devices, switch on VLM captions or hide the overlay; it is read again at every arming. It has the same format as for the simulator, see [Configure the cameras](../how-to-customize/camera-management/configure-cameras.md).
 
 ```bash
-make start-rtsp                # GPU/forward only (default)
-make start-rtsp DEVICE=cpu     # CPU/nadir only
-make start-rtsp DEVICE=npu     # NPU/rear only
-make start-rtsp DEVICE=all     # all three cameras simultaneously
+make check-cameras      # validate cameras-uavsdk.yaml and show what would run
+make start-rtsp         # wait for the drone to arm, then start the cameras
+make cameras-status     # compare the file with what is running
 ```
 
-> `DEVICE=npu` requires `NPU_DEVICE` to have been detected during `make init` — falls back to GPU otherwise. Only the selected `DEVICE` camera pipeline is active (unless `DEVICE=all`), and streams are available only after the drone arms — see [Step 7 — View the output stream](#7-view-the-output-stream) for the RTSP URLs.
+**Captions.** With `captioning.enabled: true` on a camera, the captions are published to MQTT topic `uav/caption/<camera id>` on the
+**SDK's broker** (`mqtt-broker`, host port `1884`), not on a broker of this stack: the compose file points the pipelines'
+`MQTT_HOST`/`MQTT_PORT` at `host.docker.internal:1884`. Watch them with
+`docker exec mqtt-broker mosquitto_sub -t 'uav/caption/#'`. The ground-station dashboard must use that port too
+(`VIZ_REMOTE_MQTT_PORT=1884` in its `.env`; the default `1883` is the pymavlink stack's broker).
+
+The streams are available only after the drone arms — see [Step 7 — View the output stream](#7-view-the-output-stream) for the RTSP URLs.
 
 #### Option B — Manual REST API
 
 > [!NOTE]
 > RTSP streams are not available until the UAV is armed. Run a simple mission first (see [Step 5: Run a simple mission](#5-run-a-simple-mission)).
 
-Start a single camera pipeline directly. The UAVSDK mode loads `config-uavsdk.json` which defines the three camera-source pipelines (`nadir_camera_rtsp_cpu`, `forward_camera_rtsp_gpu`, `rear_camera_rtsp_npu`).
-
-Once the source is confirmed live, start the pipeline:
+Start a single camera pipeline directly. The UAVSDK mode loads `config-uavsdk.json`, which has the same pipeline names as the simulator stack (`uav_object_detection_<det>` and `uav_object_detection_<det>_<vlm>`) with an RTSP source, taken from the `rtsp_url` parameter.
 
 ```bash
-# Start CPU pipeline (uav-mission-compute-sdk mode)
+# Detection on the CPU for the nadir camera
 INSTANCE_ID=$(curl -k -s -X POST \
-  https://<HOST_IP>/pipelines/user_defined_pipelines/nadir_camera_rtsp_cpu \
+  https://<HOST_IP>/pipelines/user_defined_pipelines/uav_object_detection_cpu \
   -H "Content-Type: application/json" \
   -d '{
-    "destination": {
-      "metadata": {
-        "type": "file",
-        "path": "/tmp/results_cpu.jsonl",
-        "format": "json-lines"
-      },
-      "frame": {
-        "type": "rtsp",
-        "path": "nadir"
-      }
-    },
+    "destination": {"frame": {"type": "rtsp", "path": "uav-nadir-camera", "encoding": "h264"}},
     "parameters": {
-      "detection-properties": {
-        "model": "/home/pipeline-server/resources/models/yolo11s/yolo11s_openvino_model/yolo11s.xml",
-        "device": "CPU"
-      }
+      "rtsp_url": "rtsp://host.docker.internal:8554/uav-1/nadir",
+      "detection_instance_id": "instcpu_yolo11s",
+      "overlay_label": "nadir-CPU"
     }
   }' | tr -d '"')
 echo "Instance ID: $INSTANCE_ID"
@@ -237,11 +230,8 @@ If `state` is `ERROR`, check the container logs:
 ```bash
 docker logs dlstreamer-pipeline-server 2>&1 | tail -20
 ```
-Change following **four values** to switch between CPU / GPU / NPU:
-1. **Pipeline name** in the URL path (`nadir_camera_rtsp_cpu` → `forward_camera_rtsp_gpu` / `rear_camera_rtsp_npu`)
-2. **RTSP path** in the request body (`nadir` → `forward` / `rear`)
-3. **Device** in `detection-properties` (`CPU` → `GPU` / `NPU`)
-4. **JSONL log path** in the request body (`/tmp/results_cpu.jsonl` → `/tmp/results_gpu.jsonl` / `/tmp/results_npu.jsonl`) — each camera/device pipeline logs detections to its own file so events from concurrently-running pipelines are never mixed together.
+
+To use another device change the pipeline name (`uav_object_detection_gpu`, `uav_object_detection_npu`, or the `_<vlm>` variants with `captioner_model_path` and `mqtt_topic` in `parameters`) and the `detection_instance_id`.
 
 > [!NOTE]
 > `https://<HOST_IP>/...` is the DL Streamer Pipeline Server REST API, proxied by nginx on
@@ -257,20 +247,9 @@ Install ffmpeg first if not present using `sudo apt install ffmpeg`.
 Any of the annotated streams can be viewed with `ffplay <RTSP_PATH>`:
 
 ```bash
-ffplay rtsp://<HOST_IP>:8555/nadir               # nadir camera
-ffplay rtsp://<HOST_IP>:8555/forward               # forward camera
-ffplay rtsp://<HOST_IP>:8555/rear               # rearcamera
-```
-
-#### View detection logs
-
-Each camera/device pipeline writes its detection events (with GPS/telemetry enrichment)
-to a separate JSONL file:
-
-```bash
-tail -f /tmp/results_cpu.jsonl   # nadir (CPU) detections
-tail -f /tmp/results_gpu.jsonl   # forward (GPU) detections
-tail -f /tmp/results_npu.jsonl   # rear (NPU) detections
+ffplay rtsp://<HOST_IP>:8555/uav-nadir-camera      # nadir camera
+ffplay rtsp://<HOST_IP>:8555/uav-forward-camera    # forward camera
+ffplay rtsp://<HOST_IP>:8555/uav-rear-camera       # rear camera
 ```
 
 #### Capture all the video streams
@@ -279,9 +258,9 @@ Record all three streams to disk with `ffmpeg`:
 
 ```bash
 ffmpeg \
-  -rtsp_transport tcp -i rtsp://<HOST_IP>:8555/nadir \
-  -rtsp_transport tcp -i rtsp://<HOST_IP>:8555/forward \
-  -rtsp_transport tcp -i rtsp://<HOST_IP>:8555/rear \
+  -rtsp_transport tcp -i rtsp://<HOST_IP>:8555/uav-nadir-camera \
+  -rtsp_transport tcp -i rtsp://<HOST_IP>:8555/uav-forward-camera \
+  -rtsp_transport tcp -i rtsp://<HOST_IP>:8555/uav-rear-camera \
   -map 0:v -c:v copy nadir.mkv \
   -map 1:v -c:v copy forward.mkv \
   -map 2:v -c:v copy rear.mkv
@@ -312,7 +291,7 @@ make uavsdk-down
 Then stop the SDK's core infrastructure:
 
 ```bash
-cd uav-mission-compute-sdk
+cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
 make down
 ```
 
@@ -322,17 +301,17 @@ make down
 
 ### UAV Mission Compute SDK Mode (`config-uavsdk.json`)
 
-| Pipeline | Device | Source (inside Docker) | Output RTSP (host) |
+Nine pipelines with the same names as the simulator stack: `uav_object_detection_<det>` (`cpu`, `gpu`, `npu`) and `uav_object_detection_<det>_<vlm>` (`vlm` = `cpu` or `gpu`, with captions on MQTT `uav/caption/<camera>`). Their source is `rtsp_url`. `configs/cameras-uavsdk.yaml` picks them:
+
+| Camera | Pipeline | Source (inside Docker) | Output RTSP (host) |
 | --- | --- | --- | --- |
-| `nadir_camera_rtsp_cpu` | CPU | `rtsp://host.docker.internal:8554/uav-1/nadir` | `rtsp://<HOST_IP>:8555/nadir` |
-| `forward_camera_rtsp_gpu` | GPU | `rtsp://host.docker.internal:8554/uav-1/forward` | `rtsp://<HOST_IP>:8555/forward` |
-| `rear_camera_rtsp_npu` | NPU | `rtsp://host.docker.internal:8554/uav-1/rear` | `rtsp://<HOST_IP>:8555/rear` |
+| `nadir_camera` | `uav_object_detection_cpu` | `rtsp://host.docker.internal:8554/<UAV_ID>/nadir` | `rtsp://<HOST_IP>:8555/uav-nadir-camera` |
+| `forward_camera` | `uav_object_detection_gpu` | `rtsp://host.docker.internal:8554/<UAV_ID>/forward` | `rtsp://<HOST_IP>:8555/uav-forward-camera` |
+| `rear_camera` | `uav_object_detection_npu` | `rtsp://host.docker.internal:8554/<UAV_ID>/rear` | `rtsp://<HOST_IP>:8555/uav-rear-camera` |
 
-> `uav-1` in the source URL is the value of the `UAV_ID` environment variable (default: `uav-1`).
-> Set a different value in `.env` if your SDK project uses a different vehicle ID.
-> Also update the RTSP input URLs in `config-uavsdk.json` if you change the UAV ID.
+> `<UAV_ID>` is the `UAV_ID` environment variable (default: `uav-1`); set another value in `.env` if your SDK project uses a different vehicle ID. The cameras file uses the placeholder `{uav_id}`, so nothing else has to change.
 
-All pipelines are `auto_start: false` — started explicitly via the pipeline managers (`make start-rtsp DEVICE=cpu|gpu|npu|all`) or the REST API directly.
+All pipelines are `auto_start: false` — started by the manager (`make start-rtsp`) or through the REST API.
 
 REST endpoint: `POST https://<HOST_IP>/pipelines/user_defined_pipelines/{name}` (proxied by nginx over HTTPS to `dlstreamer-pipeline-server:8081`)
 
@@ -374,7 +353,9 @@ Each output frame carries these overlaid fields in the upper-left corner:
 | Document | Description |
 | --- | --- |
 | [index.md](../index.md) | Application overview and component block diagrams |
-| [realsense-guide.md](../how-to-guides/realsense-guide.md) | Intel RealSense camera setup and pipelines |
+| [how-to-guides.md](../how-to-guides.md) | Operating the application: QGroundControl, ground station, deployment modes |
+| [how-to-customize.md](../how-to-customize.md) | Changing cameras, models, pipelines, overlay and search tuning |
+| [realsense-guide.md](../how-to-customize/camera-management/realsense-guide.md) | Intel RealSense camera setup and pipelines |
 | [benchmark.md](../benchmark.md) | Performance benchmarking guide |
 | [makefile.md](../how-to-guides/makefile.md) | Makefile target reference |
 | [troubleshooting.md](../how-to-guides/troubleshooting.md) | Known issues and resolutions |

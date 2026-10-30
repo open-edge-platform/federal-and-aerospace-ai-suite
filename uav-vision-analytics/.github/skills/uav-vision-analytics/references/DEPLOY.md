@@ -214,13 +214,14 @@ dlstreamer-pipeline-server:
 > ```
 >
 > Binding to `${HOST_IP:-127.0.0.1}` (not `0.0.0.0`) scopes the published ports to the
-> specific interface in `HOST_IP` instead of every interface on the host — see
-> `references/SECURITY.md`-style guidance in `docs/user-guide/how-to-guides/security-considerations.md`.
+> specific interface in `HOST_IP` instead of every interface on the host.
 
 **For UAVSDK mode** mount the UAVSDK overlay and manager instead:
 ```yaml
     - "./gvapython/telemetry-overlay-uavsdk.py:/home/pipeline-server/gvapython/telemetry-overlay-uavsdk.py"
-    - "./scripts/uavsdk_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+    - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+    - "./scripts/camera_config.py:/home/pipeline-server/scripts/camera_config.py:ro"
+    - "./configs:/home/pipeline-server/configs:rw"          # cameras-uavsdk.yaml (CAMERAS_CONFIG), ARM_SOURCE=mqtt
 ```
 And set `UAV_ID` env var (default `uav-1`).
 
@@ -257,7 +258,7 @@ pymav-up:    ## Start pymavlink stack (docker-compose-pymavlink.yml)
 pymav-down:  ## Stop pymavlink stack
 uavsdk-up:   ## Start UAVSDK stack (requires uav-mission-compute-sdk running first)
 uavsdk-down: ## Stop UAVSDK stack
-start-rtsp:  ## Launch pipeline_manager.py --sink rtsp inside container
+start-rtsp:  ## Launch pipeline_manager.py inside container
 ```
 
 Full Makefile is in `uav-vision-analytics/Makefile`.
