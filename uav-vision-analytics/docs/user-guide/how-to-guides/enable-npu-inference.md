@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Enabling NPU Inference
+# Enable NPU Inference
 
 NPU is a first-class supported inference device — it has its own pipeline
 entries (`..._npu`) selectable per camera in `configs/cameras-pymavlink.yaml`
@@ -15,8 +15,8 @@ camera to (or away from) the NPU is a one-line change in the camera file, see
 
 ## Prerequisites
 
-- An Intel NPU (e.g. Meteor Lake / Panther Lake) with the NPU driver
-  installed on the host.
+- An Intel NPU (e.g., Intel® Core™ Ultra Series 1 or Intel® Core™ Ultra Series 3) with the
+  NPU driver installed on the host.
 - The stack not yet started for this session (or willing to restart it).
 
 ## Steps

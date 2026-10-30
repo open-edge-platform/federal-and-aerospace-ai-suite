@@ -14,12 +14,12 @@ Run `make help` (or just `make`) to list all targets with descriptions.
 
 | Target | Description |
 | --- | --- |
-| `make init` | Create `.env` from template and auto-detect the host IP, Intel GPU and NPU device paths and USB cameras |
+| `make init` | Create `.env` from template and auto-detect the host IP, Intel GPU and NPU device paths, and USB cameras |
 | `make model` | Download YOLO11s checkpoint and export to OpenVINO FP16 |
 | `make vlm-model` | Download and convert the VLM captioning model (OpenVINO IR) for CPU and GPU |
-| `make pymav-build` | Rebuild the locally built pymavlink images (requires network access) |
-| `make pymav-up` | Start the standalone pymavlink stack (requires model — errors if missing); builds images only if they do not exist yet |
-| `make pymav-down` | Stop and remove the pymavlink stack (includes volumes) |
+| `make pymav-build` | Rebuild the locally built Pymavlink images (requires network access) |
+| `make pymav-up` | Start the standalone Pymavlink stack (requires model — errors if missing); builds images only if they do not exist yet |
+| `make pymav-down` | Stop and remove the Pymavlink stack (includes volumes) |
 | `make uavsdk-up` | Start the uav-mission-compute-sdk stack |
 | `make uavsdk-down` | Stop and remove the uav-mission-compute-sdk stack (includes volumes) |
 | `make start-rtsp` | Start the cameras of `configs/cameras-pymavlink.yaml` (RTSP output) when the vehicle is armed |
@@ -77,7 +77,7 @@ resources/
         └── yolo11s_openvino_model/      ← exported IR (yolo11s.xml + yolo11s.bin)
 ```
 
-> [!NOTE]
+> [!IMPORTANT]
 > `ultralytics` is pinned to `8.4.67`. Do not upgrade without
 > re-verifying GPU/NPU compatibility — newer versions use a `CumSum`-based
 > detection head that fails to compile on Intel GPU and NPU OpenVINO plugins.
@@ -91,7 +91,7 @@ captions. The conversion script is fetched from the live-video-captioning app at
 
 ### `make pymav-up` / `make pymav-down`
 
-Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), which includes:
+Manages the **standalone Pymavlink stack** (`docker-compose-pymavlink.yml`), which includes:
 
 - `dlstreamer-pipeline-server` — AI inference, REST API (:8081), RTSP output (:8555) — reached via `nginx`
 - `broker` — Eclipse Mosquitto MQTT broker (:1883)
@@ -103,7 +103,7 @@ Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), whi
 `down` passes `-v` to also remove named volumes (pipeline cache).
 
 Before starting, `pymav-up` (and `uavsdk-up`) runs `scripts/update_device_gids.sh`, which writes the group IDs of the
-GPU, NPU and camera device nodes (`GPU_CARD_GID`, `GPU_RENDER_GID`, `NPU_GID`, `CAMERA_GID`) into `.env`; the compose
+GPU, NPU, and camera device nodes (`GPU_CARD_GID`, `GPU_RENDER_GID`, `NPU_GID`, `CAMERA_GID`) into `.env`; the compose
 files pass them as `group_add`, so the non-root pipeline user can open the devices on any host. Nothing to do by hand.
 
 Containers are named `uav-va-<service>` (for example `uav-va-dlstreamer-pipeline-server`), use those names with `docker exec` / `docker logs`.
@@ -165,7 +165,7 @@ Convenience alias for `make pymav-up`. Starts the default standalone stack.
 # 0. Install system prerequisites
 sudo apt install python3.12-venv ffmpeg
 
-# 1. Create .env and auto-detect the host IP, GPU, NPU and camera devices
+# 1. Create .env and auto-detect the host IP, GPU, NPU, and camera devices
 make init
 
 # 2. Download and export the detection model, and download the VLM used for captions

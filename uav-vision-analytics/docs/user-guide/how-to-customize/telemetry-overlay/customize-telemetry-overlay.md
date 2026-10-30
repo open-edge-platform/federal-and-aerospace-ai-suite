@@ -18,7 +18,7 @@ modify an existing one, or remove one safely.
 
   | Mode | Script | Telemetry source |
   | --- | --- | --- |
-  | Standalone (pymavlink) | `gvapython/telemetry-overlay-pymavlink.py` | MAVLink UDP broadcast (`:14541`) via `pymavlink` |
+  | Standalone (Pymavlink) | `gvapython/telemetry-overlay-pymavlink.py` | MAVLink UDP broadcast (`:14541`) via `pymavlink` |
   | UAV Mission Compute SDK | `gvapython/telemetry-overlay-uavsdk.py` | MQTT topics `uav/{UAV_ID}/telemetry/#` |
 
 - The stack running in the target mode, so you can restart it to pick up
@@ -54,7 +54,7 @@ latest_data = {
 
 ### Add a new field
 
-**Example: add vertical climb rate (`VFR_HUD.climb`) in pymavlink mode.**
+**Example: add vertical climb rate (`VFR_HUD.climb`) in Pymavlink mode.**
 
 1. Add a key to `latest_data`:
 

@@ -3,13 +3,13 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Searching Live Video with VSS
+# Search Live Video with VSS
 
 `uav-ground-station` can optionally index every running camera's live RTSP
 stream into a
-[Video Search and Summarization (VSS)](https://github.com/open-edge-platform/edge-ai-libraries/tree/main/sample-applications/video-search-and-summarization)
+[Video Search and Summarization (VSS)](https://docs.openedgeplatform.intel.com/dev/edge-ai-libraries/video-search-and-summarization/index.html)
 stack and let an operator search across them with a natural-language query
-(e.g. "a red car on the road"). This tutorial covers enabling the overlay,
+(e.g., "a red car on the road"). This tutorial covers enabling the overlay,
 how a UAV's cameras get indexed, and how to scope a search to one UAV or
 camera — this is a `uav-ground-station` feature; nothing changes on the
 `uav-vision-analytics` side beyond already running RTSP pipelines (see
@@ -28,7 +28,7 @@ camera — this is a `uav-ground-station` feature; nothing changes on the
   device/camera) — see [Get Started](../get-started/get-started-standalone.md)
   and [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md).
 - `uav-ground-station` checked out (see its
-  [Quick Start](../../../../uav-ground-station/README.md#quick-start)) and `make init` already run once (creates
+  [Quick Start](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/README.md#quick-start)) and `make init` already run once (this creates
   `.env`). Recommended to Run it on a different machine than the UAV Mission Compute SDK
   stack: both publish the mediamtx WebRTC port `8889` on `HOST_IP`.
 - `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` /
@@ -60,8 +60,8 @@ continuously. A backend loop, every `VSS_LIVE_SYNC_INTERVAL_SECONDS` (default
 for `VSS_LIVE_RETENTION_HOURS`.
 
 > [!NOTE]
-> Starting/enabling a camera *after* connecting (e.g. via
-> [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md) + `make start-rtsp`) is picked up on
+> Starting/enabling a camera *after* connecting (e.g., via
+> [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md) and `make start-rtsp`) is picked up on
 > the next sync interval, not instantly — allow up to
 > `VSS_LIVE_SYNC_INTERVAL_SECONDS` before it appears as searchable.
 
@@ -105,5 +105,5 @@ dominating results, result clips that won't play, a new camera that never
 becomes searchable).
 
 See also the ground station's own
-[README — VSS search](../../../../uav-ground-station/README.md#vss-search)
+[README — VSS search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/README.md#vss-search)
 for the full route reference and container list.

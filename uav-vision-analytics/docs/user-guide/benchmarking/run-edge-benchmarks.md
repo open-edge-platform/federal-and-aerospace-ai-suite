@@ -81,7 +81,7 @@ Some GenAI models require authentication:
 export HF_TOKEN=<your-hugging-face-token>
 ```
 
-## Running Benchmarks
+## Run Benchmarks
 
 ### Vision Benchmarks
 
@@ -154,7 +154,7 @@ Example — run media benchmarks with power measurement, resuming from prior res
 cd workloads/media-benchmarks && make benchmarks POWER=True RESUME=True
 ```
 
-## Generating Reports
+## Generate Reports
 
 After running benchmarks, generate an interactive HTML dashboard:
 

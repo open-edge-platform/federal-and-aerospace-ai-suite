@@ -50,7 +50,7 @@ device the camera uses.
 
 `gvagenai` loads the model with `openvino_genai.VLMPipeline`, so the folder
 must contain a complete **OpenVINO IR export of the VLM** (not a PyTorch,
-safetensors or ONNX checkpoint). A typical export contains:
+safetensors, or ONNX checkpoint). A typical export contains:
 
 | Files | Purpose |
 | --- | --- |
@@ -190,7 +190,7 @@ For a pipeline started by hand, pass the container path in
 
 ## Prompt and caption length
 
-`prompt` may contain letters, digits, spaces and `, . ? ' -` only (validated
+`prompt` may contain letters, digits, spaces, and `, . ? ' -` only (validated
 by `make check-cameras`). `max_new_tokens` bounds the caption length and
 therefore the generation time; the pipeline sends one frame to the VLM every
 5 s, so a model/prompt combination that takes longer than that per caption
