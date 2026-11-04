@@ -30,6 +30,8 @@ benchmark/                    Stream density benchmarking tooling (`calc_stream_
 
 ## Stack
 
+Container names use the prefix `uav-va-` (vision analytics), for example `uav-va-dlstreamer-pipeline-server` for the DL Streamer Pipeline Server. The ground station uses `uav-gs-`. The compose service names listed below are unchanged.
+
 ### Standalone Mode (pymavlink)
 
 | Service | Image | Role |
@@ -140,7 +142,7 @@ required. Restart the cameras (`make start-rtsp`) after replacing a file. See
 a vehicle (Ctrl+C stops them):
 
 ```bash
-docker exec -it -e HOST_IP=<HOST_IP> dlstreamer-pipeline-server \
+docker exec -it -e HOST_IP=<HOST_IP> uav-va-dlstreamer-pipeline-server \
   python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now
 ```
 

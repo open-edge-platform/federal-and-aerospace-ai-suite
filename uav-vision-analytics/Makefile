@@ -8,7 +8,7 @@ endif
 
 COMPOSE_PYMAV  := docker-compose-pymavlink.yml
 COMPOSE_SDK := docker-compose-uavsdk.yml
-DLSPS          := dlstreamer-pipeline-server
+DLSPS          := uav-va-dlstreamer-pipeline-server
 MODEL_DIR      := resources/models/yolo11s
 MODEL_XML      := $(MODEL_DIR)/yolo11s_openvino_model/yolo11s.xml
 VENV           := resources/venv

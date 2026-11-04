@@ -40,7 +40,7 @@ See [System Requirements](../../get-started/system-requirements.md) for the full
    make start-rtsp          # the cameras start when the vehicle is armed
    ```
 
-   Without a vehicle: `docker exec -it dlstreamer-pipeline-server python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now`.
+   Without a vehicle: `docker exec -it uav-va-dlstreamer-pipeline-server python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now`.
 
 4. **View the stream** at `rtsp://<HOST_IP>:8555/uav-realsense-camera` (`ffplay`, VLC or the ground-station dashboard, where the
    card has a `LIVE` badge).

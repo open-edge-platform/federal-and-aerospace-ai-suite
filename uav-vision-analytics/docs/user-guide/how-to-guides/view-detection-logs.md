@@ -41,7 +41,7 @@ container; copy it out with `docker cp` as shown below.
 ### 1. Tail the log live
 
 ```bash
-docker exec dlstreamer-pipeline-server tail -f /tmp/results.jsonl
+docker exec uav-va-dlstreamer-pipeline-server tail -f /tmp/results.jsonl
 ```
 
 ### 2. Pretty-print and filter with `jq`
@@ -52,10 +52,10 @@ and confidence scores.
 
 ```bash
 # Pretty-print the most recent line
-docker exec dlstreamer-pipeline-server tail -n 1 /tmp/results.jsonl | jq .
+docker exec uav-va-dlstreamer-pipeline-server tail -n 1 /tmp/results.jsonl | jq .
 
 # Show only frames where at least one object was detected
-docker exec dlstreamer-pipeline-server tail -f /tmp/results.jsonl \
+docker exec uav-va-dlstreamer-pipeline-server tail -f /tmp/results.jsonl \
   | jq -c 'select(.objects | length > 0) | {ts: .timestamp, objects: [.objects[].detection.label]}'
 ```
 
@@ -67,7 +67,7 @@ docker exec dlstreamer-pipeline-server tail -f /tmp/results.jsonl \
 ### 3. Copy the log out for offline analysis
 
 ```bash
-docker cp dlstreamer-pipeline-server:/tmp/results.jsonl ./results.jsonl
+docker cp uav-va-dlstreamer-pipeline-server:/tmp/results.jsonl ./results.jsonl
 ```
 
 ### 4. Correlate a log entry with a pipeline instance

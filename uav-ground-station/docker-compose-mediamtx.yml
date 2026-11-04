@@ -24,7 +24,7 @@ services:
 
   mediamtx:
     image: bluenviron/mediamtx:1.21.2
-    container_name: viz-mediamtx
+    container_name: uav-gs-mediamtx
     volumes:
       - ./configs/mediamtx.yml:/mediamtx.yml:ro
     environment:

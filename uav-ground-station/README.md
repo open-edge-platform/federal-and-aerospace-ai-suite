@@ -67,6 +67,8 @@ uav-ground-station/
     └── static/           # index.html, css/, js/ (app.js, search.js, summary.js, arch.js), img/
 ```
 
+Container names use the prefix `uav-gs-` (ground station): `uav-gs-backend`, `uav-gs-mediamtx` and `uav-gs-metrics-manager`. The compose service names (`viz-backend`, `mediamtx`, `gs-metrics-manager`) are unchanged.
+
 ## Quick Start
 
 ```bash
