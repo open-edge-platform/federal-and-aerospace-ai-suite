@@ -2,7 +2,7 @@ services:
 
   broker:
     image: docker.io/library/eclipse-mosquitto:2.0.22
-    container_name: broker
+    container_name: uav-va-broker
     environment:
       - http_proxy=${http_proxy}
       - https_proxy=${https_proxy}
@@ -17,7 +17,7 @@ services:
   px4:
     image: px4io/px4-sitl:latest
     hostname: px4-sitl
-    container_name: px4
+    container_name: uav-va-px4
     volumes:
       - ./10040_sihsim_quadx.post:/opt/px4/etc/init.d-posix/airframes/10040_sihsim_quadx.post
     stdin_open: true
@@ -42,7 +42,7 @@ services:
         no_proxy:    ${no_proxy:-localhost,127.0.0.0/8}
         NO_PROXY:    ${NO_PROXY:-localhost,127.0.0.0/8}
     image: uav-vision-analytics-mavlink-router:local
-    container_name: mavlink-router
+    container_name: uav-va-mavlink-router
     restart: unless-stopped
     volumes:
       - ./configs/mavlink-router/main.conf:/etc/mavlink-router/main.conf
@@ -60,7 +60,7 @@ services:
         FROM ${DLSTREAMER_PIPELINE_SERVER_IMAGE}
         RUN pip install --no-cache-dir pymavlink
     image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE}-pymavlink
-    container_name: dlstreamer-pipeline-server
+    container_name: uav-va-dlstreamer-pipeline-server
     environment:
       - http_proxy=${http_proxy}
       - https_proxy=${https_proxy}
@@ -92,14 +92,11 @@ services:
       - "/run/udev:/run/udev:ro"
       - "/tmp:/tmp"
     group_add:
-      - "44"
-      - "109"
-      - "110"
-      - "990"
-      - "992"
-      - "993"
-      - "994"
-      - "996"
+      # Group IDs of the GPU/NPU/camera device nodes, written to .env by scripts/update_device_gids.sh
+      - "${GPU_CARD_GID:-44}"
+      - "${GPU_RENDER_GID:-109}"
+      - "${NPU_GID:-65501}"
+      - "${CAMERA_GID:-65502}"
     device_cgroup_rules:
       - "c 189:* rmw"
       - "c 209:* rmw"
@@ -125,7 +122,7 @@ services:
 
   metrics-manager:
     image: intel/metrics-manager:2026.2.0
-    container_name: metrics-manager
+    container_name: uav-va-metrics-manager
     privileged: true
     pid: host
     devices:
@@ -141,7 +138,7 @@ services:
   # HOST_IP is unset) rather than all interfaces.
   nginx:
     image: nginx:1.27-alpine
-    container_name: nginx
+    container_name: uav-va-nginx
     restart: unless-stopped
     volumes:
       - ./configs/nginx/nginx-pymavlink.conf:/etc/nginx/nginx.conf:ro

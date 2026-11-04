@@ -90,7 +90,7 @@ its detection device, so the file chooses a pipeline and never edits one.
    * an edit while armed is noted (`[config] changed while armed: it applies the next time the vehicle is armed`);
      the cameras that are streaming keep running unchanged.
 
-   Without a vehicle, `docker exec -it dlstreamer-pipeline-server python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now`
+   Without a vehicle, `docker exec -it uav-va-dlstreamer-pipeline-server python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now`
    starts the cameras right away and stops them on Ctrl+C.
 
 3. **Compare the file with what is running**

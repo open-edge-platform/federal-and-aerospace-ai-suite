@@ -43,7 +43,7 @@ sequenceDiagram
 | Service | Image | Ports | Role |
 | --- | --- | --- | --- |
 | `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server` | `8081`, `8555` | AI inference, RTSP output |
-| `metrics-manager` (container `uav-metrics-manager`) | `intel/metrics-manager` | `9090` (internal; through nginx at `/metrics/stream` and `/api/v1/metrics/latest`) | CPU, GPU, NPU and memory metrics for the ground-station dashboard (the container is not named `metrics-manager`, which the SDK's observability profile uses) |
+| `metrics-manager` (container `uav-va-metrics-manager`) | `intel/metrics-manager` | `9090` (internal; through nginx at `/metrics/stream` and `/api/v1/metrics/latest`) | CPU, GPU, NPU and memory metrics for the ground-station dashboard (the container is not named `metrics-manager`, which the SDK's observability profile uses) |
 | `nginx` | `nginx:1.27-alpine` | `80` (redirects to 443), `443` (HTTPS, self-signed cert), `8555` (RTSP passthrough) — published to `HOST_IP` | Reverse proxy / TLS termination — the only service that publishes ports to the host |
 
 > `dlstreamer-pipeline-server` no longer publishes ports directly — it is reachable only
@@ -228,7 +228,7 @@ curl -k -s https://<HOST_IP>/pipelines/${INSTANCE_ID}/status | python3 -m json.t
 If `state` is `ERROR`, check the container logs:
 
 ```bash
-docker logs dlstreamer-pipeline-server 2>&1 | tail -20
+docker logs uav-va-dlstreamer-pipeline-server 2>&1 | tail -20
 ```
 
 To use another device change the pipeline name (`uav_object_detection_gpu`, `uav_object_detection_npu`, or the `_<vlm>` variants with `captioner_model_path` and `mqtt_topic` in `parameters`) and the `detection_instance_id`.

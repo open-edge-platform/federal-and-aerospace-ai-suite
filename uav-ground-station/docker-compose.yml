@@ -29,7 +29,7 @@ services:
   # stream at /api/local-metrics-stream.
   gs-metrics-manager:
     image: intel/metrics-manager:2026.2.0
-    container_name: gs-metrics-manager
+    container_name: uav-gs-metrics-manager
     privileged: true
     pid: host
     devices:
@@ -45,7 +45,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     image: uav-ground-station-backend:local
-    container_name: viz-backend
+    container_name: uav-gs-backend
     environment:
       - DEFAULT_REMOTE_HOST=${VIZ_COMPANION_HOST:-127.0.0.1}
       - CAMERA_ORDER=${VIZ_CAMERA_ORDER:-front,bottom,back}

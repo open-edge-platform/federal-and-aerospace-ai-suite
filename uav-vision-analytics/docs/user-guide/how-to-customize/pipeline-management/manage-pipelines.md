@@ -97,7 +97,7 @@ Pipelines are defined in `configs/config-pymavlink.json` (standalone) or
 `/home/pipeline-server/config.json`:
 
 ```bash
-docker exec dlstreamer-pipeline-server python3 -c \
+docker exec uav-va-dlstreamer-pipeline-server python3 -c \
   "import json; print('\n'.join(p['name'] for p in json.load(open('/home/pipeline-server/config.json'))['config']['pipelines']))"
 ```
 
@@ -161,7 +161,7 @@ curl -k -s https://<HOST_IP>/pipelines/status | python3 -m json.tool
 `"state": "RUNNING"` is healthy. `QUEUED` that never changes means the
 pipeline is waiting on a resource held by another instance (same
 `detection_instance_id`, same `/dev/video*` device). `ERROR` — check
-`docker logs dlstreamer-pipeline-server`. A GPU/NPU pipeline that silently
+`docker logs uav-va-dlstreamer-pipeline-server`. A GPU/NPU pipeline that silently
 fell back to CPU still reports `RUNNING`, just at CPU-typical `avg_fps`.
 
 ### Stop a pipeline

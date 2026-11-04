@@ -137,7 +137,7 @@ python3 /home/pipeline-server/scripts/pipeline_manager.py --status     # file ve
 
 **Makefile target:**
 ```bash
-make start-rtsp      # docker exec -it dlstreamer-pipeline-server bash -c "python3 ..."
+make start-rtsp      # docker exec -it uav-va-dlstreamer-pipeline-server bash -c "python3 ..."
 ```
 
 ### mavlink_pipeline_manager.py with ARM_SOURCE=mqtt (uavsdk mode)

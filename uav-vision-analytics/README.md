@@ -30,6 +30,8 @@ benchmark/                    Stream density benchmarking tooling (`calc_stream_
 
 ## Stack
 
+Container names use the prefix `uav-va-` (vision analytics), for example `uav-va-dlstreamer-pipeline-server` for the DL Streamer Pipeline Server. The ground station uses `uav-gs-`. The compose service names listed below are unchanged.
+
 ### Standalone Mode (pymavlink)
 
 | Service | Image | Role |
@@ -37,7 +39,7 @@ benchmark/                    Stream density benchmarking tooling (`calc_stream_
 | `broker` | `eclipse-mosquitto:2.0.22` | MQTT broker for telemetry and pipeline events |
 | `px4` | `px4io/px4-sitl:latest` | PX4 SITL flight controller simulation |
 | `mavlink-router` | Built from `uav-mission-compute-sdk/infra/px4-sim/mavlink-router` | Routes MAVLink telemetry between PX4 and the pipeline server; publishes UDP `14551` for a remote QGroundControl |
-| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-2.0-rc1` (+ `pymavlink`) | Core inference engine — YOLO11s detection and telemetry overlay |
+| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu26-rc1` (+ `pymavlink`) | Core inference engine — YOLO11s detection and telemetry overlay |
 | `metrics-manager` | `intel/metrics-manager:2026.2.0` | Host platform (CPU/GPU) metrics |
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy for HTTPS, RTSP and MQTT |
 
@@ -47,7 +49,7 @@ All services share the `app_network` Docker network and are defined in [`docker-
 
 | Service | Image | Role |
 |---------|-------|------|
-| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-2.0-rc1` | Core inference engine — YOLO11s detection and telemetry overlay; connects to an externally running UAV Mission Compute SDK stack |
+| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu26-rc1` | Core inference engine — YOLO11s detection and telemetry overlay; connects to an externally running UAV Mission Compute SDK stack |
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy — the only service that publishes ports to the host |
 
 Defined in [`docker-compose-uavsdk.yml`](docker-compose-uavsdk.yml). Requires the
@@ -140,7 +142,7 @@ required. Restart the cameras (`make start-rtsp`) after replacing a file. See
 a vehicle (Ctrl+C stops them):
 
 ```bash
-docker exec -it -e HOST_IP=<HOST_IP> dlstreamer-pipeline-server \
+docker exec -it -e HOST_IP=<HOST_IP> uav-va-dlstreamer-pipeline-server \
   python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now
 ```
 

@@ -134,11 +134,11 @@ ffmpeg -rtsp_transport tcp \
 
 ### DL Streamer container keeps restarting
 
-- Check logs: `docker logs dlstreamer-pipeline-server`
+- Check logs: `docker logs uav-va-dlstreamer-pipeline-server`
 - Verify the model files exist:
 
   ```bash
-  docker exec dlstreamer-pipeline-server ls \
+  docker exec uav-va-dlstreamer-pipeline-server ls \
     /home/pipeline-server/resources/models/yolo11s/yolo11s_openvino_model/
   ```
 
@@ -198,8 +198,8 @@ See [Get Started (UAV Mission Compute SDK Mode) — Step 1](../get-started/get-s
 **pymavlink mode:** Confirm `mavlink-router` is running and forwarding MAVLink from PX4:
 
 ```bash
-docker logs mavlink-router
-docker logs px4 | grep -i mavlink
+docker logs uav-va-mavlink-router
+docker logs uav-va-px4 | grep -i mavlink
 ```
 
 **uav-mission-compute-sdk mode:** Confirm the SDK MQTT broker is reachable and publishing telemetry:
@@ -213,7 +213,7 @@ mosquitto_sub -h localhost -p 1884 -t "uav/uav-1/telemetry/#" -v
 - Confirm `pipeline_manager.py` is running inside the container:
 
   ```bash
-  docker exec dlstreamer-pipeline-server ps aux | grep pipeline
+  docker exec uav-va-dlstreamer-pipeline-server ps aux | grep pipeline
   ```
 
 - Check that the RTSP sources from the SDK are available:
@@ -261,7 +261,7 @@ container is restarted.
 **Resolution:** Restart the DLPS container to clear the poisoned instance:
 
 ```bash
-docker restart dlstreamer-pipeline-server
+docker restart uav-va-dlstreamer-pipeline-server
 # Wait ~15 s for container to become healthy, then retry
 ```
 
@@ -308,7 +308,7 @@ unsupported model, device not mounted) and the pipeline server keeps that
 instance poisoned until it restarts:
 
 ```bash
-docker restart dlstreamer-pipeline-server     # wait ~15 s, then start the pipeline again
+docker restart uav-va-dlstreamer-pipeline-server     # wait ~15 s, then start the pipeline again
 ```
 
 ### `RTSP Stream ... already exists` right after stopping a pipeline
@@ -429,7 +429,7 @@ confidence distribution; lower it as shown in
 
 The model folder is not a complete OpenVINO IR export of the VLM, or the
 architecture is not supported by the `openvino_genai` version in the
-pipeline-server image. `docker logs dlstreamer-pipeline-server` shows the
+pipeline-server image. `docker logs uav-va-dlstreamer-pipeline-server` shows the
 loader error; revert `captioning.model` and re-arm to recover. The required
 file set is listed in
 [Change the Captioning Model — Required format](../how-to-customize/model-and-video-management/vlm-model.md#required-format).
@@ -511,14 +511,14 @@ Possible causes:
 - **DL Streamer Pipeline Server pipeline in ERROR state** — often a shared `model-instance-id` from a previous aborted run:
 
   ```bash
-  docker restart dlstreamer-pipeline-server
+  docker restart uav-va-dlstreamer-pipeline-server
   ```
 
 - **RTSP path conflict** — restart DL Streamer Pipeline Server to clear leftover path registrations.
 - **Video file missing inside the container:**
 
   ```bash
-  docker exec dlstreamer-pipeline-server ls \
+  docker exec uav-va-dlstreamer-pipeline-server ls \
     /home/pipeline-server/resources/videos/
   ```
 
@@ -556,7 +556,7 @@ jq -r '.[].pipeline' benchmark/benchmark_app_payload.json
 The system does not have an accessible Intel GPU or NPU. Verify hardware availability:
 
 ```bash
-docker exec dlstreamer-pipeline-server python3 -c \
+docker exec uav-va-dlstreamer-pipeline-server python3 -c \
   "from openvino.runtime import Core; print(Core().available_devices)"
 ```
 
@@ -568,7 +568,7 @@ docker exec dlstreamer-pipeline-server python3 -c \
 RAPL counters may not be accessible in the container on this hardware. The `metrics-manager` must have access to `/sys/class/powercap/` or Intel qmassa sensors. Check `metrics-manager` logs:
 
 ```bash
-docker logs metrics-manager 2>&1 | grep -iE "power|rapl|error"
+docker logs uav-va-metrics-manager 2>&1 | grep -iE "power|rapl|error"
 ```
 
 ## QGroundControl

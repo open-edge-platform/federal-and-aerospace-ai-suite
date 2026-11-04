@@ -2,7 +2,7 @@ services:
 
   dlstreamer-pipeline-server:
     image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE}
-    container_name: dlstreamer-pipeline-server
+    container_name: uav-va-dlstreamer-pipeline-server
     environment:
       - http_proxy=${http_proxy}
       - https_proxy=${https_proxy}
@@ -43,14 +43,11 @@ services:
       - "/run/udev:/run/udev:ro"
       - "/tmp:/tmp"
     group_add:
-      - "44"
-      - "109"
-      - "110"
-      - "990"
-      - "992"
-      - "993"
-      - "994"
-      - "996"
+      # Group IDs of the GPU/NPU/camera device nodes, written to .env by scripts/update_device_gids.sh
+      - "${GPU_CARD_GID:-44}"
+      - "${GPU_RENDER_GID:-109}"
+      - "${NPU_GID:-65501}"
+      - "${CAMERA_GID:-65502}"
     device_cgroup_rules:
       - "c 189:* rmw"
       - "c 209:* rmw"
@@ -69,11 +66,11 @@ services:
       - "host.docker.internal:host-gateway"
 
   # Host metrics (CPU, GPU, NPU, memory) for the ground-station dashboard; reached through nginx
-  # (/metrics/stream and /api/v1/metrics/latest). The service name is what nginx uses; the container is named
-  # uav-metrics-manager because the SDK's observability profile has its own container called metrics-manager.
+  # (/metrics/stream and /api/v1/metrics/latest). The service name is what nginx uses; the container is
+  # prefixed uav-va- so it never clashes with the SDK's own metrics-manager container.
   metrics-manager:
     image: intel/metrics-manager:2026.2.0
-    container_name: uav-metrics-manager
+    container_name: uav-va-metrics-manager
     privileged: true
     pid: host
     devices:
@@ -89,7 +86,7 @@ services:
   # HOST_IP is unset) rather than all interfaces.
   nginx:
     image: nginx:1.27-alpine
-    container_name: nginx
+    container_name: uav-va-nginx
     restart: unless-stopped
     volumes:
       - ./configs/nginx/nginx-uavsdk.conf:/etc/nginx/nginx.conf:ro
