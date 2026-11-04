@@ -10,8 +10,8 @@ ntpserver, broker, pgserver, web, scene-loader (one-shot appdata import), scene 
 analytics (publishes the `regulated` topic the UI reads), dlstreamer-pipeline-server
 (pipelines `hota-cam1`/`hota-cam2`, CPU) and nginx (HTTPS on 443).
 
-All SceneScape images use tag `2026.3.0-20261020-weekly` (`SCENESCAPE_VERSION` in `.env`);
-the pipeline server uses `2026.3.0-20261020-weekly-ubuntu24`.
+All SceneScape images use the tag set by `SCENESCAPE_VERSION` in `.env`; the pipeline server image
+is set by `DLSTREAMER_PIPELINE_SERVER_IMAGE` (defaults in `.env.example`).
 
 ## Usage
 ```

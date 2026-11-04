@@ -7,7 +7,7 @@ name: tsn-camera-pipeline
 
 services:
   dlsps:
-    image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE:-intel/dlstreamer-pipeline-server:2026.3.0-20261020-weekly-ubuntu24}
+    image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE:-intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc1}
     # Host networking: reads the local mediamtx on 127.0.0.1 and publishes MQTT on the TSN VLAN.
     network_mode: host
     tty: true

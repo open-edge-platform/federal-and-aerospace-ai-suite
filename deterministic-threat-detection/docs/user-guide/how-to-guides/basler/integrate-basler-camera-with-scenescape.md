@@ -31,13 +31,20 @@ does the wiring.
    these points:
 
    - Tag the result `tsn-dlstreamer-pipeline-server-basler:<SCENESCAPE_VERSION>` (the value from
-     `src/scene/.env`, for example `2026.3.0-20261020-weekly`). `make up SOURCE=basler` stops
+     `src/scene/.env`). `make up SOURCE=basler` stops
      with a message if this image does not exist.
    - Build `gencamsrc` with `-DGENCAMSRC_ENABLE_HW_TIMESTAMP_META=ON`. It then attaches the
      camera's PTP hardware timestamp to every frame (`GstReferenceTimestampMeta`), which the
      SceneScape adapter uses as the frame time. This worked with the `edge-ai-libraries`
      mainline at commit `cc2ac98fb0d3de12e5b12db37ce8fea34aa4d75a`.
    - Install the pylon runtime (7.5 was used) and `gst-plugin-pylon`.
+   - Install the build tools for `gencamsrc` (`cmake`, `make`, `g++` and the GStreamer development
+     packages). The current `ubuntu24` base image no longer contains `make`, so without it
+     CMake fails with "unable to find a build program".
+   - Behind a proxy that re-signs HTTPS traffic, download the `gst-plugin-pylon` `.deb` on the host
+     and `COPY` it into the image: the GitHub release redirects to
+     `release-assets.githubusercontent.com`, and `wget` inside the build then fails with a
+     certificate error (exit code 5).
    - Set `GENICAM_GENTL64_PATH=/opt/pylon/lib/gentlproducer/gtl` and make sure `GST_PLUGIN_PATH`
      includes `/opt/intel/dlstreamer/lib`, `/opt/intel/dlstreamer/gstreamer/lib/gstreamer-1.0`,
      `/opt/intel/dlstreamer/gstreamer/lib`, `/usr/lib/x86_64-linux-gnu/gstreamer-1.0` and
