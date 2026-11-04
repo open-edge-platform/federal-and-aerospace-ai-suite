@@ -268,7 +268,9 @@ def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, che
             topic = camera.mqtt_topic or f"uav/caption/{camera.id}"
             vlm_path = f"{resources_dir}/ov_models/{cap.device}/{cap.model}"
             parameters.update({"captioner_model_path": vlm_path, "captioner_prompt": cap.prompt,
-                               "captioner_max_new_tokens": cap.max_new_tokens, "mqtt_topic": topic})
+                               "captioner_max_new_tokens": cap.max_new_tokens, "mqtt_topic": topic,
+                               # cameras with the same device, model and token limit share one loaded VLM (the limit is a per-instance setting)
+                               "captioner_instance_id": re.sub(r"[^a-z0-9_]", "_", f"instvlm_{cap.device}_{cap.model}_t{cap.max_new_tokens}".lower())})
         frame = {"type": "rtsp", "path": stream_path(camera), "encoding": "h264", "overlay-properties": {"thickness": thickness}}
         if not camera.overlay:
             frame["overlay"] = False

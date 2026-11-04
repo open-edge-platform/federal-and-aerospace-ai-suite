@@ -105,7 +105,7 @@ The shipped pipelines expose:
 | --- | --- |
 | `uav_object_detection_<det>` (pymavlink) | `video`, `detection_model`, `detection_instance_id`, `overlay_label` |
 | `uav_object_detection_<det>` (uavsdk) | `rtsp_url`, `detection_model`, `detection_instance_id`, `overlay_label` |
-| `uav_object_detection_<det>_<vlm>` | the above plus `captioner_model_path`, `captioner_prompt`, `captioner_max_new_tokens`, `frame_width`, `frame_height`, `mqtt_topic` |
+| `uav_object_detection_<det>_<vlm>` | the above plus `captioner_model_path`, `captioner_instance_id`, `captioner_prompt`, `captioner_max_new_tokens`, `frame_width`, `frame_height`, `mqtt_topic` |
 | `uav_camera_<det>[_<vlm>]` | as the file-source pipelines, with `device`, `camera_width`, `camera_height`, `camera_fps` instead of `video` |
 
 Each value is checked against its `pattern`; a request that does not match

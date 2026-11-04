@@ -140,6 +140,7 @@ Useful request fields:
 | `parameters.rtsp_url` | SDK mode: the camera's RTSP source. |
 | `parameters.detection_model` | Container path of the OpenVINO IR model (see [Modify the Detection Model](../model-and-video-management/modify-model.md)). |
 | `parameters.captioner_model_path`, `captioner_prompt`, `captioner_max_new_tokens`, `mqtt_topic` | Captioning pipelines only (see [Change the Captioning Model](../model-and-video-management/vlm-model.md)). |
+| `parameters.captioner_instance_id` | Captioning pipelines only. Streams with the same id share one loaded VLM (one copy in memory, requests served in turn). The camera manager sets it from the VLM device, model and `max_new_tokens`, because the token limit belongs to the shared instance (the first stream's value wins); the prompt stays per stream. Use a different id only to give a stream its own VLM copy. |
 
 The full schema per pipeline is in the config file; see
 [Modify Pipelines — the parameters schema](./modify-pipelines.md#the-parameters-schema).
