@@ -92,14 +92,11 @@ services:
       - "/run/udev:/run/udev:ro"
       - "/tmp:/tmp"
     group_add:
-      - "44"
-      - "109"
-      - "110"
-      - "990"
-      - "992"
-      - "993"
-      - "994"
-      - "996"
+      # Group IDs of the GPU/NPU/camera device nodes, written to .env by scripts/update_device_gids.sh
+      - "${GPU_CARD_GID:-44}"
+      - "${GPU_RENDER_GID:-109}"
+      - "${NPU_GID:-65501}"
+      - "${CAMERA_GID:-65502}"
     device_cgroup_rules:
       - "c 189:* rmw"
       - "c 209:* rmw"

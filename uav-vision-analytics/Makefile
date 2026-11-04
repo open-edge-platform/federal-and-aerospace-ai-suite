@@ -28,7 +28,7 @@ VLM_DOWNLOAD_SCRIPT_PATH := metro-ai-suite/live-video-analysis/live-video-captio
 VLM_DOWNLOAD_SCRIPT_URL  ?= https://raw.githubusercontent.com/$(VLM_DOWNLOAD_SCRIPT_REPO)/$(VLM_DOWNLOAD_SCRIPT_REF)/$(VLM_DOWNLOAD_SCRIPT_PATH)
 VLM_DOWNLOAD_SCRIPT      := $(CURDIR)/.cache/download_models.sh
 
-.PHONY: help init build model _confirm_model_license vlm-model _check_model _check_certs _check_venv_pkg \
+.PHONY: help init build model _confirm_model_license vlm-model _check_model _check_certs _check_venv_pkg _device_gids \
         _fetch_vlm_download_script \
         pymav-up pymav-down \
         uavsdk-up uavsdk-down \
@@ -205,15 +205,18 @@ vlm-model: _confirm_model_license _fetch_vlm_download_script ## Download/convert
 
 # ── pymavlink stack ───────────────────────────────────────────────────────────
 
-pymav-up: _check_model _check_certs ## Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + metrics-manager + nginx)
+pymav-up: _check_model _check_certs _device_gids ## Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + metrics-manager + nginx)
 	docker compose -f $(COMPOSE_PYMAV) up -d
 
 pymav-down: ## Stop and remove pymavlink stack (includes volumes)
 	docker compose -f $(COMPOSE_PYMAV) down -v
 
+_device_gids: # Record the group IDs of the GPU/NPU/camera devices in .env (used by group_add)
+	@./scripts/update_device_gids.sh
+
 # ── UAV Mission Compute SDK stack ──────────────────────────────────────────────────────────────
 
-uavsdk-up: _check_model _check_certs ## Start UAV Mission Compute SDK stack (requires uav-mission-compute-sdk running first)
+uavsdk-up: _check_model _check_certs _device_gids ## Start UAV Mission Compute SDK stack (requires uav-mission-compute-sdk running first)
 	docker compose -f $(COMPOSE_SDK) up -d
 
 uavsdk-down: ## Stop and remove UAV Mission Compute SDK stack (includes volumes)
