@@ -37,7 +37,7 @@ benchmark/                    Stream density benchmarking tooling (`calc_stream_
 | `broker` | `eclipse-mosquitto:2.0.22` | MQTT broker for telemetry and pipeline events |
 | `px4` | `px4io/px4-sitl:latest` | PX4 SITL flight controller simulation |
 | `mavlink-router` | Built from `uav-mission-compute-sdk/infra/px4-sim/mavlink-router` | Routes MAVLink telemetry between PX4 and the pipeline server; publishes UDP `14551` for a remote QGroundControl |
-| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-20261020-weekly-ubuntu24` (+ `pymavlink`) | Core inference engine — YOLO11s detection and telemetry overlay |
+| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-2.0-rc1` (+ `pymavlink`) | Core inference engine — YOLO11s detection and telemetry overlay |
 | `metrics-manager` | `intel/metrics-manager:2026.2.0` | Host platform (CPU/GPU) metrics |
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy for HTTPS, RTSP and MQTT |
 
@@ -47,7 +47,7 @@ All services share the `app_network` Docker network and are defined in [`docker-
 
 | Service | Image | Role |
 |---------|-------|------|
-| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-20261020-weekly-ubuntu24` | Core inference engine — YOLO11s detection and telemetry overlay; connects to an externally running UAV Mission Compute SDK stack |
+| `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-2.0-rc1` | Core inference engine — YOLO11s detection and telemetry overlay; connects to an externally running UAV Mission Compute SDK stack |
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy — the only service that publishes ports to the host |
 
 Defined in [`docker-compose-uavsdk.yml`](docker-compose-uavsdk.yml). Requires the
@@ -187,6 +187,7 @@ and `metrics-manager` no longer publish ports directly to the host.
 make init          Create .env from template, auto-detect HOST_IP, and auto-detect GPU/NPU/camera device paths
 make model         Download YOLO11s and export to OpenVINO FP16
 make vlm-model     Download/convert the VLM captioning model (OpenVINO IR) for CPU, GPU, and NPU
+make pymav-build    Rebuild the locally built pymavlink images (requires network access)
 make pymav-up       Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + metrics-manager + nginx)
 make pymav-down     Stop and remove pymavlink stack (includes volumes)
 make uavsdk-up      Start UAV Mission Compute SDK stack (requires uav-mission-compute-sdk running first)

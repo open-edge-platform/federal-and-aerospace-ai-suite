@@ -30,7 +30,7 @@ VLM_DOWNLOAD_SCRIPT      := $(CURDIR)/.cache/download_models.sh
 
 .PHONY: help init build model _confirm_model_license vlm-model _check_model _check_certs _check_venv_pkg \
         _fetch_vlm_download_script \
-        pymav-up pymav-down \
+        pymav-build pymav-up pymav-down \
         uavsdk-up uavsdk-down \
         start-rtsp check-cameras cameras-status
 
@@ -205,8 +205,15 @@ vlm-model: _confirm_model_license _fetch_vlm_download_script ## Download/convert
 
 # ── pymavlink stack ───────────────────────────────────────────────────────────
 
-pymav-up: _check_model _check_certs ## Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + metrics-manager + nginx)
-	docker compose -f $(COMPOSE_PYMAV) up -d
+pymav-build: _check_model ## (Re)build the locally built pymavlink images (requires network access)
+	docker compose -f $(COMPOSE_PYMAV) build
+
+pymav-up: _check_model _check_certs ## Start standalone pymavlink stack; builds images only if missing, so it runs offline afterwards
+	@if ! docker image inspect $(DLSTREAMER_PIPELINE_SERVER_IMAGE)-pymavlink uav-vision-analytics-mavlink-router:local >/dev/null 2>&1; then \
+		echo "[pymav-up] Locally built images not found — building (requires network access)..."; \
+		docker compose -f $(COMPOSE_PYMAV) build; \
+	fi
+	docker compose -f $(COMPOSE_PYMAV) up -d --no-build
 
 pymav-down: ## Stop and remove pymavlink stack (includes volumes)
 	docker compose -f $(COMPOSE_PYMAV) down -v
@@ -225,7 +232,7 @@ start-rtsp: ## Start the cameras in configs/cameras-pymavlink.yaml when the vehi
 	-docker exec -it \
 	  -e HOST_IP=$(HOST_IP) \
 	  $(DLSPS) bash -c \
-	  "python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now $(if $(CAMERAS),--config $(CAMERAS))"
+	  "python3 /home/pipeline-server/scripts/pipeline_manager.py $(if $(CAMERAS),--config $(CAMERAS))"
 
 check-cameras: ## Validate configs/cameras-pymavlink.yaml and show what would run (nothing is started). CAMERAS=<file> checks another file.
 	docker exec $(DLSPS) python3 /home/pipeline-server/scripts/camera_config.py check $(CAMERAS)

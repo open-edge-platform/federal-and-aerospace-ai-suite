@@ -17,7 +17,8 @@ Run `make help` (or just `make`) to list all targets with descriptions.
 | `make init` | Create `.env` from template and auto-detect the host IP, Intel GPU and NPU device paths and USB cameras |
 | `make model` | Download YOLO11s checkpoint and export to OpenVINO FP16 |
 | `make vlm-model` | Download and convert the VLM captioning model (OpenVINO IR) for CPU, GPU and NPU |
-| `make pymav-up` | Start the standalone pymavlink stack (requires model — errors if missing) |
+| `make pymav-build` | Rebuild the locally built pymavlink images (requires network access) |
+| `make pymav-up` | Start the standalone pymavlink stack (requires model — errors if missing); builds images only if they do not exist yet |
 | `make pymav-down` | Stop and remove the pymavlink stack (includes volumes) |
 | `make uavsdk-up` | Start the uav-mission-compute-sdk stack |
 | `make uavsdk-down` | Stop and remove the uav-mission-compute-sdk stack (includes volumes) |
@@ -98,6 +99,13 @@ Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), whi
 - `nginx` — reverse proxy; the only service publishing ports to the host (`:80`, `:443`, `:8555`, `:1883`)
 
 `down` passes `-v` to also remove named volumes (pipeline cache).
+
+Two images are built locally (the DL Streamer Pipeline Server with
+`pymavlink`, and `mavlink-router`). `make pymav-up` builds them only the
+first time, then starts the stack without rebuilding, so it works without
+Internet access once the images and the base images exist locally. Run
+`make pymav-build` to rebuild them deliberately, for example after changing
+`DLSTREAMER_PIPELINE_SERVER_IMAGE`.
 
 ### `make uavsdk-up` / `make uavsdk-down`
 
