@@ -398,6 +398,8 @@ async def _detect_running_cameras(host: str) -> dict:
 
 _prev_cpu_times: Optional[tuple] = None
 
+METRICS_RECONNECT_DELAY_S = 3
+
 
 @app.get("/api/local-metrics-stream")
 async def local_metrics_stream():
@@ -469,28 +471,31 @@ async def metrics_stream_multi(hosts: str = Query(...)):
     loop = asyncio.get_event_loop()
 
     async def pump_one(host: str):
+        # Keep reconnecting: the remote metrics-manager goes away whenever its stack is
+        # restarted (e.g. make pymav-down/up). The browser's SSE connection to this
+        # endpoint stays open, so it never retries itself and the graphs would freeze.
         base = _remote_base(host)
         url = f"{base}/metrics/stream"
-        try:
-            async with httpx.AsyncClient(verify=False, timeout=None, trust_env=False) as client:
-                async with client.stream("GET", url) as resp:
-                    if resp.status_code != 200:
-                        await queue.put({"host": host, "error": f"status {resp.status_code}"})
-                        return
-                    async for line in resp.aiter_lines():
-                        if not line.startswith("data:"):
-                            continue
-                        try:
-                            payload = json.loads(line[len("data:"):].strip())
-                        except json.JSONDecodeError:
-                            continue
-                        payload["host"] = host
-                        await queue.put(payload)
-        except httpx.HTTPError as exc:
-            logger.warning("metrics-stream-multi proxy failed for host=%s: %s", host, exc)
-            await queue.put({"host": host, "error": str(exc)})
-        except asyncio.CancelledError:
-            raise
+        while True:
+            try:
+                async with httpx.AsyncClient(verify=False, timeout=None, trust_env=False) as client:
+                    async with client.stream("GET", url) as resp:
+                        if resp.status_code != 200:
+                            await queue.put({"host": host, "error": f"status {resp.status_code}"})
+                        else:
+                            async for line in resp.aiter_lines():
+                                if not line.startswith("data:"):
+                                    continue
+                                try:
+                                    payload = json.loads(line[len("data:"):].strip())
+                                except json.JSONDecodeError:
+                                    continue
+                                payload["host"] = host
+                                await queue.put(payload)
+            except httpx.HTTPError as exc:
+                logger.warning("metrics-stream-multi proxy failed for host=%s: %s", host, exc)
+                await queue.put({"host": host, "error": str(exc)})
+            await asyncio.sleep(METRICS_RECONNECT_DELAY_S)
 
     tasks = [loop.create_task(pump_one(h)) for h in host_list]
 
