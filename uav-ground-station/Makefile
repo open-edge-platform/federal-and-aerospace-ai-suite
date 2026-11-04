@@ -98,6 +98,8 @@ _check_vss_env:
 
 up-vss: init _check_vss_env _build_if_changed ## Relay mode + VSS search containers (enables Live Natural Language Search)
 	$(VSS_COMPOSE) up -d
+	@echo ""; \
+	echo "✅ UAV ground station is up. Open the dashboard at: http://$(VIZ_HOST_IP):$(or $(VIZ_PORT),8080)"
 
 down-vss: ## Stop the relay + VSS stack, keeping indexed footage/embeddings
 	$(VSS_COMPOSE) down
