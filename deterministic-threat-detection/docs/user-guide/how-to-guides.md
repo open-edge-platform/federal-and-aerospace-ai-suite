@@ -1,7 +1,8 @@
 # How-to Guides
 
-Reference guides for the pieces [Get started](./get-started.md) relies on. You only need them to
-change or repair the setup.
+This section collects the guides for configuring the Moxa TSN switch and the
+Basler cameras that are used in [Get started](./get-started.md).
+You only need them when you want to change or repair your setup.
 
 ## Moxa TSN switch
 
@@ -15,7 +16,7 @@ change or repair the setup.
 ## Basler cameras
 
 - [Configure Basler PTP timestamps](./how-to-guides/basler/configure-basler-ptp-timestamps.md)
-- [Integrate Basler cameras with SceneScape](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md)
+- [Integrate Basler cameras with Scenescape](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md)
 
 <!--hide_directive
 :::{toctree}

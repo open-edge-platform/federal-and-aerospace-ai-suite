@@ -1,13 +1,16 @@
 # Configure PTP, IEEE 802.1AS (gPTP)
 
-The switch is the PTP grandmaster. Each machine runs `ptp4l` (NIC clock) and `phc2sys` (system
-clock). gPTP is one of two profiles; the other is [IEEE 1588v2](./configure-ptp-1588v2.md), which
-the Basler cameras need. A port is in one profile at a time: set the switch and **all** machines
-to the same one.
+This guide explains how to synchronize the machines and the switch with the IEEE 802.1AS (gPTP)
+profile. The switch acts as the PTP grandmaster. Each machine runs `ptp4l` to synchronize the
+NIC clock and `phc2sys` to synchronize the system clock. gPTP is one of two supported profiles; the
+other is [IEEE 1588v2](./configure-ptp-1588v2.md), which the Basler cameras require. A port can run
+only one profile at a time, so make sure that the switch and **all** machines use the same one.
 
 ## Machines
 
-`ptp-install.sh` is run once ([First-time setup](../../first-time-setup.md#3-ptp-every-machine)). Then switch profile with:
+`ptp-install.sh` is run once during the
+[First-time setup](../../first-time-setup.md#3-ptp-every-machine).
+Then, switch the profile with:
 
 ```bash
 sudo ptp-profile gptp
@@ -22,11 +25,11 @@ sudo phc2sys -s tsn0 -c CLOCK_REALTIME --step_threshold=1 --transportSpecific=1 
 ```
 
 `phc2sys` steps `CLOCK_REALTIME`, so NTP clients (`chrony`, `systemd-timesyncd`) must be off.
-`ptp-install.sh` does that.
+`ptp-install.sh` disables them.
 
 ## Switch
 
-Set the profile in the web page (System > Time > Time Synchronization) or with
+Set the profile in the web interface (System > Time > Time Synchronization) or with
 `python3 ptp_profile.py 802.1as` from `src/switch/` on a machine that reaches the switch
 (`python3 ptp_profile.py --help` lists the options).
 
