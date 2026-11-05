@@ -117,7 +117,7 @@ RUN git clone --depth 1 https://github.com/mavlink-router/mavlink-router.git /sr
     && meson setup build . -Dsystemdsystemunitdir=/usr/lib/systemd/system \
     && ninja -C build \
     && ninja -C build install \
-    && rm -rf /src
+    && find /src -delete
 
 ENV http_proxy= https_proxy= no_proxy=
 

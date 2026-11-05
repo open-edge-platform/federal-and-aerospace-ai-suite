@@ -29,7 +29,8 @@ camera — this is a `uav-ground-station` feature; nothing changes on the
   and [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md).
 - `uav-ground-station` checked out (see its
   [Quick Start](../../../../uav-ground-station/README.md#quick-start)) and `make init` already run once (creates
-  `.env`).
+  `.env`). Recommended to Run it on a different machine than the UAV Mission Compute SDK
+  stack: both publish the mediamtx WebRTC port `8889` on `HOST_IP`.
 - `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` /
   `VSS_POSTGRES_PASSWORD` set in `uav-ground-station/.env` (see
   `.env.example`) — required by `make up-vss`.

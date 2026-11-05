@@ -96,7 +96,7 @@ Then, for either option, initialize the environment:
 make init
 ```
 
-`make init` creates `.env` from the template and auto-detects your **host IP** (`HOST_IP`, used for the RTSP, MQTT and HTTPS addresses), your **Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
+`make init` creates `.env` from the template and auto-detects your **host IP** (`HOST_IP`, used for the RTSP, MQTT and HTTPS addresses), your **Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists. Open and update `.env` only if `HOST_IP` is not the address other machines use to reach this host (for example on a host with several network cards).
 
 ### 2. Prepare the models
 
@@ -227,7 +227,7 @@ All of them publish RTSP on `:8555`. The camera pipelines for the CPU and GPU ar
 ([Configure the cameras](../how-to-customize/camera-management/configure-cameras.md)).
 
 > [!NOTE]
-> **Using different or your own aerial footage:** The bundled video `uav_sample.avi` is a placeholder. To see detection on a different aerial footage, replace `uav-vision-analytics/resources/videos/uav_sample.avi` with your own video containing vehicles/pedestrians in appropriate file format (keep the same filename). If the stack is already running with the old video, run [Step 6 — Stop all services](#6-stop-all-services), then restart from [Step 3 — Standalone mode (pymavlink)](#3-standalone-mode-pymavlink) and [Step 4 — Start inference pipelines](#4-start-inference-pipelines) — the file is only read when a pipeline starts.
+> **Using different or your own aerial footage:** each camera of `configs/cameras-pymavlink.yaml` plays its own file from `resources/videos/` (`uav_sample_front.avi`, `uav_sample_bottom.avi`, `uav_sample_back.avi`). Convert your footage with `scripts/convert_video.sh` and set `video:` for the camera, see [Use Your Own Videos](../how-to-customize/model-and-video-management/use-your-own-video.md). The file is only read when a pipeline starts, so there is no need to stop the stack: restart the cameras (`make start-rtsp`, or disarm and arm again).
 
 ---
 

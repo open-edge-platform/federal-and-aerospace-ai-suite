@@ -71,6 +71,10 @@ Container names use the prefix `uav-gs-` (ground station): `uav-gs-backend`, `ua
 
 ## Quick Start
 
+Prerequisites: Docker with the Compose plugin and `make` on this machine, Recommended to use
+a machine other than the UAV host running `uav-vision-analytics` or the UAV SDK stack with its pipelines
+started.
+
 There are two options available to get the application source:
 
 #### Option A — Download the ZIP (recommended)
@@ -85,7 +89,7 @@ Decompress the downloaded file:
 
 ```bash
 unzip uav-mission-apps.zip
-cd uav-vision-analytics
+cd uav-ground-station
 ```
 
 #### Option B — Clone the whole repository
@@ -102,8 +106,12 @@ Then:
 make up      # creates .env from template (host IP and devices auto-detected), builds, and starts the container
 ```
 
-Then open `http://localhost:8080` (or `${VIZ_HOST_IP}:${VIZ_PORT}`), enter the
-UAV host's IP (defaults to `127.0.0.1`), and press **Connect**. Device cards
+`make up` runs `make init`, which sets `VIZ_HOST_IP` and `VIZ_PUBLIC_HOST` to this
+machine's LAN IP and detects the GPU/NPU devices; edit `.env` only to override them
+(for example `127.0.0.1` for loopback-only access).
+
+Then open `http://<VIZ_HOST_IP>:8080` (`http://localhost:8080` when `VIZ_HOST_IP` is `127.0.0.1`), enter the
+UAV host's IP (defaults to `VIZ_COMPANION_HOST`, `127.0.0.1`), and press **Connect**. Device cards
 (`cpu`/`gpu`/`npu`) are detected automatically from whichever pipelines are
 currently running on the remote host.
 
@@ -130,8 +138,10 @@ All configuration is via `.env` (see `.env.example`):
 | `MEDIAMTX_WEBRTC_PORT` / `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT` | `8889` / `8189` / `8189` | Published WebRTC (WHEP) port and ICE UDP/TCP ports of the relay |
 | `GPU_DEVICE` / `GPU_RENDER_DEVICE` / `NPU_DEVICE` | `/dev/null` (`make init` auto-detects) | Devices passed to `gs-metrics-manager` for this machine's utilization panel |
 | `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(required with `make up-vss`)_ | Credentials for the VSS overlay's MinIO and Postgres |
+| `VSS_REGISTRY` / `VSS_TAG` | `intel/` / `2026.3.0-rc1` | Registry and tag of the VSS images used by `make up-vss` |
+| `VSS_ENABLED` / `VSS_MANAGER_URL` / `VSS_DATASTORE_URL` | `false` / `http://host.docker.internal:12345/manager` / `.../datastore` | Only for a VSS deployed separately; `make up-vss` sets them itself |
 | `VSS_MANAGER_PORT` | `3001` | Host port (bound to `VIZ_HOST_IP`) for the VSS pipeline-manager API |
-| `VIDEO_GROUP_ID` / `RENDER_GROUP_ID` | `44` / `992` | Host's `video`/`render` group ids (`getent group video render`), needed for GPU/NPU VSS devices |
+| `VIDEO_GROUP_ID` / `RENDER_GROUP_ID` | `44` / `992` | Host's `video`/`render` group ids (`getent group video render`; `make init` does not set them), needed for GPU/NPU VSS devices |
 | `VSS_EMBEDDING_MODEL` | _(required with `make up-vss`)_ | Embedding model VSS uses for frames and queries, for example `CLIP/clip-vit-b-32` |
 | `DATAPREP_DETECTION_MODEL` | _(required with `make up-vss`)_ | Object detection model VSS dataprep uses for crop extraction, for example `yolox_s` |
 | `VSS_ENABLE_OBJECT_DETECTION` | `true` | Run object-detection crops alongside embedding during ingestion |
@@ -164,7 +174,7 @@ only when the VSS overlay is used. It is a separate compose file,
 `docker-compose-vss.yml`, that adds just the 8 containers VSS search needs
 (pipeline-manager, video-search, multimodal-dataprep,
 multimodal-embedding-serving, vector-retriever, vdms-vector-db, postgres,
-minio). With the default `make up` the search UI is hidden
+minio; container names `uav-gs-vss-*`). With the default `make up` the search UI is hidden
 and the search routes return 404.
 
 1. Set the required `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials, plus
@@ -173,7 +183,7 @@ and the search routes return 404.
 2. `make up-vss` (base + mediamtx + VSS overlay). The first start downloads
    the CLIP embedding model (and YOLOX, for object crops) into Docker volumes.
 3. Open the dashboard and **Connect** to the UAV. Every RUNNING pipeline
-   (`uav-<camera>` on `REMOTE_RTSP_PORT`) is registered with VSS
+   (`uav-<camera>` on `VIZ_REMOTE_RTSP_PORT`) is registered with VSS
    as a live stream and indexed continuously. A backend loop
    (`VSS_LIVE_SYNC_INTERVAL_SECONDS`) adds pipelines that start later and
    pauses ones that stop; **Disconnect** pauses all of them. Indexed footage

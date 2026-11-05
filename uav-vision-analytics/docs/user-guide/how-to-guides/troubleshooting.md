@@ -363,8 +363,7 @@ If they stay at zero, see
 ### Detection log (JSONL) is missing or empty
 
 Only a pipeline started by hand with a `destination.metadata` block writes
-one; the camera-file manager and `scripts/uav_pipeline_control.sh` do not
-add it. See [View Detection Logs](./view-detection-logs.md).
+one; the camera-file manager does not add it. See [View Detection Logs](./view-detection-logs.md).
 
 ## Cameras & Video
 
@@ -687,7 +686,7 @@ The relevance filters are off or too low for the embedding model; see
 
 Some stored live-stream segments use a codec the browser can't decode; the
 player falls back to VSS's server-decoded best-matching frame plus a
-download link. If the segment is older than VSS's `LIVE_RETENTION_HOURS`, it
+download link. If the segment is older than VSS's `VSS_LIVE_RETENTION_HOURS`, it
 may no longer be available at all.
 
 ### New camera never becomes searchable
