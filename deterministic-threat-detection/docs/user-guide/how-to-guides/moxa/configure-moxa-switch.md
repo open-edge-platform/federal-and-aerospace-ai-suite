@@ -10,7 +10,8 @@ IEEE 802.1Qbv Time-Aware Shaper.
 ## Access the web interface
 
 After a reset the switch has the address `192.168.127.253`, user `admin`, password `moxa`.
-Put your computer in the same subnet to open it.
+Put your computer in the same subnet (for example `192.168.127.100/24`) and open the address in a
+browser. These defaults are public: keep the switch on an isolated network.
 
 ![MOXA Web UI](../../_assets/moxa-webui.png)
 
@@ -25,14 +26,15 @@ Put your computer in the same subnet to open it.
 
 ## Scripts
 
-`src/switch/` drives the switch over Telnet. The dashboard runs them on machine-2:
+`src/switch/` drives the switch over Telnet. The dashboard runs them on machine-2, where
+`make -C src/dashboard deploy-switch` copies them to `~/moxa`:
 
 | Script | Purpose |
 |--------|---------|
 | `tas_config.py get\|set\|clear --port N` | Qbv gate schedule |
-| `port_priority.py get\|set --ports 5,6 --value 0` | Default priority of untagged ports |
-| `ptp_profile.py get\|1588v2\|802.1as` | PTP profile |
-| `capture_web.py` | Screenshots of the web pages |
+| `port_priority.py get\|set --ports 5,6 --value 0` | Default priority of untagged ports (needs `--host <switch address>`) |
+| `get_port_mode.py --port N` | Link state and mode of a port |
+| `ptp_profile.py get\|1588v2\|802.1as` | PTP profile. Not copied by `deploy-switch`: copy it to machine-2 yourself. `--help` lists its options |
 
 Port 2 (the management path of machine-2) is refused by the scripts.
 

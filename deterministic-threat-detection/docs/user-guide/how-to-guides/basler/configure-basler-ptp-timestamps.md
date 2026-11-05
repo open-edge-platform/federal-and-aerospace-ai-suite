@@ -7,7 +7,7 @@ sub-microsecond accuracy. Done once per camera, with the pylon Viewer on any com
 
 - Switch and machine-1 on IEEE 1588v2: [Configure PTP 1588v2](../moxa/configure-ptp-1588v2.md).
 - Camera cabled to a switch port in VLAN 3 (ports 5 and 6 in this demo).
-- Basler pylon Viewer installed.
+- Basler pylon Viewer installed ([download](https://www.baslerweb.com/en/downloads/software/)).
 
 ## Steps
 

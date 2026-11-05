@@ -9,7 +9,7 @@ Port 1 (towards machine-1, where all cameras' data and the load arrive) runs a 1
 
 | Slot | Length | Open queues | Traffic |
 |------|--------|-------------|---------|
-| 0 | 90 ms | 6, 3, 1, 0 | Cameras (VLAN 1 = queue 1, VLAN 3 = queue 3) |
+| 0 | 90 ms | 6, 1, 0 | Cameras (VLAN 1 = queue 1; Basler frames use queue 0) |
 | 1 | 10 ms | 5, 1, 0 | Background load (VLAN 5 = queue 5) and cameras |
 
 Frame priority (PCP) selects the queue, so the load (PCP 5) can only leave in the 10 ms slot:
@@ -18,7 +18,7 @@ about 10% of the link. Without the shaper the load (PCP 5) outranks the cameras 
 ```mermaid
 flowchart LR
     subgraph Cycle["100 ms cycle on port 1"]
-        S0["0-90 ms<br/>queues 6,3,1,0<br/>cameras"] --> S1["90-100 ms<br/>queues 5,1,0<br/>load + cameras"] --> S0
+        S0["0-90 ms<br/>queues 6,1,0<br/>cameras"] --> S1["90-100 ms<br/>queues 5,1,0<br/>load + cameras"] --> S0
     end
 ```
 
@@ -37,12 +37,13 @@ flowchart LR
    or the script (run from machine-2 after `make -C src/dashboard deploy-switch`):
 
    ```bash
-   python3 -I ~/moxa/tas_config.py set --port 1 --slot 90000:6,3,1,0 --slot 10000:5,1,0
+   python3 -I ~/moxa/tas_config.py set --port 1 --slot 90000:6,1,0 --slot 10000:5,1,0
    python3 -I ~/moxa/tas_config.py get --port 1
    python3 -I ~/moxa/tas_config.py clear --port 1
    ```
 
-   The dashboard toggle runs `set` / `clear` for you. Enabling takes about 10 s, disabling up to 30 s.
+   The dashboard toggle runs `set` / `clear` for you with these slots (`SWITCH_SCHEDULE` in
+   `src/dashboard/.env` changes them). Enabling takes about 10 s, disabling up to 30 s.
 
 3. **Verify.** `get` must report `operative: active`. If it says `not active`, step 1 was missed.
 

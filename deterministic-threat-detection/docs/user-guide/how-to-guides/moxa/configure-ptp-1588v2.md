@@ -7,7 +7,8 @@ the switch must use the same profile: see [gPTP](./configure-ptp-gptp.md) for th
 ## Switch
 
 Set the profile in the web page (System > Time > Time Synchronization), or run
-`python3 ptp_profile.py 1588v2` from `src/switch/`.
+`python3 ptp_profile.py 1588v2` from `src/switch/` on a machine that reaches the switch
+(`python3 ptp_profile.py --help` lists the options).
 
 ![MOXA Time Sync Settings for Basler](../../_assets/moxa-time-sync-settings-for-basler.png)
 
@@ -20,14 +21,15 @@ Set the profile in the web page (System > Time > Time Synchronization), or run
 ## Machines
 
 `ptp-install.sh` installs the services once with this profile as default
-([First-time setup](../../first-time-setup.md#2-ptp-every-machine)). To switch back later:
+([First-time setup](../../first-time-setup.md#3-ptp-every-machine)). To switch back later:
 
 ```bash
 sudo ptp-profile ieee1588
 sudo ptp-profile status
 ```
 
-Equivalent manual commands (the interface needs an IP address; use `tsn0` with its VLAN or base address):
+Equivalent manual commands (`-4` needs an IPv4 address on `tsn0`; `setup_tsn_nic.sh` gives it a base
+address such as `192.168.11.11`):
 
 ```bash
 sudo ptp4l -i tsn0 -4 -E -s -m --priority1=255 --domain=0

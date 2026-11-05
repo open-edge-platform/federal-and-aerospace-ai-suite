@@ -12,7 +12,9 @@ Four Linux machines, all cabled to the same Moxa TSN switch and to a lab network
 | machine-4 | Load injector | 4 |
 
 Each machine needs an Intel I225-LM or I226-LM TSN network card (PCI `8086:15f2` / `8086:125b`).
-Machine-1 needs about 8 CPU cores for the full stack.
+Machine-1 needs about 8 CPU cores for the full stack and several GB of free disk for the Docker
+images (the DL Streamer image alone is about 5 GB). The camera machines need Docker and enough CPU
+for one inference pipeline each.
 
 ## Network topology
 
@@ -24,7 +26,9 @@ The dotted lab network is never shaped.
 ## Software
 
 - Ubuntu 24.04
-- Docker Engine with Docker Compose V2 (all machines)
+- Docker Engine with Docker Compose V2, so `docker compose` works, not only `docker-compose` (all machines;
+  [install guide](https://docs.docker.com/engine/install/ubuntu/))
+- `git` and `make` on machine-1
 - `linuxptp` and NetworkManager (installed or used by the setup scripts)
 - Passwordless `ssh` from machine-1 to machines 2, 3 and 4 (key based)
 - Internet or proxy access on machine-1 to pull the Docker images and to download the detection model (`src/data/download_models.sh`, runs automatically in `make up`; Open Model Zoo, Apache-2.0; you are asked to accept the license on the first download)
@@ -39,5 +43,5 @@ The dotted lab network is never shaped.
 
 | Component | Details |
 |-----------|---------|
-| Moxa TSN-G5000 switch | IEEE 802.1Qbv and 1588v2/802.1AS. Tested with TSN-G5008-2GTXSFP, firmware 2.1 |
+| Moxa TSN-G5000 switch | IEEE 802.1Qbv and 1588v2/802.1AS, Telnet management enabled (the dashboard scripts use it). Tested with TSN-G5008-2GTXSFP, firmware 2.1 |
 | Basler ace GigE cameras (optional) | PTP hardware timestamps, for the Basler test only. Tested with acA1920-40GC |

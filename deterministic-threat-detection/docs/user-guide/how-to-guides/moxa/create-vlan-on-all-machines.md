@@ -10,7 +10,7 @@ The demo uses three VLANs on the TSN NIC (`tsn0`):
 
 ## Automatic
 
-Run once per machine with `setup_tsn_nic.sh`: see [First-time setup](../../first-time-setup.md#1-nic-and-vlans-every-machine).
+Run once per machine with `setup_tsn_nic.sh`: see [First-time setup](../../first-time-setup.md#2-nic-and-vlans-every-machine).
 It renames the NIC to `tsn0`, creates `tsn0.1/.3/.5` with address `192.168.<vlan>.<id>` and maps every
 frame priority to PCP = VLAN id. Without the map all frames leave with priority 0 and the switch
 cannot tell the traffic apart.

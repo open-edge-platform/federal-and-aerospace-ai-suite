@@ -18,14 +18,18 @@ with it on they are not affected.
 
 ## Quick start
 
+You need four Linux machines and a Moxa TSN switch ([System requirements](./docs/user-guide/system-requirements.md)).
+Set up the machines, VLANs, PTP and the switch once: [First-time setup](./docs/user-guide/first-time-setup.md).
+Then, on machine-1, in a clone of this repository:
+
 ```bash
-cp lab.env.example lab.env      # fill in the addresses (once)
+cp lab.env.example lab.env      # fill in the addresses (once, see First-time setup, step 6)
 make up                         # test videos; or: make up SOURCE=basler
 make down
 ```
 
-Then open `https://<machine-1 lab address>/dashboard/`.
-Machines, VLANs, PTP and switch are set up once: [First-time setup](./docs/user-guide/first-time-setup.md), then [Get started](./docs/user-guide/get-started.md).
+Then open `https://<machine-1 lab address>/dashboard/`. [Get started](./docs/user-guide/get-started.md)
+explains the dashboard and what to try.
 
 ## Layout
 
@@ -51,6 +55,6 @@ Machines, VLANs, PTP and switch are set up once: [First-time setup](./docs/user-
 ## Tests
 
 ```bash
-make test        # dashboard unit tests
-make test-e2e    # SceneScape end-to-end test (needs the stack running)
+make test        # dashboard unit tests (no hardware needed)
+make test-e2e    # SceneScape end-to-end test (needs `make up` running with the test videos)
 ```

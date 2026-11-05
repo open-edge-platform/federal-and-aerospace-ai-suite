@@ -11,7 +11,7 @@
 - One web dashboard for both use cases: live latency, tracking quality (HOTA), network-load slider,
   Qbv toggle, system utilization and a live architecture view.
 - One command deployment for four machines: `make up` / `make down`.
-- Basler GigE camera support with PTP hardware timestamps: `make up SOURCE=basler STREAMS=0`.
+- Basler GigE camera support with PTP hardware timestamps: `make up SOURCE=basler`.
 - Setup scripts for the TSN NIC, VLANs and PTP profiles (`src/setup/`).
 
 **Changed**:

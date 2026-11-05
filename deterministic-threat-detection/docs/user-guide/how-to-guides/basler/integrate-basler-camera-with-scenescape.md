@@ -17,7 +17,8 @@ does the wiring.
    VLAN 3 on switch ports 5 and 6.
 3. Give the camera ports priority 0. Untagged camera frames take the port's priority; priority 3
    would put the camera video in the same queue as other VLAN 3 traffic and starve MQTT
-   under the Qbv schedule. Run on machine-2 after `make -C src/dashboard deploy-switch`:
+   under the Qbv schedule. Run on machine-2 after `make -C src/dashboard deploy-switch`
+   (`<switch address>` is `SWITCH_IP` from `lab.env`):
 
    ```bash
    python3 -I ~/moxa/port_priority.py set --host <switch address> --ports 5,6 --value 0
@@ -51,8 +52,9 @@ does the wiring.
      `/usr/local/lib/gstreamer-1.0`.
    - End the image with the base image's non-root user (`intelmicroserviceuser`).
 
-5. In `src/scene/.env` set the camera serial numbers (created from `.env.example` by the first
-   `make up`) and, if needed, the macvlan address (it must be free):
+5. In `src/scene/.env` set the camera serial numbers (the file is created from `.env.example` by
+   the first `make up`; run `make up` once first if it does not exist yet) and, if needed, the
+   macvlan address (it must be a free address in the VLAN 3 subnet):
 
    ```text
    BASLER_CAMERA1_SERIAL=<serial of camera 1>

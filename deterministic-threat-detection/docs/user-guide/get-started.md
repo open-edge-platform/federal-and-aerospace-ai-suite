@@ -5,13 +5,9 @@ Set up four machines and a Moxa TSN switch, then start both use cases with one c
 ## Prerequisites
 
 - Four machines and a Moxa TSN-G5000 switch as listed in [System requirements](./system-requirements.md).
-- Machine-1 is the machine you work on. Passwordless ssh works from it to machines 2, 3 and 4
-  (`ssh-copy-id <user>@<machine>`), and your user is in the `docker` group on all four.
-
-## First time setup guide
-
-One-time steps per machine and for the switch (NIC and VLANs, PTP, switch, `lab.env`):
-**[First-time setup](./first-time-setup.md)**. Skip it once done.
+- Machine-1 is the machine you work on. It has `git`, `make` and Docker, and passwordless ssh
+  works from it to machines 2, 3 and 4 (`ssh-copy-id <user>@<machine>`). Your user is in the
+  `docker` group on all four. [First-time setup](./first-time-setup.md) walks through these.
 
 ## Clone the project
 
@@ -20,7 +16,14 @@ git clone <repository URL> federal-and-aerospace-ai-suite
 cd federal-and-aerospace-ai-suite/deterministic-threat-detection
 ```
 
-Clone it on machine-1 only. `make up` copies what the other machines need.
+Replace `<repository URL>` with the clone URL of the repository this page belongs to. Clone it
+on machine-1 only: `make up` copies what the other machines need. The one-time setup scripts are
+the exception; [First-time setup](./first-time-setup.md) copies them by hand.
+
+## First time setup guide
+
+One-time steps per machine and for the switch (ssh and Docker, NIC and VLANs, PTP, switch,
+`lab.env`): **[First-time setup](./first-time-setup.md)**. Skip it once done.
 
 ## Architecture diagram
 
@@ -63,7 +66,15 @@ make up
 ```
 
 `make up` starts the test-video streams, the dashboard, the load agent, the camera pipelines and
-SceneScape. The first run pulls images and downloads the detection model, and takes several minutes. Before the first model download, `make up` asks you to accept the model license (Open Model Zoo, Apache-2.0); answering anything other than yes aborts the setup. The answer is remembered in `src/data/models/.terms-accepted`. For non-interactive runs, set `ACCEPT_MODEL_TERMS=yes`. When it finishes it prints:
+SceneScape.
+
+- The first run pulls the Docker images (several GB; the DL Streamer image alone is about 5 GB)
+  and downloads the detection model, so it takes several minutes.
+- Before the first model download, `make up` asks you to accept the model license (Open Model
+  Zoo, Apache-2.0). Answering anything other than yes aborts the setup. The answer is remembered
+  in `src/data/models/.terms-accepted`. For non-interactive runs, set `ACCEPT_MODEL_TERMS=yes`.
+
+When it finishes it prints:
 
 - Dashboard: `https://<machine-1 lab address>/dashboard/`
 - SceneScape: `https://<machine-1 lab address>/` (user `admin`, password in
@@ -82,7 +93,9 @@ Try it:
 
    ![Use case 2: tracking](./_assets/uc2-tracking-video.gif)
 
-3. Switch off Qbv and move **Network load** to 1000 Mbit/s: latency climbs from milliseconds to
+3. Switch off Qbv (the toggle works only after you set `SWITCH_ALLOW_WRITE=1`, see
+   [First-time setup](./first-time-setup.md#6-lab-configuration-machine-1)) and move **Network load**
+   to 1000 Mbit/s: latency climbs from milliseconds to
    seconds and the tracker rate (use case 2) and HOTA collapse. The Architecture view shows the
    streams stalling and frames lost.
 
@@ -125,6 +138,7 @@ HOTA is not shown for Basler (no ground truth); the tracker rate is.
 | Qbv toggle disabled, read-only | Set `SWITCH_ALLOW_WRITE=1` in `src/dashboard/.env`, run `make up` again |
 | Latency stays high with Qbv on | Check the VLAN priority maps (`ip -d link show tsn0.1` lists `egress_qos`) and PTP (`sudo ptp-profile status`) |
 | Basler `Device::open()` fails | Another process holds the camera: `docker stop -t 30` the pipeline container, then retry |
+| A start failed half way | `make down`, fix the cause, `make up` again. `make -C src/scene clean` also deletes the SceneScape database volumes |
 
 ## Key References
 
