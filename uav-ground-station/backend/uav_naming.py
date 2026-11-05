@@ -16,10 +16,13 @@ a circular import.
 
 from __future__ import annotations
 
+import hashlib
 import re
 from typing import Optional
 
 _SANITIZE = re.compile(r"[^a-z0-9]+")
+_SLUG_MAX = 24
+_DIGEST_LEN = 8
 
 # Loose "looks like a stream this feature manages" check -- not meant to be
 # parsed back into (host_tag, camera); use the registry functions below for
@@ -34,9 +37,12 @@ LEGACY_NAME = re.compile(r"^uav-(?!.*--)[A-Za-z0-9_-]{1,44}$")
 
 
 def host_tag(host: str) -> str:
-    """Sanitize a hostname/IP into a VSS-stream-name-safe, unique-enough tag."""
-    tag = _SANITIZE.sub("-", (host or "").strip().lower()).strip("-")
-    return tag or "host"
+    """Bounded, collision-resistant tag for a host: a readable slug plus a
+    short digest of the exact host, so "10.2.3.4" and "10-2-3-4" differ."""
+    raw = (host or "").strip().lower()
+    slug = _SANITIZE.sub("-", raw).strip("-")[:_SLUG_MAX].strip("-") or "host"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:_DIGEST_LEN]
+    return f"{slug}-{digest}"
 
 
 def stream_name(host: str, camera: str) -> str:

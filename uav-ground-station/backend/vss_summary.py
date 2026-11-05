@@ -218,14 +218,12 @@ def build_summary(host: str, cameras: list, window_minutes: int,
     now = time.time() if now is None else now
     since = now - window_minutes * 60
 
-    per_camera_entries: dict = {}
     per_camera_scenes: dict = {}
     keywords: Counter = Counter()
     per_camera_counts: dict = {}
     for camera in cameras:
         entries = caption_log.get_captions(host, camera, since)
         scenes, counter = _map_camera(camera, entries)
-        per_camera_entries[camera] = entries
         per_camera_scenes[camera] = scenes
         keywords.update(counter)
         per_camera_counts[camera] = {"captions": len(entries), "scenes": len(scenes)}
@@ -239,7 +237,6 @@ def build_summary(host: str, cameras: list, window_minutes: int,
     # chattier one could use.
     base_share = max(1, max_highlights // max(1, len(cameras)))
     highlights_by_camera: dict = {}
-    budget_used = 0
     cameras_by_volume = sorted(cameras, key=lambda c: len(per_camera_scenes.get(c, [])), reverse=True)
     remaining_budget = max_highlights
     shares = {c: min(base_share, len(per_camera_scenes.get(c, []))) for c in cameras}

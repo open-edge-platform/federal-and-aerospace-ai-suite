@@ -21,6 +21,7 @@ CLI:
     camera_config.py plan  [FILE]     the same plan as JSON, including the start requests
     camera_config.py schema           JSON schema of the configuration (for UI forms)
 """
+import hashlib
 import json
 import os
 import re
@@ -47,7 +48,7 @@ _RTSP = re.compile(r"^rtsp://[A-Za-z0-9_.-]{1,128}(:[0-9]{1,5})?/[A-Za-z0-9_./{}
 _UAV_ID = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 _DEVICE = re.compile(r"^/dev/(video[0-9]{1,3}|v4l/by-(id|path)/[A-Za-z0-9_.:+-]{1,128})$")
 _PATH = re.compile(r"^[A-Za-z0-9_-]{1,48}$")
-_TOPIC = re.compile(r"^uav/caption/[A-Za-z0-9_-]+$")
+_TOPIC = re.compile(r"^uav/caption/[A-Za-z0-9_-]{1,48}$")
 
 Device = Literal["cpu", "gpu", "npu"]
 VlmDevice = Literal["cpu", "gpu"]
@@ -165,7 +166,7 @@ class Camera(_Strict):
     @classmethod
     def _topic(cls, value):
         if value is not None and not _TOPIC.match(value):
-            raise ValueError("must look like uav/caption/<name>")
+            raise ValueError("must look like uav/caption/<name> (name: letters, digits, _ and -, max 48)")
         return value
 
 
@@ -259,8 +260,8 @@ def build_plan(config: CamerasConfig, *, resources_dir: str = RESOURCES_DIR, che
                                           "camera_fps": camera.fps or 30}
                if camera.device else {} if rtsp_url else {"video": camera.video}),
             "detection_model": model_path,
-            # cameras sharing device and model share one loaded model; a different model gets its own instance
-            "detection_instance_id": re.sub(r"[^a-z0-9_]", "_", f"inst{det.device}_{os.path.splitext(os.path.basename(det.model))[0]}".lower()),
+            # cameras sharing device and model path share one loaded model; a different model (even with the same file name) gets its own instance
+            "detection_instance_id": re.sub(r"[^a-z0-9_]", "_", f"inst{det.device}_{os.path.splitext(os.path.basename(det.model))[0]}_{hashlib.sha256(os.path.normpath(det.model).encode()).hexdigest()[:8]}".lower()),
             "overlay_label": label,
         }
         topic = None
