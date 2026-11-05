@@ -1,10 +1,11 @@
-# Integrate Basler Cameras with SceneScape
+# Integrate Basler Cameras with Scenescape
 
-Use two Basler GigE cameras as the sources for use case 2. This project does not ship the image
-with the Basler camera SDK: you build it once yourself (below). After that `make up SOURCE=basler`
-does the wiring.
+This guide shows you how to use two Basler GigE cameras as the video sources for
+use case 2. You build the Docker image with the Basler camera SDK once, and then
+run it to start the pipeline server on a network that can reach the cameras.
 
-> **License notice:** the pylon SDK is proprietary software under Basler's own license terms (see
+> [!IMPORTANT]
+> The pylon SDK is proprietary software under Basler's own license terms (see
 > <https://www.baslerweb.com/en/downloads/software/>). It is not part of this project and not
 > covered by its Apache-2.0 license. By building the image you accept Basler's terms. Build it
 > locally for your own cameras and do not publish or redistribute it. `gst-plugin-pylon`
@@ -13,11 +14,13 @@ does the wiring.
 ## Prepare (once)
 
 1. Configure the cameras: [Configure Basler PTP timestamps](./configure-basler-ptp-timestamps.md).
-2. Create VLAN 3 on machine-1 ([First-time setup](../../first-time-setup.md)); the cameras sit in
+2. Create VLAN 3 on machine-1 ([First-time setup](../../first-time-setup.md)); the cameras are in
    VLAN 3 on switch ports 5 and 6.
-3. Give the camera ports priority 0. Untagged camera frames take the port's priority; priority 3
-   would put the camera video in the same queue as other VLAN 3 traffic and starve MQTT
-   under the Qbv schedule. Run on machine-2 after `make -C src/dashboard deploy-switch`
+3. Assign priority 0 to the camera ports. Untagged camera frames take the port's priority, and
+   priority 3 would put the camera video in the same queue as other VLAN 3 traffic, which would starve MQTT
+   under the Qbv schedule.
+
+   Run the following on machine-2 after `make -C src/dashboard deploy-switch`
    (`<switch address>` is `SWITCH_IP` from `lab.env`):
 
    ```bash
@@ -28,7 +31,7 @@ does the wiring.
 4. Build the pipeline server image with the camera SDK. The standard DL Streamer Pipeline Server
    image has neither the pylon SDK nor the `gencamsrc` GStreamer source. Follow
    [Integrate Pylon SDK, Step 2: Create the Docker Image](https://docs.openedgeplatform.intel.com/dev/edge-ai-suites/ai-suite-manufacturing/industrial-edge-insights-vision/pallet-defect-detection/how-to-guides/integrate-camera-sdks.html#step-2-create-the-docker-image),
-   using the image from `DLSTREAMER_PIPELINE_SERVER_IMAGE` in `src/scene/.env` as the base, with
+   using the image from `DLSTREAMER_PIPELINE_SERVER_IMAGE` in `src/scene/.env` as the base, and note
    these points:
 
    - Tag the result `tsn-dlstreamer-pipeline-server-basler:<SCENESCAPE_VERSION>` (the value from
@@ -36,9 +39,9 @@ does the wiring.
      with a message if this image does not exist.
    - Build `gencamsrc` with `-DGENCAMSRC_ENABLE_HW_TIMESTAMP_META=ON`. It then attaches the
      camera's PTP hardware timestamp to every frame (`GstReferenceTimestampMeta`), which the
-     SceneScape adapter uses as the frame time. This worked with the `edge-ai-libraries`
+     Scenescape adapter uses as the frame time. This worked with the `edge-ai-libraries`
      mainline at commit `cc2ac98fb0d3de12e5b12db37ce8fea34aa4d75a`.
-   - Install the pylon runtime (7.5 was used) and `gst-plugin-pylon`.
+   - Install the pylon runtime (version 7.5 was used) and `gst-plugin-pylon`.
    - Install the build tools for `gencamsrc` (`cmake`, `make`, `g++` and the GStreamer development
      packages). The current `ubuntu24` base image no longer contains `make`, so without it
      CMake fails with "unable to find a build program".
@@ -50,9 +53,9 @@ does the wiring.
      includes `/opt/intel/dlstreamer/lib`, `/opt/intel/dlstreamer/gstreamer/lib/gstreamer-1.0`,
      `/opt/intel/dlstreamer/gstreamer/lib`, `/usr/lib/x86_64-linux-gnu/gstreamer-1.0` and
      `/usr/local/lib/gstreamer-1.0`.
-   - End the image with the base image's non-root user (`intelmicroserviceuser`).
+   - Finish the Dockerfile by switching to the base image's non-root user (`intelmicroserviceuser`).
 
-5. In `src/scene/.env` set the camera serial numbers (the file is created from `.env.example` by
+5. In `src/scene/.env`, set the camera serial numbers (the file is created from `.env.example` by
    the first `make up`; run `make up` once first if it does not exist yet) and, if needed, the
    macvlan address (it must be a free address in the VLAN 3 subnet):
 
@@ -96,7 +99,7 @@ is no ground truth and no frame number.
 
 ## Troubleshooting
 
-- `Device::open()` fails: the camera is still held. `docker stop -t 30` the pipeline container,
-  wait, then `make up SOURCE=basler` again.
-- 1970 timestamps: the camera's PTP is not locked yet (timestamp 0 is ignored by the adapter).
-- No cameras found: `ping 192.168.3.17` from machine-1 and check the camera IPs.
+- `Device::open()` fails: the camera is still held by another process. Stop the pipeline container with
+  `docker stop -t 30`, wait, then run `make up SOURCE=basler` again.
+- Timestamps from 1970: the camera's PTP is not locked yet (timestamp 0 is ignored by the adapter).
+- No cameras found: run `ping 192.168.3.17` from machine-1 and check the camera IP addresses.
