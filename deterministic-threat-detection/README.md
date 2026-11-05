@@ -20,13 +20,31 @@ with it on they are not affected.
 
 You need four Linux machines and a Moxa TSN switch ([System requirements](./docs/user-guide/system-requirements.md)).
 Set up the machines, VLANs, PTP and the switch once: [First-time setup](./docs/user-guide/first-time-setup.md).
-Then, on machine-1, in a clone of this repository:
+Then, on machine-1:
 
 ```bash
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git
+cd federal-and-aerospace-ai-suite/deterministic-threat-detection
 cp lab.env.example lab.env      # fill in the addresses (once, see First-time setup, step 6)
 make up                         # test videos; or: make up SOURCE=basler
 make down
 ```
+
+No git on machine-1? Download the archive instead:
+
+```bash
+curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/deterministic-threat-detection.zip
+unzip deterministic-threat-detection.zip
+cd deterministic-threat-detection
+```
+
+> [!NOTE]
+> The documentation assumes paths relative to the
+> `federal-and-aerospace-ai-suite/deterministic-threat-detection` directory.
+> If you used the ZIP archive, replace
+> `federal-and-aerospace-ai-suite/deterministic-threat-detection` with the
+> path to your extracted `deterministic-threat-detection` folder wherever it
+> appears in the guides.
 
 Then open `https://<machine-1 lab address>/dashboard/`. [Get started](./docs/user-guide/get-started.md)
 explains the dashboard and what to try.

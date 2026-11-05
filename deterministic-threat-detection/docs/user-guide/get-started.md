@@ -12,12 +12,11 @@ Set up four machines and a Moxa TSN switch, then start both use cases with one c
 ## Clone the project
 
 ```bash
-git clone <repository URL> federal-and-aerospace-ai-suite
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git
 cd federal-and-aerospace-ai-suite/deterministic-threat-detection
 ```
 
-Replace `<repository URL>` with the clone URL of the repository this page belongs to. Clone it
-on machine-1 only: `make up` copies what the other machines need. The one-time setup scripts are
+Clone it on machine-1 only: `make up` copies what the other machines need. The one-time setup scripts are
 the exception; [First-time setup](./first-time-setup.md) copies them by hand.
 
 ## First time setup guide
