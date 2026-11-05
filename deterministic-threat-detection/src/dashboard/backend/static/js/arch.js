@@ -126,7 +126,7 @@
 
     // the switch
     refs.sw = add(svg, 'rect', { x: 420, y: 215, width: 160, height: 150, rx: 8, class: 'switch' });
-    text(500, 245, 'Moxa TSN switch', 't', 'middle');
+    text(500, 245, 'TSN switch', 't', 'middle');
     text(500, 264, 'PTP grandmaster', 's', 'middle');
     refs.qbv = text(500, 300, 'Qbv', 'live', 'middle');
     refs.qbvSub = text(500, 318, '', 's', 'middle');
