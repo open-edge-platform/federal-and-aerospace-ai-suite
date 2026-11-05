@@ -16,7 +16,7 @@ Run `make help` (or just `make`) to list all targets with descriptions.
 | --- | --- |
 | `make init` | Create `.env` from template and auto-detect the host IP, Intel GPU and NPU device paths and USB cameras |
 | `make model` | Download YOLO11s checkpoint and export to OpenVINO FP16 |
-| `make vlm-model` | Download and convert the VLM captioning model (OpenVINO IR) for CPU, GPU and NPU |
+| `make vlm-model` | Download and convert the VLM captioning model (OpenVINO IR) for CPU and GPU |
 | `make pymav-build` | Rebuild the locally built pymavlink images (requires network access) |
 | `make pymav-up` | Start the standalone pymavlink stack (requires model — errors if missing); builds images only if they do not exist yet |
 | `make pymav-down` | Stop and remove the pymavlink stack (includes volumes) |
@@ -86,8 +86,8 @@ resources/
 
 Downloads `OpenGVLab/InternVL2-1B` and converts it to OpenVINO IR under `resources/ov_models/<device>/`. Needed for camera
 captions. The conversion script is fetched from the live-video-captioning app at a pinned commit and cached in `.cache/`
-(`FORCE_REFRESH=true` fetches it again). Overrides: `VLM_MODEL_ID`, `VLM_DEVICE` (for example `cpu,gpu`) and
-`VLM_WEIGHT_FORMAT` (the NPU always uses `int4`).
+(`FORCE_REFRESH=true` fetches it again). Overrides: `VLM_MODEL_ID`, `VLM_DEVICE` (`cpu,gpu` by default; the VLM does not run on the NPU) and
+`VLM_WEIGHT_FORMAT` (`int8` by default).
 
 ### `make pymav-up` / `make pymav-down`
 
@@ -126,10 +126,10 @@ Start order:
 
 ```bash
 # 1. Start the SDK project (provides PX4, MQTT telemetry)
-cd federal-and-aerospace-ai-suite/uav-mission-compute-sdk && make up-sim-camera
+cd ../uav-mission-compute-sdk && make up-sim-camera
 
 # 2. Start this application
-make uavsdk-up
+cd ../uav-vision-analytics && make uavsdk-up
 ```
 
 `down` passes `-v` to also remove named volumes.
@@ -165,10 +165,10 @@ Convenience alias for `make pymav-up`. Starts the default standalone stack.
 # 0. Install system prerequisites
 sudo apt install python3.12-venv ffmpeg
 
-# 1. Create .env and auto-detect HOST_IP and the GPU/NPU/camera devices
+# 1. Create .env and auto-detect the host IP, GPU, NPU and camera devices
 make init
 
-# 2. Download and export the models (YOLO11s detection and the VLM for the captions)
+# 2. Download and export the detection model, and download the VLM used for captions
 make model
 make vlm-model
 
@@ -189,7 +189,7 @@ make pymav-down
 
 ```bash
 make pymav-down                       # stop standalone stack if running
-cd federal-and-aerospace-ai-suite/uav-mission-compute-sdk && make up-sim-camera   # start SDK project
-cd .. && make uavsdk-up               # start uav-mission-compute-sdk stack
+cd ../uav-mission-compute-sdk && make up-sim-camera   # start SDK project
+cd ../uav-vision-analytics && make uavsdk-up          # start uav-vision-analytics against the SDK
 make start-rtsp
 ```

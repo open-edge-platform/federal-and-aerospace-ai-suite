@@ -112,25 +112,19 @@ make up-sim-camera        # start PX4, MQTT, RTSP server
 
 ### 2. Configure environment
 
-If Downloaded Compressed file then Get into the directory with:
+From the `uav-mission-compute-sdk` directory, get into the application directory (it sits next to the SDK in both the ZIP and the cloned repository):
 
 ```bash
-cd ../uav-vision-analytics/
+cd ../uav-vision-analytics
 ```
 
-Or, If Cloned whole repo then Get into the directory with:
-
-```bash
-cd federal-and-aerospace-ai-suite/uav-vision-analytics
-```
-
-Then, for either option, initialize the environment:
+Then initialize the environment:
 
 ```bash
 make init
 ```
 
-`make init` creates `.env` from the template and auto-detects `HOST_IP` (the first address of `hostname -I`), your **Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`) and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists. Open `.env` only if `HOST_IP` is not the address other machines use to reach this host (for example on a host with several network cards).
+`make init` creates `.env` from the template and auto-detects your **host IP** (`HOST_IP`), your **Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists. Open and update `.env` only if `HOST_IP` is not the address other machines use to reach this host (for example on a host with several network cards).
 
 ### 3. Prepare the models
 
@@ -140,20 +134,21 @@ Download and export the YOLO11s detection model to OpenVINO FP16 IR:
 make model
 ```
 
-The shipped cameras also write scene captions, so download and convert the VLM captioning model (OpenVINO IR for CPU, GPU and NPU; takes a while the first time):
+If any camera in `configs/cameras-uavsdk.yaml` has `captioning.enabled: true`, also download and convert the VLM that writes the scene captions (InternVL2-1B, OpenVINO IR for the CPU and the GPU):
 
 ```bash
 make vlm-model
 ```
 
-> Without `make vlm-model`, set `captioning.enabled: false` for every camera of `configs/cameras-uavsdk.yaml`, otherwise their pipelines cannot start. See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) and the [VLM Model guide](../how-to-customize/model-and-video-management/vlm-model.md) for details.
+Both targets show the model license and ask for confirmation; add `ACCEPT_LICENSE=y` to accept without the prompt.
+
+> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) and the [VLM Model guide](../how-to-customize/model-and-video-management/vlm-model.md) for model details.
 
 ### 4. Start the uav-vision-analytics application
 
 The SDK's core infrastructure (step 1) must already be running.
 
 ```bash
-cd federal-and-aerospace-ai-suite/uav-vision-analytics
 make uavsdk-up
 ```
 
@@ -291,7 +286,7 @@ make uavsdk-down
 Then stop the SDK's core infrastructure:
 
 ```bash
-cd federal-and-aerospace-ai-suite/uav-mission-compute-sdk
+cd ../uav-mission-compute-sdk
 make down
 ```
 

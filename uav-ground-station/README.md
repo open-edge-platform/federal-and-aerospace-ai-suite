@@ -71,12 +71,39 @@ Container names use the prefix `uav-gs-` (ground station): `uav-gs-backend`, `ua
 
 ## Quick Start
 
-Prerequisites: Docker with the Compose plugin and `make` on this machine, and a
-UAV host running `uav-vision-analytics` or the UAV SDK stack with its pipelines
-started. Use a machine other than the UAV host: both bind port `8889`.
+Prerequisites: Docker with the Compose plugin and `make` on this machine, Recommended to use
+a machine other than the UAV host running `uav-vision-analytics` or the UAV SDK stack with its pipelines
+started.
+
+There are two options available to get the application source:
+
+#### Option A — Download the ZIP (recommended)
+
+Download the compressed file and get into the directory:
 
 ```bash
-make up      # creates .env from template, builds, and starts the container
+curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/uav-mission-apps.zip
+```
+
+Decompress the downloaded file:
+
+```bash
+unzip uav-mission-apps.zip
+cd uav-ground-station
+```
+
+#### Option B — Clone the whole repository
+
+Clone the repo and get into the directory:
+
+```bash
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
+cd federal-and-aerospace-ai-suite/uav-ground-station
+
+Then:
+
+```bash
+make up      # creates .env from template (host IP and devices auto-detected), builds, and starts the container
 ```
 
 `make up` runs `make init`, which sets `VIZ_HOST_IP` and `VIZ_PUBLIC_HOST` to this

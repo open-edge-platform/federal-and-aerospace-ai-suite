@@ -10,8 +10,8 @@
 #   captioning off -> uav_object_detection_<detection device>               (detection only)
 #   captioning on  -> uav_object_detection_<detection device>_<vlm device>  (detection + captions)
 # Detection can run on cpu, gpu or npu. The VLM that writes the captions runs on cpu or gpu only, needs its model
-# (make vlm-model) and publishes on MQTT uav/caption/<camera id>. Captions are on for every camera here; set captioning.enabled: false on
-# a camera to switch them off (the VLM shares the GPU or CPU with detection, so with limited hardware start with one captioning camera).
+# (make vlm-model) and publishes on MQTT uav/caption/<camera id>. If captions are off; set captioning.enabled: true on
+# a camera to switch them on (the VLM shares the GPU or CPU with detection, so start with one camera).
 
 version: 1
 

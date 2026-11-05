@@ -193,9 +193,8 @@ _fetch_vlm_download_script: ## (internal) Fetch+cache the canonical download_mod
 	fi
 
 vlm-model: LICENSE_NAME = $(VLM_MODEL_ID)
-vlm-model: _confirm_model_license _fetch_vlm_download_script ## Download/convert the VLM captioning model (OpenVINO IR) for CPU, GPU, and NPU. Override VLM_MODEL_ID/VLM_DEVICE/VLM_WEIGHT_FORMAT to customize.
+vlm-model: _confirm_model_license _fetch_vlm_download_script ## Download/convert the VLM captioning model (OpenVINO IR) for CPU and GPU. Override VLM_MODEL_ID/VLM_DEVICE/VLM_WEIGHT_FORMAT to customize.
 	@echo "[vlm-model] Downloading '$(VLM_MODEL_ID)' (weight-format=$(VLM_WEIGHT_FORMAT)) for device(s): $(VLM_DEVICE)"
-	@echo "[vlm-model] NOTE: NPU conversion always uses int4 regardless of VLM_WEIGHT_FORMAT (enforced by the script)."
 	MODEL_PATH="$(VLM_MODEL_PATH)" "$(VLM_DOWNLOAD_SCRIPT)" \
 	  --model "$(VLM_MODEL_ID)" \
 	  --type vlm \
