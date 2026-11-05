@@ -16,10 +16,5 @@ resources/ov_models/
 # not vendored, so it's not committed here.
 .cache/
 
-# Local-only analysis notes, kept on disk but not committed.
-/BENCHMARK-COMBINED-VS-SEPARATE.md
-/CPU-ANALYSIS-COMBINED-VS-SEPARATE.md
-/PIPELINE-ARCHITECTURE-COMBINED-VS-SEPARATE.md
-
 # Benchmark output written by benchmark/calc_stream_density.sh
 benchmark/results/

@@ -8,6 +8,8 @@ The UAV Vision Analytics application is an AI-powered UAV object detection appli
 
 The application is built on Intel DL Streamer Pipeline Server and supports two deployment modes: a self-contained **Standalone (pymavlink)** mode using Gazebo/PX4 Software-in-the-Loop (SITL) simulation, and a **UAV Mission Compute SDK** mode that integrates with a running instance of the UAV Mission Compute SDK for full mission control and multi-camera pipeline management. Both modes are deployed on top of the Edge Node Infrastructure software - an edge computing platform, which enables hardware acceleration capabilities. See [Infrastructure Setup](docs/user-guide/infrastructure-setup.md) for build and provisioning steps.
 
+![UAV Vision Analytics application architecture](docs/user-guide/_assets/uav-application-architecture.svg)
+
 ## Project Structure
 
 ```text
