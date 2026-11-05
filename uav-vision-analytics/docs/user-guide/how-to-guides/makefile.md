@@ -36,6 +36,8 @@ auto-detects Intel GPU and NPU device paths, writing them into `.env` so
 `docker compose` picks them up automatically.
 
 - **GPU:** scans `/dev/dri/` for `card*` and `renderD*` entries → sets `GPU_DEVICE` and `GPU_RENDER_DEVICE`
+- **Host IP:** takes the first address of `hostname -I` → sets `HOST_IP` (falls back to `127.0.0.1`)
+- **USB / RealSense camera:** sets `CAMERA_DEVICE_1` (`/dev/null` when none is found)
 - **NPU:** scans `/dev/accel/` for `accel*` entries → sets `NPU_DEVICE` (defaults to `/dev/null` if not found, disabling NPU pipelines)
 
 ```bash
@@ -100,6 +102,13 @@ Manages the **standalone pymavlink stack** (`docker-compose-pymavlink.yml`), whi
 
 `down` passes `-v` to also remove named volumes (pipeline cache).
 
+Before starting, `pymav-up` (and `uavsdk-up`) runs `scripts/update_device_gids.sh`, which writes the group IDs of the
+GPU, NPU and camera device nodes (`GPU_CARD_GID`, `GPU_RENDER_GID`, `NPU_GID`, `CAMERA_GID`) into `.env`; the compose
+files pass them as `group_add`, so the non-root pipeline user can open the devices on any host. Nothing to do by hand.
+
+Containers are named `uav-va-<service>` (for example `uav-va-dlstreamer-pipeline-server`), use those names with `docker exec` / `docker logs`.
+The two stacks cannot run together: stop one (`make pymav-down` / `make uavsdk-down`) before starting the other.
+
 Two images are built locally (the DL Streamer Pipeline Server with
 `pymavlink`, and `mavlink-router`). `make pymav-up` builds them only the
 first time, then starts the stack without rebuilding, so it works without
@@ -110,14 +119,14 @@ Internet access once the images and the base images exist locally. Run
 ### `make uavsdk-up` / `make uavsdk-down`
 
 Manages the **uav-mission-compute-sdk stack** (`docker-compose-uavsdk.yml`),
-which requires the `edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk`
+which requires the `federal-and-aerospace-ai-suite/uav-mission-compute-sdk`
 project to already be running.
 
 Start order:
 
 ```bash
 # 1. Start the SDK project (provides PX4, MQTT telemetry)
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk && make up-sim-camera
+cd federal-and-aerospace-ai-suite/uav-mission-compute-sdk && make up-sim-camera
 
 # 2. Start this application
 make uavsdk-up
@@ -180,7 +189,7 @@ make pymav-down
 
 ```bash
 make pymav-down                       # stop standalone stack if running
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk && make up-sim-camera   # start SDK project
+cd federal-and-aerospace-ai-suite/uav-mission-compute-sdk && make up-sim-camera   # start SDK project
 cd .. && make uavsdk-up               # start uav-mission-compute-sdk stack
 make start-rtsp
 ```

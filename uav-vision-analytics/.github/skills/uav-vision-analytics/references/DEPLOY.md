@@ -284,7 +284,7 @@ PX4 SITL ──MAVLink──▶ mavlink-router (:14550 server → :14541 broadca
 
 ```
 uav-mission-compute-sdk:
-  PX4+Gazebo → companion-bridge → MQTT broker (:1884)
+  PX4+Gazebo → companion-bridge → MQTT broker (:1883)
                                → RTSP server (:8554) [camera streams]
 
 DL Streamer Pipeline Server container:

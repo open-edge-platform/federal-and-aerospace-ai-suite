@@ -144,7 +144,7 @@ make start-rtsp      # docker exec -it uav-va-dlstreamer-pipeline-server bash -c
 
 The same manager as the pymavlink stack; `docker-compose-uavsdk.yml` sets `ARM_SOURCE=mqtt` and
 `CAMERAS_CONFIG=/home/pipeline-server/configs/cameras-uavsdk.yaml`. It subscribes to the SDK's MQTT broker
-(`MQTT_BROKER_HOST:MQTT_BROKER_PORT`, default `host.docker.internal:1884`) on `uav/<UAV_ID>/telemetry/status` and parses the
+(`MQTT_BROKER_HOST:MQTT_BROKER_PORT`, default `host.docker.internal:1883`) on `uav/<UAV_ID>/telemetry/status` and parses the
 `armed` boolean of the JSON payload.
 
 **On ARMED:** re-reads the cameras file and, for each camera whose source is an RTSP stream, probes it with `ffprobe`

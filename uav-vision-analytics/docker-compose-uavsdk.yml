@@ -18,7 +18,7 @@ services:
       - REST_SERVER_PORT=8081
       - SERVICE_NAME=dlstreamer-pipeline-server
       # The caption publisher of the pipelines uses MQTT_HOST/MQTT_PORT. This stack has no broker of its own: it is the
-      # SDK's (container mqtt-broker, published on host port 1884), reached through host.docker.internal.
+      # SDK's (container mqtt-broker, published on host port 1883), reached through host.docker.internal.
       - MQTT_HOST=host.docker.internal
       - MQTT_PORT=${MQTT_BROKER_PORT:-1883}
       - ENABLE_OPEN_TELEMETRY=false

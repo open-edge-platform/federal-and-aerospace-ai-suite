@@ -45,6 +45,7 @@ sequenceDiagram
 | Service | Image | Ports | Role |
 | --- | --- | --- | --- |
 | `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server` + pymavlink | `8081`, `8555` | AI inference, RTSP output |
+| `broker` | `eclipse-mosquitto` | `1883` (published through `nginx`) | MQTT broker for the scene captions |
 | `px4` | `px4io/px4-sitl` | `14550` | Flight controller simulator |
 | `mavlink-router` | custom build | `14551` (UDP, published to `HOST_IP`) | MAVLink UDP routing (:14550 → :14541); remote QGroundControl connects to :14551 |
 | `metrics-manager` | `intel/metrics-manager` | `9090` | CPU/GPU/NPU/power metrics |
@@ -70,7 +71,7 @@ There are two options available to get the application source:
 Download the compressed file and get into the directory:
 
 ```bash
-curl -OjL https://github.com/open-edge-platform/edge-ai-suites/releases/download/fedaero-latest/uav-mission-apps.zip
+curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/uav-mission-apps.zip
 ```
 
 Decompress the downloaded file:
@@ -85,8 +86,8 @@ cd uav-vision-analytics
 Clone the repo and get into the directory:
 
 ```bash
-git clone https://github.com/open-edge-platform/edge-ai-suites.git --branch main
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
+cd federal-and-aerospace-ai-suite/uav-vision-analytics
 ```
 
 Then, for either option, initialize the environment:
@@ -136,6 +137,8 @@ make cameras-status    # compare the file with the running pipelines
 ```
 
 > To arm the drone and trigger streaming, connect with QGroundControl (QGC) and press takeoff — see the [QGroundControl guide](../how-to-guides/qgroundcontrol.md) for setup and connection details. Every enabled camera in `configs/cameras-pymavlink.yaml` starts together once armed — see [Step 5 — View the output stream](#5-view-the-output-stream) for the RTSP URLs.
+
+> To run the cameras right away, without arming the drone, use `pipeline_manager.py --start-now`, see [Starting pipelines without arming the drone](../../../README.md#starting-pipelines-without-arming-the-drone).
 
 #### Option B — Manual REST API
 
@@ -255,6 +258,7 @@ only on the internal `app_network`.
 | `443` | HTTPS | `nginx` → proxies to `dlstreamer-pipeline-server:8081` (REST API) and `metrics-manager:9090` (metrics); self-signed cert, use `curl -k` | Yes | All modes |
 | `8555` | RTSP | `nginx` → raw TCP passthrough to `dlstreamer-pipeline-server:8555` | Yes | All modes |
 | `8081` | HTTP | DL Streamer REST API | No (internal only) | All modes |
+| `1883` | MQTT | `nginx` → raw TCP passthrough to `broker:1883` (scene captions `uav/caption/<camera>`) | Yes | pymavlink modes |
 | `14551` | UDP | `mavlink-router` MAVLink endpoint for a remote QGroundControl (see [QGroundControl](../how-to-guides/qgroundcontrol.md)) | Yes | pymavlink modes |
 | `14541` | UDP | MAVLink broadcast (mavlink-router) | No (internal only) | pymavlink modes |
 | `9090` | HTTP | metrics-manager (HW metrics) | No (internal only) | pymavlink modes |

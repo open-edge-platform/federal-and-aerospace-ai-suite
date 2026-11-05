@@ -60,7 +60,7 @@ curl -k -s https://<HOST_IP>/api/v1/metrics/latest | head -3
 ## Scenarios
 
 ```bash
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-vision-analytics/benchmark
+cd federal-and-aerospace-ai-suite/uav-vision-analytics/benchmark
 
 # 1. Whatever cameras-pymavlink.yaml says
 ./calc_stream_density.sh
