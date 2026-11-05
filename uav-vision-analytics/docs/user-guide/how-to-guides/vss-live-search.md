@@ -39,7 +39,7 @@ camera — this is a `uav-ground-station` feature; nothing changes on the
 
 ```bash
 cd uav-ground-station
-make up-vss     # base viz-backend + mediamtx relay + the 8 VSS containers
+make up-vss     # base uav-gs-backend + mediamtx relay + the 8 VSS containers (uav-gs-vss-*)
 ```
 
 The first start downloads the CLIP embedding model and YOLOX (for object

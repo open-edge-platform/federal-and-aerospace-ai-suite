@@ -461,7 +461,7 @@ sudo apt-get install -y jq
 mkdir -p ~/.local/bin
 cat > ~/.local/bin/jq << 'EOF'
 #!/usr/bin/env bash
-CONTAINER="dlstreamer-pipeline-server"
+CONTAINER="uav-va-dlstreamer-pipeline-server"
 args=()
 for arg in "$@"; do
   if [[ -f "$arg" ]]; then
@@ -527,7 +527,7 @@ FPS-only results. Make sure the full stack is up:
 
 ```bash
 make pymav-up
-docker ps | grep metrics-manager
+docker ps | grep uav-va-metrics-manager
 ```
 
 To use another address: `./benchmark/calc_stream_density.sh --metrics-url https://<HOST_IP> ...`

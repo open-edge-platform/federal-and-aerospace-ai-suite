@@ -13,7 +13,7 @@ that host until you enter its IP in the dashboard and press **Connect**.
 
 ## What it shows
 
-- The live video stream, via **H.264 Relay**: the local viz-backend
+- The live video stream, via **H.264 Relay**: the local uav-gs-backend
   configures a mediamtx sidecar (`docker-compose-mediamtx.yml`, always
   brought up alongside the base stack -- see `make up`; `configs/mediamtx.yml` keeps on-demand sources alive for 60 s) to pull the remote
   UAV host's already-H.264 RTSP stream on demand and re-serve it to the
@@ -34,7 +34,7 @@ that host until you enter its IP in the dashboard and press **Connect**.
   camera device in the top-right information icon's tooltip, along with the
   pipeline state and name (from the DL Streamer
   Pipeline Server's REST API and the start request of each pipeline).
-- CPU/GPU/NPU utilization of the UAV host (proxied from its `metrics-manager`) and of this ground-station machine (the local `gs-metrics-manager` container).
+- CPU/GPU/NPU utilization of the UAV host (proxied from its `metrics-manager`) and of this ground-station machine (the local `uav-gs-metrics-manager` container).
 - **Live Natural Language Search**: the **Search Videos** button (top bar or side
   panel, or press `/`) opens a popup where you type a natural-language prompt
   (e.g. "a red car on the road") and get a ranked result list with thumbnails
@@ -120,7 +120,7 @@ All configuration is via `.env` (see `.env.example`):
 | `VSS_PLAYBACK_DEFAULT` | `sd` | Quality the player starts in (`sd` or `hd`); users switch with the SD/HD toggle and their choice is remembered per browser |
 | `VSS_PREVIEW_HEIGHT` | `360` | Preview height in pixels (never upscaled) |
 | `VSS_PREVIEW_MAX_KBPS` | `800` | Preview video bitrate cap |
-| `VSS_PREVIEW_CACHE_MB` | `1024` | Disk budget for cached previews in `viz-backend` |
+| `VSS_PREVIEW_CACHE_MB` | `1024` | Disk budget for cached previews in `uav-gs-backend` |
 | `VSS_PREVIEW_PREWARM` | `3` | Top results transcoded as soon as a search returns |
 | `CAPTION_BUFFER_SIZE` | `1000` | Max scene captions kept per (host, camera) for the Flight Summary report |
 | `CAPTION_LOG_IDLE_TTL_SECONDS` | `120` | Drop a (host, camera) caption subscriber after this many seconds of not being observed captioning |
@@ -165,7 +165,7 @@ Live RTSP ingestion needs the `intel/*:2026.3.0-rc1` (or newer) VSS images
 deployed separately with its own `setup.sh --search` instead, set
 `VSS_ENABLED=true` and `VSS_MANAGER_URL` / `VSS_DATASTORE_URL` in `.env`.
 
-`viz-backend` proxies everything so the browser only talks to this dashboard:
+`uav-gs-backend` proxies everything so the browser only talks to this dashboard:
 
 | Route | Upstream VSS call | Purpose |
 |---|---|---|
@@ -226,7 +226,7 @@ under each camera's video. It works independently of VSS: no extra containers,
 no LLM call, always available once a camera's pipeline is running with
 captioning on.
 
-1. `viz-backend` keeps a small ring buffer of recent captions per
+1. `uav-gs-backend` keeps a small ring buffer of recent captions per
    `(host, camera)` (`caption_log.py`), kept warm only while the dashboard's
    normal pipeline-info polling has observed that camera captioning; an idle
    `(host, camera)` pair is dropped after `CAPTION_LOG_IDLE_TTL_SECONDS`.

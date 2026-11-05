@@ -136,7 +136,7 @@ make uavsdk-up
 
 ### `make start-rtsp`
 
-Executes `pipeline_manager.py` inside the running `dlstreamer-pipeline-server` container. It monitors the MAVLink
+Executes `pipeline_manager.py` inside the running `uav-va-dlstreamer-pipeline-server` container. It monitors the MAVLink
 ARMED/DISARMED state and starts/stops one inference pipeline per camera of `configs/cameras-pymavlink.yaml`, each with
 **RTSP frame output** on port `8555` (`rtsp://<HOST_IP>:8555/uav-<camera>`). The file is read when the manager starts
 and again at every arming, so after an edit you either run `make start-rtsp` again or disarm and arm. `CAMERAS=<file>`
