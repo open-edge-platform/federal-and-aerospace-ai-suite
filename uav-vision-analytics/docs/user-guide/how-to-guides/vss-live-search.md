@@ -27,7 +27,8 @@ camera — this is a `uav-ground-station` feature; nothing changes on the
 - `uav-vision-analytics` running with at least one RTSP pipeline up (any
   device/camera) — see [Get Started](../get-started/get-started-standalone.md)
   and [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md).
-- `uav-ground-station` cloned and `make init` already run once (creates
+- `uav-ground-station` checked out (see its
+  [Quick Start](../../../../uav-ground-station/README.md#quick-start)) and `make init` already run once (creates
   `.env`).
 - `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` /
   `VSS_POSTGRES_PASSWORD` set in `uav-ground-station/.env` (see

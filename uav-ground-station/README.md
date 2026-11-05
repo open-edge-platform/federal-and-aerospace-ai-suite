@@ -71,8 +71,35 @@ Container names use the prefix `uav-gs-` (ground station): `uav-gs-backend`, `ua
 
 ## Quick Start
 
+There are two options available to get the application source:
+
+#### Option A — Download the ZIP (recommended)
+
+Download the compressed file and get into the directory:
+
 ```bash
-make up      # creates .env from template, builds, and starts the container
+curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/uav-mission-apps.zip
+```
+
+Decompress the downloaded file:
+
+```bash
+unzip uav-mission-apps.zip
+cd uav-vision-analytics
+```
+
+#### Option B — Clone the whole repository
+
+Clone the repo and get into the directory:
+
+```bash
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
+cd federal-and-aerospace-ai-suite/uav-ground-station
+
+Then:
+
+```bash
+make up      # creates .env from template (host IP and devices auto-detected), builds, and starts the container
 ```
 
 Then open `http://localhost:8080` (or `${VIZ_HOST_IP}:${VIZ_PORT}`), enter the

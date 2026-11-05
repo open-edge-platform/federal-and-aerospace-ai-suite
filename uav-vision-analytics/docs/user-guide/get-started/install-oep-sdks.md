@@ -41,7 +41,7 @@ Expected: `card0`/`renderD128` under `/dev/dri`, `accel0` under `/dev/accel`, an
 Get the UAV Mission Compute SDK source on the target and start the simulation stack.
 
 ```bash
-curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/2026.2/uav-mission-apps.zip
+curl -OjL https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/releases/download/fedaero-latest/uav-mission-apps.zip
 unzip uav-mission-apps.zip
 cd uav-mission-compute-sdk/
 ```

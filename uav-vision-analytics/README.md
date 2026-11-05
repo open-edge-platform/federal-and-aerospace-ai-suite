@@ -66,27 +66,23 @@ Defined in [`docker-compose-uavsdk.yml`](docker-compose-uavsdk.yml). Requires th
 | Intel® NPU (optional) | For NPU-accelerated pipelines; falls back to `/dev/null` (disabled) if not detected. |
 | USB or RealSense camera (optional) | For live-camera pipelines; auto-detected by `make init`. |
 
-Run `make init` after cloning to create `.env` from `.env.example`, auto-detect the host IP (`HOST_IP`), and auto-detect GPU, NPU, and camera device paths.
+Run `make init` after cloning to create `.env` from `.env.example`, auto-detect the host IP (`HOST_IP`), and auto-detect GPU, NPU, and camera device paths. No manual `.env` edit is needed.
 
 ## Quick Start
 
-### Step 1: Download the model
+Run the commands from the `uav-vision-analytics` directory (`cd federal-and-aerospace-ai-suite/uav-vision-analytics` after `git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git`, or the directory of the downloaded ZIP; see [Get Started](docs/user-guide/get-started/get-started-standalone.md)).
+
+### Step 1: Initialize and download the models
 
 ```bash
-cd uav-vision-analytics
+make init
 make model
+make vlm-model
 ```
 
-This creates a Python virtual environment, downloads YOLO11s, and exports it to OpenVINO FP16 format under `resources/models/yolo11s/`.
+`make model` creates a Python virtual environment, downloads YOLO11s, and exports it to OpenVINO FP16 format under `resources/models/yolo11s/`.
 
-> **Optional — video captioning:** if you plan to use the VLM captioning pipelines, also run:
->
-> ```bash
-> make vlm-model
-> ```
->
-> This downloads/converts `OpenGVLab/InternVL2-1B` (override with `VLM_MODEL_ID=...`) to OpenVINO IR for `CPU`, `GPU`, and `NPU` (override with `VLM_DEVICE=cpu,gpu`, etc.) under `resources/ov_models/<device>/`. NPU conversion always uses `int4` quantization regardless of `VLM_WEIGHT_FORMAT` (enforced by the download script).
-
+`make vlm-model` downloads/converts `OpenGVLab/InternVL2-1B` (override with `VLM_MODEL_ID=...`) to OpenVINO IR for `CPU` and `GPU` (override with `VLM_DEVICE=gpu`, etc.; the VLM does not run on the NPU) under `resources/ov_models/<device>/`. The shipped `configs/cameras-pymavlink.yaml` turns captions on for two cameras, so it is needed for the default setup; skip it only if you switch captioning off for every camera.
 ### Step 2: Start a deployment mode
 
 **Standalone Mode (pymavlink)** — self-contained, no external dependencies:
@@ -116,7 +112,7 @@ it, `make start-rtsp` (or disarm and arm again) applies it, and `make cameras-st
 running. See [Configure the Cameras](docs/user-guide/how-to-customize/camera-management/configure-cameras.md).
 
 Streams are published as `rtsp://<HOST_IP>:8555/uav-<camera>` (for example `uav-front-camera`) and the captions of a
-camera on MQTT `uav/caption/<camera>`. Captions need the VLM models: run `make vlm-model` once.
+camera on MQTT `uav/caption/<camera>`. Captions need the VLM model (`make vlm-model`, Step 1).
 
 ### Using your own videos
 
@@ -188,7 +184,7 @@ and `metrics-manager` no longer publish ports directly to the host.
 ```text
 make init          Create .env from template, auto-detect HOST_IP, and auto-detect GPU/NPU/camera device paths
 make model         Download YOLO11s and export to OpenVINO FP16
-make vlm-model     Download/convert the VLM captioning model (OpenVINO IR) for CPU, GPU, and NPU
+make vlm-model     Download/convert the VLM captioning model (OpenVINO IR) for CPU and GPU
 make pymav-build    Rebuild the locally built pymavlink images (requires network access)
 make pymav-up       Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + metrics-manager + nginx)
 make pymav-down     Stop and remove pymavlink stack (includes volumes)

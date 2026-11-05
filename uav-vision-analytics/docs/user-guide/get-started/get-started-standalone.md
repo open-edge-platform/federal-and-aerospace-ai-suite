@@ -96,23 +96,25 @@ Then, for either option, initialize the environment:
 make init
 ```
 
-`make init` creates `.env` from the template and **auto-detects your Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
+`make init` creates `.env` from the template and auto-detects your **host IP** (`HOST_IP`, used for the RTSP, MQTT and HTTPS addresses), your **Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
 
-Then set your host IP address in `.env`:
+### 2. Prepare the models
 
-```bash
-nano .env   # set HOST_IP=<your-machine-IP>
-```
-
-### 2. Prepare the model
-
-Download and export the YOLO11s model to OpenVINO FP16 IR:
+Download and export the YOLO11s detection model to OpenVINO FP16 IR:
 
 ```bash
 make model
 ```
 
-> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) for model details.
+Download and convert the VLM that writes the scene captions (InternVL2-1B, OpenVINO IR for the CPU and the GPU). The shipped `configs/cameras-pymavlink.yaml` turns captions on for two cameras, so this step is needed for the default setup:
+
+```bash
+make vlm-model
+```
+
+Both targets show the model license and ask for confirmation; add `ACCEPT_LICENSE=y` to accept without the prompt.
+
+> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) and the [VLM Model guide](../how-to-customize/model-and-video-management/vlm-model.md) for model details.
 
 ### 3. Standalone mode (pymavlink)
 

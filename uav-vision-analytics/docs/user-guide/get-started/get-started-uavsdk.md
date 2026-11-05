@@ -112,48 +112,43 @@ make up-sim-camera        # start PX4, MQTT, RTSP server
 
 ### 2. Configure environment
 
-If Downloaded Compressed file then Get into the directory with:
+From the `uav-mission-compute-sdk` directory, get into the application directory (it sits next to the SDK in both the ZIP and the cloned repository):
 
 ```bash
-cd ../uav-vision-analytics/
+cd ../uav-vision-analytics
 ```
 
-Or, If Cloned whole repo then Get into the directory with:
-
-```bash
-cd federal-and-aerospace-ai-suite/uav-vision-analytics
-```
-
-Then, for either option, initialize the environment:
+Then initialize the environment:
 
 ```bash
 make init
 ```
 
-`make init` creates `.env` from the template and **auto-detects your Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
+`make init` creates `.env` from the template and auto-detects your **host IP** (`HOST_IP`), your **Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
 
-Then set your host IP address in `.env`:
+### 3. Prepare the models
 
-```bash
-nano .env   # set HOST_IP=<your-machine-IP>
-```
-
-### 3. Prepare the model
-
-Download and export the YOLO11s model to OpenVINO FP16 IR:
+Download and export the YOLO11s detection model to OpenVINO FP16 IR:
 
 ```bash
 make model
 ```
 
-> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) for model details.
+If any camera in `configs/cameras-uavsdk.yaml` has `captioning.enabled: true`, also download and convert the VLM that writes the scene captions (InternVL2-1B, OpenVINO IR for the CPU and the GPU):
+
+```bash
+make vlm-model
+```
+
+Both targets show the model license and ask for confirmation; add `ACCEPT_LICENSE=y` to accept without the prompt.
+
+> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) and the [VLM Model guide](../how-to-customize/model-and-video-management/vlm-model.md) for model details.
 
 ### 4. Start the uav-vision-analytics application
 
 The SDK's core infrastructure (step 1) must already be running.
 
 ```bash
-cd federal-and-aerospace-ai-suite/uav-vision-analytics
 make uavsdk-up
 ```
 
@@ -291,7 +286,7 @@ make uavsdk-down
 Then stop the SDK's core infrastructure:
 
 ```bash
-cd federal-and-aerospace-ai-suite/uav-mission-compute-sdk
+cd ../uav-mission-compute-sdk
 make down
 ```
 
