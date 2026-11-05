@@ -79,7 +79,7 @@ make model
 
 This creates a Python virtual environment, downloads YOLO11s, and exports it to OpenVINO FP16 format under `resources/models/yolo11s/`.
 
-> **Optional — video captioning:** if you plan to use the VLM captioning pipelines, also run:
+> **Needed by the shipped cameras (video captioning):** the cameras of `configs/cameras-pymavlink.yaml` and `configs/cameras-uavsdk.yaml` have captions on, so also run (or set `captioning.enabled: false` for each camera):
 >
 > ```bash
 > make vlm-model

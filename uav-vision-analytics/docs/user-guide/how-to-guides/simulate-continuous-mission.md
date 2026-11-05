@@ -36,22 +36,14 @@ often exceeded, so the vehicle disarms and dependent pipelines/streams stop.
 
 ### Standalone (pymavlink) mode — keep-alive pattern
 
-Re-issue an arm command periodically in a background loop while you do other
-testing in a separate terminal:
+The standalone stack has no REST action endpoint (`:8080/action/arm` belongs to the UAV Mission Compute SDK).
+Use one of:
 
-```bash
-while true; do
-  curl -s -X POST http://localhost:8080/action/arm > /dev/null 2>&1 \
-    || true   # ignore errors if already armed or endpoint differs per SITL setup
-  sleep 20
-done
-```
+- Arm from QGroundControl and press takeoff, a vehicle that is flying does not auto-disarm (see the [QGroundControl guide](./qgroundcontrol.md)).
+- Run the cameras without depending on the arming state: `docker exec -it -e HOST_IP=<HOST_IP> uav-va-dlstreamer-pipeline-server python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now`.
 
 > [!NOTE]
-> The exact re-arm mechanism depends on how you normally arm in your setup
-> (QGroundControl click, MAVLink command, or a REST endpoint like the
-> UAVSDK's `/action/arm`). Use whichever method you already use to arm, just
-> on a repeating timer shorter than the idle-disarm timeout.
+> If you script the arm yourself (a MAVLink command over UDP `14551`), repeat it on a timer shorter than the idle-disarm timeout.
 
 ### UAV Mission Compute SDK mode — keep-alive pattern
 

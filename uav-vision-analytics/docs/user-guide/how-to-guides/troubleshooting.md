@@ -687,7 +687,7 @@ The relevance filters are off or too low for the embedding model; see
 
 Some stored live-stream segments use a codec the browser can't decode; the
 player falls back to VSS's server-decoded best-matching frame plus a
-download link. If the segment is older than VSS's `LIVE_RETENTION_HOURS`, it
+download link. If the segment is older than VSS's `VSS_LIVE_RETENTION_HOURS`, it
 may no longer be available at all.
 
 ### New camera never becomes searchable

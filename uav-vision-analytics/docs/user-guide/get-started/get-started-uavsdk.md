@@ -130,23 +130,23 @@ Then, for either option, initialize the environment:
 make init
 ```
 
-`make init` creates `.env` from the template and **auto-detects your Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`), and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists.
+`make init` creates `.env` from the template and auto-detects `HOST_IP` (the first address of `hostname -I`), your **Intel GPU device paths** (`GPU_DEVICE`, `GPU_RENDER_DEVICE`), **Intel NPU** (`NPU_DEVICE`) and **Intel RealSense / USB camera** (`CAMERA_DEVICE_1`). It skips if `.env` already exists. Open `.env` only if `HOST_IP` is not the address other machines use to reach this host (for example on a host with several network cards).
 
-Then set your host IP address in `.env`:
+### 3. Prepare the models
 
-```bash
-nano .env   # set HOST_IP=<your-machine-IP>
-```
-
-### 3. Prepare the model
-
-Download and export the YOLO11s model to OpenVINO FP16 IR:
+Download and export the YOLO11s detection model to OpenVINO FP16 IR:
 
 ```bash
 make model
 ```
 
-> See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) for model details.
+The shipped cameras also write scene captions, so download and convert the VLM captioning model (OpenVINO IR for CPU, GPU and NPU; takes a while the first time):
+
+```bash
+make vlm-model
+```
+
+> Without `make vlm-model`, set `captioning.enabled: false` for every camera of `configs/cameras-uavsdk.yaml`, otherwise their pipelines cannot start. See the [AI Model guide](../how-to-customize/model-and-video-management/model.md) and the [VLM Model guide](../how-to-customize/model-and-video-management/vlm-model.md) for details.
 
 ### 4. Start the uav-vision-analytics application
 
@@ -183,7 +183,7 @@ Two options are available depending on your use case:
 
 Runs `pipeline_manager.py` inside the DL Streamer Pipeline Server container. It watches the SDK's MQTT status topic `uav/<UAV_ID>/telemetry/status` (`{"armed": true|false}`), starts the cameras of [`configs/cameras-uavsdk.yaml`](../../../configs/cameras-uavsdk.yaml) when the drone arms and stops them when it disarms. Annotated frames are served as RTSP on port `8555`.
 
-The cameras are RTSP streams from the SDK (`rtsp://host.docker.internal:8554/<UAV_ID>/<camera>`, `UAV_ID` from `.env`, default `uav-1`). By default `nadir_camera` detects on the CPU, `forward_camera` on the GPU and `rear_camera` on the NPU (skipped when the host has no NPU). A camera whose RTSP source is not available is skipped. Edit the file to change the devices, switch on VLM captions or hide the overlay; it is read again at every arming. It has the same format as for the simulator, see [Configure the cameras](../how-to-customize/camera-management/configure-cameras.md).
+The cameras are RTSP streams from the SDK (`rtsp://host.docker.internal:8554/<UAV_ID>/<camera>`, `UAV_ID` from `.env`, default `uav-1`). By default `nadir_camera` detects on the CPU, `forward_camera` on the GPU and `rear_camera` on the NPU (skipped when the host has no NPU). A camera whose RTSP source is not available is skipped. Edit the file to change the devices, switch off VLM captions or hide the overlay; it is read again at every arming. It has the same format as for the simulator, see [Configure the cameras](../how-to-customize/camera-management/configure-cameras.md).
 
 ```bash
 make check-cameras      # validate cameras-uavsdk.yaml and show what would run

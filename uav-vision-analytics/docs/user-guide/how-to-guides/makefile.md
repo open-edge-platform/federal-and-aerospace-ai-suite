@@ -165,12 +165,12 @@ Convenience alias for `make pymav-up`. Starts the default standalone stack.
 # 0. Install system prerequisites
 sudo apt install python3.12-venv ffmpeg
 
-# 1. Create .env and auto-detect GPU
+# 1. Create .env and auto-detect HOST_IP and the GPU/NPU/camera devices
 make init
-nano .env   # set HOST_IP=<your-machine-IP>
 
-# 2. Download and export the model
+# 2. Download and export the models (YOLO11s detection and the VLM for the captions)
 make model
+make vlm-model
 
 # 3. Start the stack
 make pymav-up
