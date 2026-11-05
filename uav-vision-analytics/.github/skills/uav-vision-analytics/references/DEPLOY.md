@@ -237,7 +237,7 @@ HOST_IP=192.168.1.x           # LAN IP, auto-detected by 'make init'; used for R
                                # (breaks remote QGroundControl/VLC/ffplay viewing).
 
 # DL Streamer image
-DLSTREAMER_PIPELINE_SERVER_IMAGE=intel/dlstreamer-pipeline-server:2026.1.0-ubuntu24
+DLSTREAMER_PIPELINE_SERVER_IMAGE=intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc1
 
 # Proxy
 # http_proxy=

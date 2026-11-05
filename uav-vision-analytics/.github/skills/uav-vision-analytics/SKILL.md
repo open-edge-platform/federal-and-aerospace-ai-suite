@@ -17,7 +17,7 @@ compatibility: >-
   video/render groups). For pymavlink mode: PX4 SITL runs in simulation.
   For UAVSDK mode: uav-mission-compute-sdk must be running first.
   Ports 8081 (REST), 8555 (RTSP), 1883 (MQTT), 14541/udp (MAVLink) must be
-  free. Tested with intel/dlstreamer-pipeline-server:2026.1.0 image.
+  free. Tested with intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc1 image.
 ---
 
 <!-- SPDX-FileCopyrightText: (C) 2026 Intel Corporation -->
