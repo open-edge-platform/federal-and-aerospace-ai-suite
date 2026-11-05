@@ -28,7 +28,7 @@ ls /dev/accel/
 # expected: accel0 (or similar)
 ```
 
-If this directory doesn't exist or is empty, the NPU driver isn't installed /
+If this directory does not exist or is empty, the NPU driver is not installed /
 loaded on the host — install it before continuing (outside the scope of this
 app).
 
@@ -67,7 +67,7 @@ devices:
 ```
 
 No manual edits are needed here — this is just what makes `NPU_DEVICE` from
-`.env` reach the container. `ZE_ENABLE_ALT_DRIVERS` enables the NPU OpenVINO
+`.env` reach the container. `ZE_ENABLE_ALT_DRIVERS` enables the NPU OpenVINO™
 plugin and is already set by default.
 
 ### 4. Restart the stack so the container picks up the device

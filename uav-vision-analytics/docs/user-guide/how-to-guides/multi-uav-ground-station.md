@@ -59,7 +59,7 @@ automatically:
 - VSS stream registrations (if the search overlay is enabled) use
   `uav-<host>--<camera>`.
 
-You don't need to rename cameras to avoid collisions across a fleet — just
+You do not need to rename cameras to avoid collisions across a fleet — just
 be aware result/relay names include the host for this reason.
 
 ### 5. Generate a Flight Summary for a specific UAV

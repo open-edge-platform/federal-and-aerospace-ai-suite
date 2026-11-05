@@ -142,13 +142,13 @@ make init
 
 ### 3. Prepare the models
 
-Download and export the YOLO11s detection model to OpenVINO FP16 IR:
+Download and export the YOLO11s detection model to OpenVINO™ FP16 IR:
 
 ```bash
 make model
 ```
 
-If any camera in `configs/cameras-uavsdk.yaml` has `captioning.enabled: true`, also download and convert the VLM that writes the scene captions (InternVL2-1B, OpenVINO IR for the CPU and the GPU):
+If any camera in `configs/cameras-uavsdk.yaml` has `captioning.enabled: true`, also download and convert the VLM that writes the scene captions (InternVL2-1B, OpenVINO™ IR for the CPU and the GPU):
 
 ```bash
 make vlm-model

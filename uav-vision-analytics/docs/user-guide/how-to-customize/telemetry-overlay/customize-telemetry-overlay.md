@@ -13,7 +13,7 @@ modify an existing one, or remove one safely.
 
 ## Prerequisites
 
-- Familiarity with the deployment mode you're editing — the two modes use
+- Familiarity with the deployment mode you are editing — the two modes use
   **different** overlay scripts and data sources:
 
   | Mode | Script | Telemetry source |
@@ -133,7 +133,7 @@ same-key change like this.
 ffplay rtsp://<HOST_IP>:8555/uav-front-camera
 ```
 
-Confirm the new/changed/removed line appears (or doesn't) in the upper-left
+Confirm whether the new/changed/removed line appears in the upper-left
 overlay, and that its value updates as the simulated UAV moves.
 
 ## Troubleshooting

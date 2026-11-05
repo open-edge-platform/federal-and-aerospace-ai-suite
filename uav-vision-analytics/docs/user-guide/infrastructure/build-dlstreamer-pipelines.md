@@ -38,7 +38,7 @@ docker run --rm --device intel.com/gpu=card0 intel/dlstreamer:latest gst-inspect
 
 ### Download Models
 
-DL Streamer inference elements need OpenVINO IR models. Download them using the bundled script:
+DL Streamer inference elements need OpenVINO™ IR models. Download them using the bundled script:
 
 ```bash
 mkdir -p models

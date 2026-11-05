@@ -426,7 +426,7 @@ confidence distribution; lower it as shown in
 
 ### Captioning pipeline goes to `ERROR` at start
 
-The model folder is not a complete OpenVINO IR export of the VLM, or the
+The model folder is not a complete OpenVINO™ IR export of the VLM, or the
 architecture is not supported by the `openvino_genai` version in the
 pipeline-server image. `docker logs uav-va-dlstreamer-pipeline-server` shows the
 loader error; revert `captioning.model` and re-arm to recover. The required
@@ -492,7 +492,7 @@ server, the stack is not running (`make pymav-up`) or nginx is published elsewhe
 binds only to `HOST_IP` (not `0.0.0.0`), so `localhost`/`127.0.0.1` never reach it once
 `HOST_IP` is set to a real address.
 
-If you're running the benchmark from a **different machine** than the one hosting the
+If you are running the benchmark from a **different machine** than the one hosting the
 stack, point it at that host explicitly:
 
 ```bash
@@ -682,9 +682,9 @@ The relevance filters are off or too low for the embedding model; see
 `VSS_SEARCH_MIN_PEAK_SCORE` / `VSS_SEARCH_RELATIVE_CUTOFF` in
 [Tune VSS Live Search](../how-to-customize/search-tuning/vss-search-tuning.md).
 
-### A result clip won't play in the browser
+### A result clip will not play in the browser
 
-Some stored live-stream segments use a codec the browser can't decode; the
+Some stored live-stream segments use a codec the browser cannot decode; the
 player falls back to VSS's server-decoded best-matching frame plus a
 download link. If the segment is older than VSS's `VSS_LIVE_RETENTION_HOURS`, it
 may no longer be available at all.

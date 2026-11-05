@@ -268,7 +268,7 @@ sudo pkill -x stress-ng
 ### Real AI inference load with `openvino_stress.sh`
 
 For a load that resembles a production edge workload rather than a synthetic one,
-`openvino_stress.sh` drives the CPU, GPU, or NPU with OpenVINO `benchmark_app`
+`openvino_stress.sh` drives the CPU, GPU, or NPU with OpenVINO™ `benchmark_app`
 running in a container (K3s pod or Docker, auto-detected). This is useful for
 measuring throughput-per-watt and for thermal qualification with a real
 neural-network compute pattern:
@@ -332,14 +332,14 @@ temperature approaches the throttle point.
 
 - **Thermals & acoustics:** higher profiles raise package temperature and fan
   noise; lower profiles run cooler and quieter (or fanless).
-- **Throttling:** if cooling can't keep up, the firmware clamps sustained power
+- **Throttling:** if cooling cannot keep up, the firmware clamps sustained power
   below the target. The script reports the effective (enforced) value and notes
   when firmware clamped PL1.
 - **`SysWatt = 0.00`:** on some Core Ultra silicon the psys counter is frozen.
-  The cap is still written, but turbostat can't observe it — use PkgWatt as the
+  The cap is still written, but turbostat cannot observe it — use PkgWatt as the
   effective figure. This is a firmware limitation, not a failure.
 - **Brief management gap:** applying a profile restarts `intel_lpmd.service`
-  (~2 s) during which the daemon isn't actively managing CPU states.
+  (~2 s) during which the daemon is not actively managing CPU states.
 - **Partial revert on reboot:** the RAPL power cap resets to firmware defaults
   on reboot, but the `intel_lpmd` config on disk does not — see below.
 

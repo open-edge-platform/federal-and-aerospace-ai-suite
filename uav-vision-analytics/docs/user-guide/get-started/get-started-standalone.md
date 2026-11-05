@@ -112,7 +112,7 @@ make init
 
 ### 2. Prepare the models
 
-Download and export the YOLO11s detection model to OpenVINO FP16 IR:
+Download and export the YOLO11s detection model to OpenVINO™ FP16 IR:
 
 ```bash
 make model

@@ -29,7 +29,7 @@ camera — this is a `uav-ground-station` feature; nothing changes on the
   and [Configure the Cameras](../how-to-customize/camera-management/configure-cameras.md).
 - `uav-ground-station` checked out (see its
   [Quick Start](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/README.md#quick-start)) and `make init` already run once (this creates
-  `.env`). Recommended to Run it on a different machine than the UAV Mission Compute SDK
+  `.env`). It is recommended to run it on a different machine than the UAV Mission Compute SDK
   stack: both publish the mediamtx WebRTC port `8889` on `HOST_IP`.
 - `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` /
   `VSS_POSTGRES_PASSWORD` set in `uav-ground-station/.env` (see
@@ -46,7 +46,7 @@ make up-vss     # base uav-gs-backend + mediamtx relay + the 8 VSS containers (u
 
 The first start downloads the CLIP embedding model and YOLOX (for object
 crops) into Docker volumes — this can take a few minutes. With the default
-`make up` (no `-vss`) the search UI stays hidden and `/api/search*` routes
+`make up` (no `-vss`), the search UI stays hidden and `/api/search*` routes
 return `404`.
 
 ### 2. Connect to the UAV and let indexing start automatically
@@ -77,7 +77,7 @@ The search popup's **UAV** and **Camera** dropdowns filter the already
 fetched result set in-memory — switching UAVs, changing cameras, or
 resetting the selection never re-queries VSS. This works because every
 UAV's streams are registered under a host-qualified name
-(`uav-<host>--<camera>`), so two UAVs reusing the same camera name (e.g. both
+(`uav-<host>--<camera>`), so two UAVs reusing the same camera name (e.g., both
 configure a `front_camera`) never collide in the index.
 
 > [!TIP]
@@ -94,14 +94,14 @@ curl -s -X POST http://${VIZ_HOST_IP:-127.0.0.1}:${VIZ_PORT:-8080}/api/search \
 ```
 
 `GET /api/search/sources` lists the UAV hosts and cameras currently
-live-indexed — if a camera you expect is missing, it hasn't completed a sync
-cycle yet, or its pipeline isn't `RUNNING`.
+live-indexed — if a camera you expect is missing, it has not completed a sync
+cycle yet, or its pipeline is not `RUNNING`.
 
 ## Troubleshooting
 
 See [Troubleshooting — VSS Live Search](./troubleshooting.md#vss-live-search)
 for common issues (search popup 404, "Unknown camera" results, one stream
-dominating results, result clips that won't play, a new camera that never
+dominating results, result clips that will not play, a new camera that never
 becomes searchable).
 
 See also the ground station's own

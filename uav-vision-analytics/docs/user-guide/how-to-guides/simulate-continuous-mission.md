@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 PX4 SITL auto-disarms after a short idle period with no RC/GCS input. Both
 `pipeline_manager.py`'s ARMED-triggered auto-start (standalone mode) and the
 UAV Mission Compute SDK's arm-gated RTSP publishing depend on the vehicle
-staying armed. If you're testing pipelines interactively — not flying a
+staying armed. If you are testing pipelines interactively — not flying a
 scripted mission — you will otherwise hit unexplained stream drop-outs.
 
 > [!IMPORTANT]

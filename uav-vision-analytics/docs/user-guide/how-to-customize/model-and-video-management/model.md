@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Manage the Detection Model
 
 The application detects objects with **YOLO11s**, Ultralytics' COCO-pretrained
-small model, exported to OpenVINO IR by `make model`. This page covers the
+small model, exported to OpenVINO™ IR by `make model`. This page covers the
 bundled model, how it is produced, where it lives, how the pipelines find it,
 and how to re-export it. To use a different model, see
 [Modify the Detection Model](./modify-model.md); for the scene-captioning
@@ -17,7 +17,7 @@ model, see [Change the Captioning Model](./vlm-model.md).
 | Property | Value |
 | --- | --- |
 | Model | YOLO11s (Ultralytics, COCO-pretrained) |
-| Format | OpenVINO IR, FP16, dynamic shape, opset 18, 640 × 640 input |
+| Format | OpenVINO™ IR, FP16, dynamic shape, opset 18, 640 × 640 input |
 | Classes | 80 COCO classes (person, car, truck, bus, bicycle, motorcycle, ...) |
 | Export tool | `ultralytics==8.4.67` + `openvino>=2026.0` (`resources/requirements.txt`) |
 

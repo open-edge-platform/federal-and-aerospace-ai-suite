@@ -45,7 +45,7 @@ The script produces the following sections. Use this table to navigate the outpu
 | **NETWORK INFO** | Interface list with IP addresses, default routes, wireless info (`iw`), PCI network device drivers |
 | **INTEL GPU INFO** | PCI VGA devices, `/sys/class/drm` device details (vendor/device/revision, GT0/GT1 frequencies), `xe` kernel module info, `intel_gpu_top` utilization sample, OpenGL/Mesa renderer, Vulkan info, and VA-API profiles and entrypoints (`vainfo`) |
 | **INTEL NPU INFO** | PCI accelerator device (`8086:b03e`), `/sys/class/accel` details, `intel_vpu` driver version and firmware version, NPU firmware blobs, relevant `dmesg` messages |
-| **INTEL COMPUTE / AI RUNTIMES** | OpenCL platform/device details (`clinfo`) — EUs, device IP, USM capabilities; Level Zero library inventory; OpenVINO version and available device list (`CPU`, `GPU.0`–`GPU.7`, `NPU`); oneAPI/DPC++ runtime library paths |
+| **INTEL COMPUTE / AI RUNTIMES** | OpenCL platform/device details (`clinfo`) — EUs, device IP, USM capabilities; Level Zero library inventory; OpenVINO™ version and available device list (`CPU`, `GPU.0`–`GPU.7`, `NPU`); oneAPI/DPC++ runtime library paths |
 | **INTEL USERSPACE PACKAGES (dpkg)** | Installed Intel packages grouped by: CPU/platform/monitoring, GPU/media/display, NPU/AI/OpenVINO/oneAPI, kernel, and firmware |
 | **THERMALS, POWER, FANS** | `lm-sensors` output, thermal zone temperatures, cooling device states, RAPL powercap zones (long-term/short-term power limits), battery/power supply state |
 | **FIRMWARE / BIOS / SECURITY** | SMBIOS CPU and board details (`dmidecode`), UEFI boot confirmation, TPM state, `fwupd` firmware versions for CPU microcode, display controller, NVMe SSD, system firmware, BootGuard |

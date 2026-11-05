@@ -13,7 +13,7 @@ for AI agents:
 2. **An MCP server** that exposes Intel Edge AI tools (Anomalib, DLStreamer,
    Edge AI Suites) and live MAVLink telemetry to any MCP-capable agent.
 
-Together they let you bring up the PX4 + Gazebo + OpenVINO stack, verify it,
+Together they let you bring up the PX4 + Gazebo + OpenVINO™ stack, verify it,
 capture data, and drive higher-level AI workflows — all through natural
 language.
 
@@ -84,9 +84,9 @@ description matches the user request.
 | --- | --- |
 | `anomalib_train` | Train anomaly detection models on a dataset |
 | `anomalib_predict` | Run inference on images |
-| `anomalib_export` | Export a trained model to OpenVINO / ONNX |
+| `anomalib_export` | Export a trained model to OpenVINO™ / ONNX |
 | `anomalib_benchmark` | Benchmark model performance |
-| `anomalib_openvino_inference` | Run OpenVINO inference on exported models |
+| `anomalib_openvino_inference` | Run OpenVINO™ inference on exported models |
 
 #### DLStreamer — Video Analytics
 

@@ -26,10 +26,10 @@ restart the affected pipelines.
   The bundled YOLO11s model: `make model`, where the files live, how the
   pipelines find them, re-export
 - [Modify the Detection Model](./how-to-customize/model-and-video-management/modify-model.md) —
-  Export another Ultralytics size or your own OpenVINO IR detector and point
+  Export another Ultralytics size or your own OpenVINO™ IR detector and point
   cameras at it
 - [Change the Captioning (VLM) Model](./how-to-customize/model-and-video-management/vlm-model.md) —
-  The OpenVINO IR format `gvagenai` needs, downloading or exporting a
+  The OpenVINO™ IR format `gvagenai` needs, downloading or exporting a
   different VLM, prompt, and caption length
 - [Change the Video Source](./how-to-customize/model-and-video-management/change-video-source.md) —
   Switch a camera between a video file, a live camera, and an RTSP stream
