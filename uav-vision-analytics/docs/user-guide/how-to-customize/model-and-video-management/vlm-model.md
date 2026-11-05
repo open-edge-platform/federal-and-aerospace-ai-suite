@@ -80,25 +80,92 @@ listed. `VLM_WEIGHT_FORMAT` accepts `int8` (default, smallest and fastest to
 load), `int4` or `fp16`.
 
 **Option B — export with `optimum-cli`** (any Hugging Face model id or
-local checkpoint `optimum-intel` supports):
+local checkpoint that `optimum-intel` supports). Activate the
+[export environment](#export-environment) first, then:
 
 ```bash
-resources/venv/bin/pip install "optimum[openvino]"
-resources/venv/bin/optimum-cli export openvino \
+optimum-cli export openvino \
   --model <org>/<model> --weight-format int8 \
   resources/ov_models/gpu/<model>
 ```
+
+The export downloads the original weights from Hugging Face (several GB)
+and needs RAM roughly the size of the model. Add `--trust-remote-code` for
+models that ship their own modeling code (for example InternVL2). For a
+model that requires accepting a license on Hugging Face, run
+`hf auth login` first.
 
 Repeat with `resources/ov_models/cpu/<model>` if a camera will run it on the
 CPU (the same export works on both devices; the folder is per device so a
 different precision can be used for each).
 
-**Option C — download a pre-exported model:**
+**Option C — download a pre-exported model** from the `OpenVINO/`
+organization on Hugging Face. Activate the
+[export environment](#export-environment) first, then:
 
 ```bash
-resources/venv/bin/pip install "huggingface_hub[cli]"
-resources/venv/bin/hf download OpenVINO/<model>-ov --local-dir resources/ov_models/gpu/<model>
+hf download OpenVINO/<model>-ov --local-dir resources/ov_models/gpu/<model>
 ```
+
+### Export environment
+
+Options B and C use their own Python environment, separate from the one
+`make model` creates. Create it once from `uav-vision-analytics/`
+(requires `python3-venv`, see
+[Troubleshooting](../../how-to-guides/troubleshooting.md)):
+
+```bash
+python3 -m venv .cache/venv-vlm
+source .cache/venv-vlm/bin/activate
+pip install --upgrade pip
+pip install "optimum[openvino]" huggingface_hub     # huggingface_hub alone is enough for Option C
+```
+
+In each new terminal, run `source .cache/venv-vlm/bin/activate` again
+before `optimum-cli` or `hf`. Run `deactivate` when done. The environment
+is under `.cache/`, which git ignores, and can be deleted afterwards.
+
+## Use Gemma 4
+
+Google's Gemma 4 vision-language models work with the pipeline as-is;
+only the model folder and the `captioning` settings change. They need the
+OpenVINO GenAI runtime shipped in the DL Streamer Pipeline Server image.
+
+1. Set up the [export environment](#export-environment), then download
+   the pre-exported INT8 model (about 5 GB) for each device a camera will
+   use:
+
+   ```bash
+   source .cache/venv-vlm/bin/activate
+   hf download OpenVINO/gemma-4-E2B-it-int8-ov \
+     --local-dir resources/ov_models/cpu/gemma-4-E2B-it-int8-ov
+   hf download OpenVINO/gemma-4-E2B-it-int8-ov \
+     --local-dir resources/ov_models/gpu/gemma-4-E2B-it-int8-ov
+   ```
+
+   To export it yourself instead (a different precision, for example),
+   use Option B with `--model google/gemma-4-E2B-it`.
+   The folder contains an extra
+   `openvino_text_embeddings_per_layer_model.{xml,bin}` file that Gemma 4
+   needs; keep it.
+
+2. Select it in `configs/cameras-pymavlink.yaml`:
+
+   ```yaml
+   captioning:
+     enabled: true
+     device: gpu
+     model: gemma-4-E2B-it-int8-ov
+     prompt: Describe the scene in one short sentence.
+     max_new_tokens: 50
+   ```
+
+3. Apply as described in [Apply it](#apply-it).
+
+Gemma 4 answers at length by default and may open with markdown headings
+or lists, so ask for brevity in the prompt. On the CPU, generating
+50 tokens takes about 7 s, longer than the 5 s frame interval; use the GPU
+or lower `max_new_tokens` if captions fall behind.
 
 ## Apply it
 

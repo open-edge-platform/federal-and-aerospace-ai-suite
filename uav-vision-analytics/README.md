@@ -189,6 +189,7 @@ and `metrics-manager` no longer publish ports directly to the host.
 make init          Create .env from template, auto-detect HOST_IP, and auto-detect GPU/NPU/camera device paths
 make model         Download YOLO11s and export to OpenVINO FP16
 make vlm-model     Download/convert the VLM captioning model (OpenVINO IR) for CPU, GPU, and NPU
+make pymav-build    Rebuild the locally built pymavlink images (requires network access)
 make pymav-up       Start standalone pymavlink stack (PX4 SITL + broker + DL Streamer Pipeline Server + metrics-manager + nginx)
 make pymav-down     Stop and remove pymavlink stack (includes volumes)
 make uavsdk-up      Start UAV Mission Compute SDK stack (requires uav-mission-compute-sdk running first)

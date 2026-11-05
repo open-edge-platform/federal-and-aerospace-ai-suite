@@ -75,7 +75,7 @@ _build_if_changed:
 	fi
 
 up: init _build_if_changed ## Start the ground-station viewer + mediamtx relay sidecar (H.264 Relay mode); builds viz-backend only if missing or changed
-	docker compose -f docker-compose.yml -f docker-compose-mediamtx.yml up -d
+	docker compose -f docker-compose.yml -f docker-compose-mediamtx.yml up -d --no-build
 
 down: ## Stop and remove the ground-station viewer + mediamtx relay sidecar
 	docker compose -f docker-compose.yml -f docker-compose-mediamtx.yml down -v
@@ -97,7 +97,7 @@ _check_vss_env:
 	fi
 
 up-vss: init _check_vss_env _build_if_changed ## Relay mode + VSS search containers (enables Live Natural Language Search)
-	$(VSS_COMPOSE) up -d
+	$(VSS_COMPOSE) up -d --no-build
 	@echo ""; \
 	echo "✅ UAV ground station is up. Open the dashboard at: http://$(VIZ_HOST_IP):$(or $(VIZ_PORT),8080)"
 

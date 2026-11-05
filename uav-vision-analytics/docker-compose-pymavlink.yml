@@ -41,6 +41,7 @@ services:
         https_proxy: ${https_proxy:-}
         no_proxy:    ${no_proxy:-localhost,127.0.0.0/8}
         NO_PROXY:    ${NO_PROXY:-localhost,127.0.0.0/8}
+    image: uav-vision-analytics-mavlink-router:local
     container_name: uav-va-mavlink-router
     restart: unless-stopped
     volumes:
@@ -59,7 +60,6 @@ services:
         FROM ${DLSTREAMER_PIPELINE_SERVER_IMAGE}
         RUN pip install --no-cache-dir pymavlink
     image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE}-pymavlink
-    pull_policy: build
     container_name: uav-va-dlstreamer-pipeline-server
     environment:
       - http_proxy=${http_proxy}

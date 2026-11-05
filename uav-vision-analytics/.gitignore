@@ -24,3 +24,6 @@ resources/ov_models/
 /BENCHMARK-COMBINED-VS-SEPARATE.md
 /CPU-ANALYSIS-COMBINED-VS-SEPARATE.md
 /PIPELINE-ARCHITECTURE-COMBINED-VS-SEPARATE.md
+
+# Benchmark output written by benchmark/calc_stream_density.sh
+benchmark/results/

@@ -485,36 +485,33 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 sudo apt-get install -y gawk
 ```
 
-### `Error: DL Streamer Pipeline Server not reachable at https://localhost:443`
+### `DL Streamer Pipeline Server is not reachable at https://<HOST_IP>`
 
-`calc_stream_density.sh` auto-sources `../.env` and defaults `DLSPS_NODE_IP` to that file's
-`HOST_IP` — if you still see `localhost` in the error, either `.env` doesn't exist yet
-(run `make init` first) or `dlstreamer-pipeline-server`/`nginx` aren't running. `nginx`
+`calc_stream_density.sh` finds the nginx address from `docker port nginx`, then `../.env`
+(`HOST_IP`), then the first host address. If it reports the wrong address or an unreachable
+server, the stack is not running (`make pymav-up`) or nginx is published elsewhere. `nginx`
 binds only to `HOST_IP` (not `0.0.0.0`), so `localhost`/`127.0.0.1` never reach it once
-`HOST_IP` is set to a real address. Start the full stack:
-
-```bash
-make pymav-up
-```
+`HOST_IP` is set to a real address.
 
 If you're running the benchmark from a **different machine** than the one hosting the
 stack, point it at that host explicitly:
 
 ```bash
-DLSPS_NODE_IP=<HOST_IP> ./benchmark/calc_stream_density.sh ...
+./benchmark/calc_stream_density.sh -u https://<HOST_IP> ...
 ```
 
-### `fps=0` / `throughput min: 0` after a run
+### `throughput min: 0` or `FAILED` while waiting for RUNNING
 
 Possible causes:
 
-- **DL Streamer Pipeline Server pipeline in ERROR state** — often a shared `model-instance-id` from a previous aborted run:
+- **A stream went to ERROR** — the message printed after `FAILED` is the pipeline server's
+  error text. Typical reasons are too many streams for the memory or device (for example
+  several captioning streams on a small machine) or a stale pipeline server state:
 
   ```bash
   docker restart uav-va-dlstreamer-pipeline-server
   ```
 
-- **RTSP path conflict** — restart DL Streamer Pipeline Server to clear leftover path registrations.
 - **Video file missing inside the container:**
 
   ```bash
@@ -522,33 +519,26 @@ Possible causes:
     /home/pipeline-server/resources/videos/
   ```
 
-### `HW Monitor: metrics-manager not reachable at https://localhost`
+### `metrics-manager not reachable`
 
-`calc_stream_density.sh` auto-sources `../.env` and defaults `METRICS_URL` to
-`https://<HOST_IP>` from that file — if you still see `localhost`, either `.env` doesn't
-exist yet (run `make init` first) or `metrics-manager`/`nginx` aren't running. It is
-included in `docker-compose-pymavlink.yml` — ensure the full stack is up:
+`calc_stream_density.sh` reaches `metrics-manager` through nginx on the same address as the
+pipeline server (`https://<HOST_IP>`). If it is not reachable the benchmark continues with
+FPS-only results. Make sure the full stack is up:
 
 ```bash
 make pymav-up
 docker ps | grep metrics-manager
 ```
 
-If you're running the benchmark from a **different machine** than the one hosting the
-stack, point it at that host explicitly:
+To use another address: `./benchmark/calc_stream_density.sh --metrics-url https://<HOST_IP> ...`
+
+### `Pipeline '<name>' is not registered in the pipeline server`
+
+The pipeline derived from `-d`/`-c`/`-cd` (or given with `-p`) is not in the server's
+config. List the registered pipelines:
 
 ```bash
-METRICS_URL=https://<HOST_IP> ./benchmark/calc_stream_density.sh ...
-```
-
-The benchmark continues with FPS-only results when metrics-manager is unavailable.
-
-### `Pipeline not found in benchmark_app_payload.json`
-
-The `-p` name does not match any entry. List available pipeline names:
-
-```bash
-jq -r '.[].pipeline' benchmark/benchmark_app_payload.json
+./benchmark/calc_stream_density.sh -l
 ```
 
 ### GPU or NPU shows `N/A` in the summary table
