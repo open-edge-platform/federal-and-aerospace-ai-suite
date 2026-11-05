@@ -146,18 +146,8 @@ docker exec -it -e HOST_IP=<HOST_IP> uav-va-dlstreamer-pipeline-server \
   python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now
 ```
 
-For a single ad-hoc pipeline with the default video, models and prompt, `scripts/uav_pipeline_control.sh` starts one
-pipeline per detection device:
-
-```bash
-./scripts/uav_pipeline_control.sh start  gpu              # uav_object_detection_gpu, stream uav-manual-gpu
-./scripts/uav_pipeline_control.sh start  npu --caption    # uav_object_detection_npu_gpu (captions on the GPU VLM)
-./scripts/uav_pipeline_control.sh status npu --caption
-./scripts/uav_pipeline_control.sh stop   npu --caption
-```
-
-Each started pipeline's instance ID is cached in `.uav_pipeline_<device>[_caption]_instance_id` so `stop`/`status` can
-find it later. The RTSP output is H.264 encoded, which is what the `uav-ground-station` relay expects.
+For a single ad-hoc pipeline, use the REST API (see [Manage Pipelines](docs/user-guide/how-to-customize/pipeline-management/manage-pipelines.md#rest-api)).
+The RTSP output is H.264 encoded, which is what the `uav-ground-station` relay expects.
 
 ## Endpoints
 

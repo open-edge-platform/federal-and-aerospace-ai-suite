@@ -12,8 +12,8 @@ record of what the app detected, independent of the RTSP video stream.
 ## Prerequisites
 
 - A pipeline started **by hand** with a `destination.metadata` block. The
-  camera-file manager (`make start-rtsp`) and `scripts/uav_pipeline_control.sh`
-  do not add one — their pipelines publish no per-frame log. Start the
+  camera-file manager (`make start-rtsp`) does not add one — its pipelines
+  publish no per-frame log. Start the
   pipeline through the REST API as shown in
   [Manage Pipelines — Start a pipeline](../how-to-customize/pipeline-management/manage-pipelines.md#start-a-pipeline).
 

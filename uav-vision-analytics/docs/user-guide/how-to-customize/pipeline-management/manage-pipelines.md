@@ -6,13 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 # Manage Pipelines
 
 How to **start, stop, and check** the DL Streamer Pipeline Server pipelines
-in this application. There are three ways to do it, from most to least
+in this application. There are two ways to do it, from most to least
 automated:
 
 | Method | When to use | Driven by |
 | --- | --- | --- |
 | [Pipeline manager](#pipeline-manager-make-start-rtsp) (`make start-rtsp`) | Normal operation: starts/stops every configured camera as the vehicle arms/disarms | `configs/cameras-pymavlink.yaml` (or `cameras-uavsdk.yaml`) |
-| [Manual per-device script](#manual-per-device-script) | Bench-test one pipeline per device without a vehicle or camera file | `scripts/uav_pipeline_control.sh` |
 | [REST API](#rest-api) | Scripting, or a one-off pipeline with custom parameters | `curl` to `https://<HOST_IP>/pipelines/...` |
 
 To change what a pipeline *does* (its GStreamer elements or parameter
@@ -65,25 +64,6 @@ The file is re-read at every arming. An edit while disarmed applies at the
 next arm; an edit while armed is logged and applies at the *next* arm. A file
 with errors is refused and the previous configuration keeps running — see
 [Configure the Cameras](../camera-management/configure-cameras.md).
-
-## Manual per-device script
-
-`scripts/uav_pipeline_control.sh` starts one pipeline per detection device
-with the pipeline's own default video, model and prompt — no vehicle and no
-camera file needed:
-
-```bash
-./scripts/uav_pipeline_control.sh start  [cpu|gpu|npu|all] [--caption]
-./scripts/uav_pipeline_control.sh status [cpu|gpu|npu|all] [--caption]
-./scripts/uav_pipeline_control.sh stop   [cpu|gpu|npu|all] [--caption]
-```
-
-`--caption` runs the `uav_object_detection_<device>_gpu` variant (captions
-on MQTT `uav/caption/manual_<device>`; needs `make vlm-model`). Streams are
-published as `rtsp://<HOST_IP>:8555/uav-manual-<device>`, so they never
-collide with the manager's `uav-<camera>` streams. Instance IDs are cached
-in `.uav_pipeline_<device>[_caption]_instance_id` files so `stop`/`status`
-find them again.
 
 ## REST API
 
@@ -185,9 +165,7 @@ for id in $(curl -k -s https://<HOST_IP>/pipelines/status | python3 -c \
 done
 ```
 
-This also stops pipelines started by the manager or the per-device script
-(their state files then go stale; `uav_pipeline_control.sh stop` clears
-them). `make pymav-down` / `make uavsdk-down` stops the whole stack instead.
+This also stops pipelines started by the manager. `make pymav-down` / `make uavsdk-down` stops the whole stack instead.
 
 ## Troubleshooting
 

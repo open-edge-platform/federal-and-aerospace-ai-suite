@@ -363,8 +363,7 @@ If they stay at zero, see
 ### Detection log (JSONL) is missing or empty
 
 Only a pipeline started by hand with a `destination.metadata` block writes
-one; the camera-file manager and `scripts/uav_pipeline_control.sh` do not
-add it. See [View Detection Logs](./view-detection-logs.md).
+one; the camera-file manager does not add it. See [View Detection Logs](./view-detection-logs.md).
 
 ## Cameras & Video
 
