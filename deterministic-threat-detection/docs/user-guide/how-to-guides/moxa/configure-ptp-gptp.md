@@ -1,4 +1,12 @@
-# Configure PTP, IEEE 802.1AS (gPTP)
+<!--hide_directive
+```{eval-rst}
+.. meta::
+   :description: Synchronize the machines and the Moxa switch with the IEEE 802.1AS (gPTP) Precision Time Protocol (PTP) profile.
+   :keywords: PTP, gPTP, IEEE 802.1AS, Moxa, grandmaster, ptp4l, phc2sys
+```
+hide_directive-->
+
+# Configure Precision Time Protocol (PTP), IEEE 802.1AS (gPTP)
 
 This guide explains how to synchronize the machines and the switch with the IEEE 802.1AS (gPTP)
 profile. The switch acts as the PTP grandmaster. Each machine runs `ptp4l` to synchronize the
@@ -8,9 +16,9 @@ only one profile at a time, so make sure that the switch and **all** machines us
 
 ## Machines
 
-`ptp-install.sh` is run once during the
+Run `ptp-install.sh` once during the
 [First-time setup](../../first-time-setup.md#3-ptp-every-machine).
-Then, switch the profile with:
+Then switch the profile with:
 
 ```bash
 sudo ptp-profile gptp
