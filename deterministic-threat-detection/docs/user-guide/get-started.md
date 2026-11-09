@@ -40,25 +40,7 @@ setup is complete.
 
 ![Architecture: live traffic, no load](./_assets/architecture-video-idle.gif)
 
-```mermaid
-flowchart LR
-    subgraph C["machine-2 / machine-3"]
-        V["test video<br/>RTSP"]
-        I["DL Streamer<br/>inference"]
-    end
-    subgraph M["machine-1"]
-        B["MQTT broker"]
-        D["dashboard<br/>latency"]
-        R["mediamtx relay"]
-        S["DL Streamer +<br/>Scenescape"]
-        H["live HOTA"]
-    end
-    N["machine-4<br/>load, VLAN 5"]
-    V --> I -->|"use case 1: MQTT, VLAN 1"| B --> D
-    V -->|"use case 2: RTSP, VLAN 1"| R --> S --> H --> D
-    N ==>|"load, VLAN 5"| SW["Moxa switch<br/>Qbv"]
-    SW -.->|"confined to its slot"| M
-```
+![Architecture diagram](./_assets/architecture.drawio.svg)
 
 - **machine-2 / machine-3:** replay a test video as an RTSP camera and run the use case 1
   inference pipeline, which publishes its results over MQTT.

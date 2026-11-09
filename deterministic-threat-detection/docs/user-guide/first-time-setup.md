@@ -43,6 +43,8 @@ Docker Engine with Compose V2 must already be installed
 
 ## 2. NIC and VLANs (Every Machine)
 
+![NIC VLANS and set priority maps](./_assets/nic-vlans-priority-maps.drawio.svg).
+
 ```mermaid
 flowchart LR
     NIC["tsn0 (I225/I226)"] --> V1["tsn0.1<br/>192.168.127.id, prio 1"]
