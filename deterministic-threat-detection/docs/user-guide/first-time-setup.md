@@ -45,13 +45,6 @@ Docker Engine with Compose V2 must already be installed
 
 ![NIC VLANS and set priority maps](./_assets/nic-vlans-priority-maps.drawio.svg).
 
-```mermaid
-flowchart LR
-    NIC["tsn0 (I225/I226)"] --> V1["tsn0.1<br/>192.168.127.id, prio 1"]
-    NIC --> V3["tsn0.3<br/>192.168.3.id, prio 3"]
-    NIC --> V5["tsn0.5<br/>192.168.5.id, prio 5"]
-```
-
 The `setup_tsn_nic.sh` script names the TSN NIC `tsn0`, creates `tsn0.1`, `tsn0.3`, and
 `tsn0.5`, and sets the priority maps (VLANs 1, 3, and 5 become frame priorities 1, 3, and 5).
 `--id` is the last address octet: 11, 12, 13, and 14 for machines 1 to 4. The script stops if
