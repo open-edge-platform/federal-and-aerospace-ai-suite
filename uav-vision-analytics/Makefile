@@ -123,9 +123,12 @@ _check_certs: ## Generate a self-signed TLS certificate for nginx if missing
 	@mkdir -p $(SSL_DIR); \
 	if [ ! -f "$(SSL_DIR)/server.crt" ] || [ ! -f "$(SSL_DIR)/server.key" ]; then \
 		echo "Generate self-signed certificate..."; \
+		SAN="DNS:localhost,IP:127.0.0.1"; \
+		if [ -n "$(HOST_IP)" ]; then SAN="$$SAN,IP:$(HOST_IP)"; fi; \
 		openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 		  -keyout $(SSL_DIR)/server.key -out $(SSL_DIR)/server.crt \
-		  -subj "/C=US/ST=CA/L=San Francisco/O=Intel/OU=Edge AI/CN=localhost"; \
+		  -subj "/C=US/ST=CA/L=San Francisco/O=Intel/OU=Edge AI/CN=localhost" \
+		  -addext "subjectAltName=$$SAN"; \
 		chmod 600 $(SSL_DIR)/server.key 2>/dev/null || true; \
 		chown -R "$$(id -u):$$(id -g)" $(SSL_DIR)/server.key $(SSL_DIR)/server.crt 2>/dev/null || true; \
 	fi

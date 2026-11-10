@@ -29,6 +29,7 @@ import json
 import logging
 import os
 import re
+import ssl
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
@@ -53,6 +54,27 @@ DEFAULT_REMOTE_HOST = os.environ.get("DEFAULT_REMOTE_HOST", "127.0.0.1")
 REMOTE_HTTPS_PORT = int(os.environ.get("REMOTE_HTTPS_PORT", "443"))
 REMOTE_MQTT_PORT = int(os.environ.get("REMOTE_MQTT_PORT", "1883"))
 REMOTE_RTSP_PORT = int(os.environ.get("REMOTE_RTSP_PORT", "8555"))
+
+
+def _remote_tls_verify():
+    """TLS verification setting for calls to the UAV host's nginx.
+
+    Not verified by default, because the UAV stack's nginx uses a self-signed
+    certificate. REMOTE_TLS_VERIFY=true turns verification on: against
+    REMOTE_TLS_CA_BUNDLE (a PEM file holding the UAV hosts' certificates) when
+    set, otherwise the system CAs.
+    """
+    if os.environ.get("REMOTE_TLS_VERIFY", "false").strip().lower() not in ("1", "true", "yes", "on"):
+        logging.getLogger("viz-backend").warning(
+            "REMOTE_TLS_VERIFY is off: UAV host TLS certificates are not verified")
+        return False
+    ca_bundle = os.environ.get("REMOTE_TLS_CA_BUNDLE", "").strip()
+    if ca_bundle:
+        return ssl.create_default_context(cafile=ca_bundle)
+    return True
+
+
+REMOTE_TLS_VERIFY = _remote_tls_verify()
 
 # Local mediamtx sidecar used only for "H.264 Relay" mode (see module
 # docstring) -- MEDIAMTX_API_BASE is the internal docker-network address this
@@ -268,7 +290,7 @@ async def _sessions_keepwarm_loop():
     *connected* UAV, not just whichever one happens to be the active/visible
     tab in someone's browser.
     """
-    async with httpx.AsyncClient(verify=False, timeout=5.0, trust_env=False) as client:
+    async with httpx.AsyncClient(verify=REMOTE_TLS_VERIFY, timeout=5.0, trust_env=False) as client:
         while True:
             try:
                 hosts = list(_sessions.keys())
@@ -357,7 +379,7 @@ async def pipeline_info(host: str = Query(..., pattern=HOST_PATTERN), camera: st
     try:
         # Self-signed TLS on the remote nginx (see configs/nginx/ssl on that host) -- trusted-LAN tool,
         # same posture as the -k curl examples in the main README.
-        async with httpx.AsyncClient(verify=False, timeout=5.0, trust_env=False) as client:
+        async with httpx.AsyncClient(verify=REMOTE_TLS_VERIFY, timeout=5.0, trust_env=False) as client:
             instances = await _instances_with_requests(client, _remote_base(host), running_only=False)
         info["reachable"] = True
         record = next((c for c in _cameras_from(instances) if c["camera"] == camera), None)
@@ -387,7 +409,7 @@ async def _detect_running_cameras(host: str) -> dict:
     """Shared by /api/detect-pipelines and the VSS live-stream sync."""
     result = {"reachable": False, "cameras": []}
     try:
-        async with httpx.AsyncClient(verify=False, timeout=5.0, trust_env=False) as client:
+        async with httpx.AsyncClient(verify=REMOTE_TLS_VERIFY, timeout=5.0, trust_env=False) as client:
             instances = await _instances_with_requests(client, _remote_base(host), running_only=True)
         result["reachable"] = True
         result["cameras"] = _cameras_from(instances)
@@ -434,7 +456,7 @@ async def metrics_stream(host: str = Query(..., pattern=HOST_PATTERN)):
 
     async def relay():
         try:
-            async with httpx.AsyncClient(verify=False, timeout=None, trust_env=False) as client:
+            async with httpx.AsyncClient(verify=REMOTE_TLS_VERIFY, timeout=None, trust_env=False) as client:
                 async with client.stream("GET", url) as resp:
                     if resp.status_code != 200:
                         yield f"event: error\ndata: {json.dumps({'status': resp.status_code})}\n\n"
@@ -478,7 +500,7 @@ async def metrics_stream_multi(hosts: str = Query(...)):
         url = f"{base}/metrics/stream"
         while True:
             try:
-                async with httpx.AsyncClient(verify=False, timeout=None, trust_env=False) as client:
+                async with httpx.AsyncClient(verify=REMOTE_TLS_VERIFY, timeout=None, trust_env=False) as client:
                     async with client.stream("GET", url) as resp:
                         if resp.status_code != 200:
                             await queue.put({"host": host, "error": f"status {resp.status_code}"})

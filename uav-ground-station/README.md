@@ -157,6 +157,8 @@ All configuration is via `.env` (see `.env.example`):
 | `VIZ_COMPANION_HOST` | `127.0.0.1` | UAV Companion Compute IP field |
 | `VIZ_CAMERA_ORDER` | `front,bottom,back` | Camera card order, by a word in the stream name; unlisted cameras follow alphabetically |
 | `VIZ_REMOTE_HTTPS_PORT` | `443` | UAV host's nginx HTTPS port |
+| `VIZ_REMOTE_TLS_VERIFY` | `false` | Set `true` to verify the UAV host's TLS certificate (it is self-signed by default, so off keeps it working out of the box; a warning is logged) |
+| `VIZ_REMOTE_TLS_CA_BUNDLE` | empty (system CAs) | Used when verification is on: PEM file (under `configs/certs/`, as `/certs/<file>.pem`) with the UAV hosts' certificates |
 | `VIZ_REMOTE_MQTT_PORT` | `1883` | UAV host's nginx MQTT passthrough port |
 | `VIZ_REMOTE_RTSP_PORT` | `8555` | UAV host's raw RTSP port, pulled by the mediamtx relay |
 | `VIZ_PUBLIC_HOST` | `127.0.0.1` (`make init` sets the host's LAN IP) | Address browsers use to reach this machine; advertised as the WebRTC ICE candidate. Set it when `VIZ_HOST_IP` is `0.0.0.0` |
@@ -347,9 +349,17 @@ caption evidence around the same time window.
 
 ## Notes
 
-- The UAV host's TLS certificate is self-signed; the backend skips
-  verification when calling it (trusted-LAN tool posture, consistent with the
-  `-k`/`--insecure` curl examples in `uav-vision-analytics`'s own README).
+- The UAV host's TLS certificate is self-signed, so the backend does not
+  verify it by default (trusted-LAN tool posture, consistent with the
+  `-k`/`--insecure` curl examples in `uav-vision-analytics`'s own README) and
+  logs a warning at startup. To verify it, set `VIZ_REMOTE_TLS_VERIFY=true`,
+  copy the UAV's `uav-vision-analytics/configs/nginx/ssl/server.crt`
+  (concatenate several for several UAVs) into `configs/certs/` and set
+  `VIZ_REMOTE_TLS_CA_BUNDLE=/certs/<file>.pem` in `.env`. The certificate must
+  list the address you connect to in its subject alternative names; `make pymav-up`
+  / `make uavsdk-up` in `uav-vision-analytics` generate it (when missing) with
+  `localhost`, `127.0.0.1` and the host's `HOST_IP`; delete
+  `configs/nginx/ssl/server.*` there to regenerate an old one.
 - This project makes outbound, read-only requests to whatever host you enter;
   it never starts/stops pipelines on the remote stack.
 
