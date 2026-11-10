@@ -316,7 +316,7 @@ the [UAV Ground Station README](https://github.com/open-edge-platform/federal-an
 > `uav-ground-station`'s own `mediamtx` (`MEDIAMTX_WEBRTC_PORT` /
 > `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT`) uses —
 > a single-machine test will fail to start with a `port is already
-> allocated` error unless one side is moved; to solve this, for example, add to
+> allocated` error unless one side is moved; to solve this, you can add to
 > `uav-ground-station/.env`: `MEDIAMTX_WEBRTC_PORT=8890` and
 > `MEDIAMTX_WEBRTC_ICE_UDP_PORT=8190` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT=8190`.
 >
