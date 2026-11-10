@@ -14,12 +14,15 @@ import subprocess
 import sys
 
 import requests
-import urllib3
 from playwright.sync_api import sync_playwright
 
-urllib3.disable_warnings()
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BASE = "https://localhost"
+# The demo's nginx certificate is self-signed, so it is its own trust anchor: verify against it instead of
+# disabling verification. A certificate created before it carried a subjectAltName fails with "no subjectAltName":
+# recreate it with `rm src/scene/nginx/ssl/server.* && make -C src/scene nginx-cert`, then restart nginx.
+CERT = str(ROOT / "nginx/ssl/server.crt")
+TIMEOUT = 15
 SCENE = "hota-scene"
 CAMERAS = ["Cam_x1_0", "Cam_x2_0"]
 PASSWORD = (ROOT / "secrets/supass").read_text().strip()
@@ -42,12 +45,12 @@ def mqtt_once(topic, wait=15):
 
 def api_headers():
   token = requests.post(f"{BASE}/api/v1/auth", data={"username": "admin", "password": PASSWORD},
-                        verify=False).json()["token"]
+                        verify=CERT, timeout=TIMEOUT).json()["token"]
   return {"Authorization": f"Token {token}"}
 
 
 def scene_uid():
-  scenes = requests.get(f"{BASE}/api/v1/scenes", headers=api_headers(), verify=False).json()["results"]
+  scenes = requests.get(f"{BASE}/api/v1/scenes", headers=api_headers(), verify=CERT, timeout=TIMEOUT).json()["results"]
   return next((s["uid"] for s in scenes if s["name"] == SCENE), None)
 
 
@@ -93,10 +96,10 @@ def flow_tests():
   h = api_headers()
   uid = scene_uid()
   check("API scene present", uid is not None, str(uid))
-  cams = requests.get(f"{BASE}/api/v1/cameras", headers=h, verify=False).json()["results"]
+  cams = requests.get(f"{BASE}/api/v1/cameras", headers=h, verify=CERT, timeout=TIMEOUT).json()["results"]
   check("API cameras present", sorted(c["name"] for c in cams) == CAMERAS)
 
-  st = requests.get(f"{BASE}/api/pipelines/status", verify=False).json()
+  st = requests.get(f"{BASE}/api/pipelines/status", verify=CERT, timeout=TIMEOUT).json()
   check("2 pipelines RUNNING", len(st) == 2 and all(s["state"] == "RUNNING" for s in st),
         str([round(s["avg_fps"], 1) for s in st]))
 

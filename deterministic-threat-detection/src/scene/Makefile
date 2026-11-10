@@ -86,7 +86,8 @@ $(SSL_DIR)/server.key:
 	mkdir -p $(SSL_DIR)
 	openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 		-keyout $(SSL_DIR)/server.key -out $(SSL_DIR)/server.crt \
-		-subj "/C=US/ST=CA/L=San Francisco/O=Intel/OU=Edge AI/CN=localhost"
+		-subj "/C=US/ST=CA/L=San Francisco/O=Intel/OU=Edge AI/CN=localhost" \
+		-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 
 pull:
 	docker compose pull
