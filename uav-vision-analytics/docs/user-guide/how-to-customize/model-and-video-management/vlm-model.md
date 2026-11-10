@@ -167,6 +167,12 @@ or lists, so ask for brevity in the prompt. On the CPU, generating
 50 tokens takes about 7 s, longer than the 5 s frame interval; use the GPU
 or lower `max_new_tokens` if captions fall behind.
 
+> [!WARNING]
+> Try Gemma 4 on one camera first. On an Intel Core Ultra iGPU it takes about 1 minute to load and
+> about 17-27 s per caption. Loaded on the GPU next to two other GPU VLM instances and GPU detection,
+> it failed with `CL_OUT_OF_RESOURCES` and left the pipeline server unresponsive
+> (`docker restart uav-va-dlstreamer-pipeline-server` recovers).
+
 ## Apply it
 
 1. Set `captioning.model: <model>` (and `captioning.device`) for the
@@ -181,7 +187,7 @@ or lower `max_new_tokens` if captions fall behind.
 3. Watch the captions:
 
    ```bash
-   mosquitto_sub -h <HOST_IP> -t uav/caption/front_camera
+   docker exec uav-va-broker mosquitto_sub -t uav/caption/front_camera -C 2
    ```
 
 For a pipeline started by hand, pass the container path in

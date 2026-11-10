@@ -9,12 +9,21 @@
 
 | Service | Image | Ports | Role |
 |---------|-------|-------|------|
-| `dlstreamer-pipeline-server` | `${DLSTREAMER_PIPELINE_SERVER_IMAGE}`-pymavlink (built inline with `pip install pymavlink`) | `8081`, `8555` | AI inference + RTSP output |
-| `broker` | `eclipse-mosquitto:2.0.22` | `1883` | MQTT broker for detection metadata |
+| `dlstreamer-pipeline-server` | `${DLSTREAMER_PIPELINE_SERVER_IMAGE}`-pymavlink (built inline with `pip install pymavlink`) | *(none — reached only via `nginx`)* | AI inference + RTSP output |
+| `broker` | `eclipse-mosquitto:2.0.22` | *(none — reached only via `nginx`)* | MQTT broker for detection metadata and captions |
 | `px4` | `px4io/px4-sitl:latest` | — | PX4 SITL flight controller simulator (requires `10040_sihsim_quadx.post` volume mount) |
-| `mavlink-router` | custom build | — | Routes MAVLink :14550 → :14541 |
+| `mavlink-router` | custom build | `${MAVLINK_UDP_PORT:-14551}/udp` | Routes MAVLink :14550 → :14541 broadcast; also republishes UDP to the host for a remote QGroundControl |
 | `metrics-manager` | `intel/metrics-manager:2026.3.0-*` | — | CPU/GPU/NPU/power metrics collection |
+| `nginx` | `nginx:1.27-alpine` | `80`, `443`, `8555`, `1883` | Reverse proxy / TLS termination (self-signed cert) for REST+UI (`80`→`443` redirect) and RTSP; raw MQTT passthrough on `1883` |
 
+`dlstreamer-pipeline-server` and `broker` publish **no** ports to the host directly —
+every port a client touches (`80`/`443` REST+UI, `8555` RTSP, `1883` MQTT) is published
+by `nginx` only, bound to `${HOST_IP:-127.0.0.1}`.
+
+Every service sets `container_name: uav-va-<service>` (e.g. `uav-va-dlstreamer-pipeline-server`,
+`uav-va-nginx`, `uav-va-broker`); `docker exec`/`docker logs` and the Makefile use those names,
+never the bare service name. Both modes use the same names and host ports, so only one mode runs
+at a time.
 ### px4 Service (pymavlink mode)
 
 The `px4` service MUST mount the airframe configuration file that tells PX4 which
@@ -32,7 +41,7 @@ Docker Compose fragment:
   px4:
     image: px4io/px4-sitl:latest
     hostname: px4-sitl
-    container_name: px4
+    container_name: uav-va-px4
     volumes:
       - ./10040_sihsim_quadx.post:/opt/px4/etc/init.d-posix/airframes/10040_sihsim_quadx.post
     stdin_open: true
@@ -51,7 +60,13 @@ Docker Compose fragment:
 
 | Service | Image | Ports | Role |
 |---------|-------|-------|------|
-| `dlstreamer-pipeline-server` | `${DLSTREAMER_PIPELINE_SERVER_IMAGE}` | `8081`, `8555` | AI inference + RTSP output |
+| `dlstreamer-pipeline-server` | `${DLSTREAMER_PIPELINE_SERVER_IMAGE}` | *(none — reached only via `nginx`)* | AI inference + RTSP output; `ARM_SOURCE=mqtt` reads the SDK's MQTT status topic, `CAMERAS_CONFIG=configs/cameras-uavsdk.yaml` |
+| `metrics-manager` | `intel/metrics-manager:2026.3.0-rc1` | — | CPU/GPU/NPU/power metrics collection (container `uav-va-metrics-manager`) |
+| `nginx` | `nginx:1.27-alpine` | `80`, `443`, `8555` | Reverse proxy / TLS termination; this mode has no `broker`/`px4`/`mavlink-router` services — MQTT (caption/telemetry) is the SDK's own broker, reached via `host.docker.internal:${MQTT_BROKER_PORT:-1883}` |
+
+No `broker`, `px4` or `mavlink-router` service exists in this mode — telemetry arrives over
+the SDK's MQTT topic and captions/detections publish back to the SDK's own broker
+(`host.docker.internal`), not a broker in this compose file.
 
 **Prerequisite:** `uav-mission-compute-sdk` must already be running.
 
@@ -59,10 +74,20 @@ Docker Compose fragment:
 
 ## mavlink-router Self-Containment (pymavlink mode)
 
-The pymavlink stack MUST be fully self-contained and buildable without any
-sibling repository being checked out. Never set the `mavlink-router` service's
-build `context` to a path outside `{{STACK_DIR}}` (for example, do NOT
-reference `../../uav-mission-compute-sdk/infra/px4-sim/mavlink-router`) —
+> [!NOTE]
+> The shipped mainline `uav-vision-analytics` repo's own
+> `docker-compose-pymavlink.yml` points `mavlink-router`'s build `context` at
+> `../uav-mission-compute-sdk/infra/px4-sim/mavlink-router` — a sibling
+> checkout. That only works there because the whole
+> `federal-and-aerospace-ai-suite` monorepo (with `uav-mission-compute-sdk`
+> next to it) is assumed to be cloned together. This skill instead generates
+> `{{STACK_DIR}}` as a standalone directory with no such sibling guaranteed,
+> so it MUST vendor the two files below into the stack and build locally —
+> never copy the sibling-repo path verbatim into a generated stack.
+
+The pymavlink stack this skill generates MUST be fully self-contained and
+buildable without any sibling repository being checked out. Never set the
+`mavlink-router` service's build `context` to a path outside `{{STACK_DIR}}` —
 that path will not exist for a standalone `{{STACK_DIR}}` and `docker compose
 up` fails with `unable to prepare context: path ... not found`.
 
@@ -85,7 +110,7 @@ mavlink-router:
       https_proxy: ${https_proxy:-}
       no_proxy:    ${no_proxy:-localhost,127.0.0.0/8}
       NO_PROXY:    ${NO_PROXY:-localhost,127.0.0.0/8}
-  container_name: mavlink-router
+  container_name: uav-va-mavlink-router
   restart: unless-stopped
   volumes:
     - ./mavlink-router/main.conf:/etc/mavlink-router/main.conf
@@ -142,7 +167,7 @@ dlstreamer-pipeline-server:
       FROM ${DLSTREAMER_PIPELINE_SERVER_IMAGE}
       RUN pip install --no-cache-dir pymavlink    # pymavlink mode only
   image: ${DLSTREAMER_PIPELINE_SERVER_IMAGE}-pymavlink
-  container_name: dlstreamer-pipeline-server
+  container_name: uav-va-dlstreamer-pipeline-server
   environment:
     - http_proxy=${http_proxy}
     - https_proxy=${https_proxy}
@@ -150,40 +175,54 @@ dlstreamer-pipeline-server:
     - NO_PROXY=${no_proxy},${HOST_IP}
     - ENABLE_RTSP=true
     - RTSP_PORT=8555
+    - APPEND_PIPELINE_NAME_TO_PUBLISHER_TOPIC=true
     - RUN_MODE=EVA
     - EMIT_SOURCE_AND_DESTINATION=true
     - REST_SERVER_PORT=8081
     - SERVICE_NAME=dlstreamer-pipeline-server
     - MQTT_HOST=broker
     - MQTT_PORT=1883
-    - APPEND_PIPELINE_NAME_TO_PUBLISHER_TOPIC=true
-    - ZE_ENABLE_ALT_DRIVERS=libze_intel_npu.so
+    - ENABLE_OPEN_TELEMETRY=true
+    - ZE_ENABLE_ALT_DRIVERS=libze_intel_npu.so    # NPU
+    - NPU_DEVICE=${NPU_DEVICE:-/dev/null}
   volumes:
     - dlstreamer-pipeline-server-pipeline-root:/var/cache/pipeline_root:uid=1999,gid=1999
     - "./resources:/home/pipeline-server/resources"
     - "./configs/config-pymavlink.json:/home/pipeline-server/config.json"
     - "./gvapython/telemetry-overlay-pymavlink.py:/home/pipeline-server/gvapython/telemetry-overlay-pymavlink.py"
     - "./scripts/mavlink_pipeline_manager.py:/home/pipeline-server/scripts/pipeline_manager.py"
+    - "./scripts/camera_config.py:/home/pipeline-server/scripts/camera_config.py:ro"
+    # The folder with cameras-pymavlink.yaml is mounted, not the file: editors save by
+    # replacing the file, and a single-file mount would keep showing the old one.
+    - "./configs:/home/pipeline-server/configs:rw"
     - "/run/udev:/run/udev:ro"
-    - "/dev:/dev"
     - "/tmp:/tmp"
   group_add:
-    - "44"    # video
-    - "109"   # render (adjust per host: stat -c %g /dev/dri/render*)
-    - "110"
-    - "990"
-    - "992"
-    - "993"
-    - "994"
-    - "996"
+    # GPU/NPU/camera device GIDs, auto-detected by 'make init' / scripts/update_device_gids.sh
+    - "${GPU_CARD_GID:-44}"
+    - "${GPU_RENDER_GID:-109}"
+    - "${NPU_GID:-65501}"
+    - "${CAMERA_GID:-65502}"
   device_cgroup_rules:
     - "c 189:* rmw"
     - "c 209:* rmw"
     - "a 189:* rwm"
   devices:
-    - "/dev:/dev"
+    - ${GPU_DEVICE:-/dev/dri/card0}:${GPU_DEVICE:-/dev/dri/card0}
+    - ${GPU_RENDER_DEVICE:-/dev/dri/renderD128}:${GPU_RENDER_DEVICE:-/dev/dri/renderD128}
+    - ${NPU_DEVICE:-/dev/null}:${NPU_DEVICE:-/dev/null}
+    # live cameras (RealSense, USB webcams): same host path appears in the container, so the
+    # path in configs/cameras-pymavlink.yaml is the host path
+    - ${CAMERA_DEVICE_1:-/dev/null}:${CAMERA_DEVICE_1:-/dev/null}
+    - ${CAMERA_DEVICE_2:-/dev/null}:${CAMERA_DEVICE_2:-/dev/null}
+    - ${CAMERA_DEVICE_3:-/dev/null}:${CAMERA_DEVICE_3:-/dev/null}
+    - ${CAMERA_DEVICE_4:-/dev/null}:${CAMERA_DEVICE_4:-/dev/null}
   networks:
     - app_network
+  # Not "on-failure": a pipeline-server abort (e.g. a GPU runtime error while loading several
+  # models) can still exit 0, which "on-failure" would not restart. A manual `docker stop`
+  # still stays stopped.
+  restart: unless-stopped
   extra_hosts:
     - "host.docker.internal:host-gateway"
 ```
@@ -191,14 +230,13 @@ dlstreamer-pipeline-server:
 > [!IMPORTANT]
 > `dlstreamer-pipeline-server` must NOT publish `8081`/`8555` to the host via `ports:`.
 > It is reached only through the `nginx` reverse-proxy / TLS-termination service below
-> (the only service that publishes ports to the host). Follows the same self-signed-cert
-> + HTTP→HTTPS-redirect pattern.
-> See `references/NGINX.md`-style fragment:
+> (the only service that publishes ports to the host), with a self-signed cert and an
+> HTTP→HTTPS redirect:
 >
 > ```yaml
 > nginx:
 >   image: nginx:1.27-alpine
->   container_name: nginx
+>   container_name: uav-va-nginx
 >   restart: unless-stopped
 >   volumes:
 >     - ./configs/nginx/nginx-pymavlink.conf:/etc/nginx/nginx.conf:ro
@@ -227,41 +265,41 @@ And set `UAV_ID` env var (default `uav-1`).
 
 ---
 
-## .env Variables
+## .env Variables (generate `.env.example`, never commit `.env` itself)
 
-```bash
-# Host network
-HOST_IP=192.168.1.x           # LAN IP, auto-detected by 'make init'; used for RTSP URLs
-                               # and binds nginx's published ports (80, 8555). Set to
-                               # 127.0.0.1 to restrict access to the local host only
-                               # (breaks remote QGroundControl/VLC/ffplay viewing).
+| Var | Set by | Purpose |
+| --- | --- | --- |
+| `HOST_IP` | `make init` (auto-detects LAN IP) | Binds nginx's published ports (`80`/`443`/`8555`/`1883`) and is used in RTSP/REST URLs. `127.0.0.1` restricts to loopback (breaks remote QGroundControl/VLC/ffplay). |
+| `DLSTREAMER_PIPELINE_SERVER_IMAGE` | generated, pinned | e.g. `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc1` |
+| `GPU_DEVICE`, `GPU_RENDER_DEVICE` | `make init` (auto-detect) or manual | GPU device paths, e.g. `/dev/dri/card0`, `/dev/dri/renderD128` |
+| `NPU_DEVICE` | `make init` (auto-detect, `/dev/null` if absent) | NPU device path, e.g. `/dev/accel/accel0` |
+| `GPU_CARD_GID`, `GPU_RENDER_GID`, `NPU_GID`, `CAMERA_GID` | written by `scripts/update_device_gids.sh` on `pymav-up`/`uavsdk-up` | `group_add` values so the container can access the devices; never set these by hand |
+| `CAMERA_DEVICE_1`..`_4` | `make init` (first USB MJPG/YUYV node) or manual | Live-camera device paths matched by `device:` in `cameras-*.yaml` |
+| `UAV_ID` | manual, uavsdk mode only | Identifies the vehicle in SDK MQTT topics / RTSP URLs, default `uav-1` |
+| `MAVLINK_UDP_PORT` | manual, pymavlink mode only | Host UDP port a remote QGroundControl connects to, default `14551` |
+| `http_proxy` / `https_proxy` / `no_proxy` | commented out by default | Only uncomment if the host sits behind a corporate proxy — an empty active value silently breaks `make model` / `make vlm-model` |
 
-# DL Streamer image
-DLSTREAMER_PIPELINE_SERVER_IMAGE=intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc1
-
-# Proxy
-# http_proxy=
-# https_proxy=
-# no_proxy=localhost,127.0.0.0/8
-```
+Only generate variables the stack actually consumes; do not invent extra ones.
 
 ---
 
 ## Makefile Targets
 
-```makefile
-.PHONY: init model pymav-up pymav-down uavsdk-up uavsdk-down start-rtsp
+Generate a `Makefile` exposing at least: `init`, `model`, `vlm-model` (if any
+camera captions), `pymav-build`/`pymav-up`/`pymav-down` (pymavlink mode) or
+`uavsdk-up`/`uavsdk-down` (uavsdk mode), `start-rtsp`, `check-cameras`,
+`cameras-status`. Mirror the real target behaviour (see the shipped
+`uav-vision-analytics/Makefile` for the exact recipes) rather than inventing
+new semantics — in particular:
 
-init:        ## Create .env from .env.example and auto-detect GPU/NPU device paths
-model:       ## Download and export YOLO11s to OpenVINO FP16
-pymav-up:    ## Start pymavlink stack (docker-compose-pymavlink.yml)
-pymav-down:  ## Stop pymavlink stack
-uavsdk-up:   ## Start UAVSDK stack (requires uav-mission-compute-sdk running first)
-uavsdk-down: ## Stop UAVSDK stack
-start-rtsp:  ## Launch pipeline_manager.py inside container
-```
-
-Full Makefile is in `uav-vision-analytics/Makefile`.
+- `init` must create `.env` from `.env.example` and auto-detect `HOST_IP`,
+  `GPU_DEVICE`/`GPU_RENDER_DEVICE`, `NPU_DEVICE`, `CAMERA_DEVICE_1`, never
+  overwriting an existing `.env`.
+- `check-cameras` / `cameras-status` must accept `CAMERAS=<file>` to point at
+  a non-default camera file.
+- `model` / `vlm-model` must not re-download if the target files already exist,
+  and `vlm-model` must show the model's license and require confirmation
+  (`ACCEPT_LICENSE=y` to skip) before downloading.
 
 ---
 

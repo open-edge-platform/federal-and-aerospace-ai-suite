@@ -17,7 +17,22 @@ REST path and MQTT topic suffix are derived from the `name` field.
 - Status:       `GET  /pipelines/{instance_id}/status`
 - Delete:       `/pipelines/{instance_id}` (HTTP DELETE)
 
-The POST response body is the integer `instance_id` — save it for DELETE calls.
+The POST response body is the `instance_id` (a quoted 32-character hex string, not an integer) — save it
+(strip the quotes with `tr -d '"'`) for DELETE calls.
+
+The **pipeline matrix** below is fixed and pre-generated into
+`config-pymavlink.json` / `config-uavsdk.json` / `config-pymavlink-realsense.json` —
+adding a camera is a `configs/cameras-*.yaml` edit, never a new pipeline definition
+(see `references/CAMERAS.md`). Pipelines with a captioning branch
+(`uav_object_detection_<det>_<vlm>`, `uav_camera_<det>_<vlm>`) are documented in
+full in `references/CAPTIONING.md`; this file covers the detection-only shapes.
+
+| Source | Captioning | Pipeline name pattern | `<det>` | `<vlm>` |
+| --- | --- | --- | --- | --- |
+| `video`/`rtsp` | off | `uav_object_detection_<det>` | cpu,gpu,npu | — |
+| `video`/`rtsp` | on | `uav_object_detection_<det>_<vlm>` | cpu,gpu,npu | cpu,gpu |
+| `device` (live camera) | off | `uav_camera_<det>` | cpu,gpu,npu | — |
+| `device` (live camera) | on | `uav_camera_<det>_<vlm>` | cpu,gpu,npu | cpu,gpu |
 
 ---
 
@@ -84,6 +99,34 @@ Replace `multifilesrc...! h264parse ! decodebin3` with:
 ```
 rtspsrc location={{RTSP_INPUT_URL}} latency=100
 ! rtph264depay ! h264parse ! decodebin3
+```
+
+### Captioning branch (any source, `_<vlm>` pipeline variants)
+
+A `tee` right after `decodebin3` splits the stream into the unchanged detection
+branch and a captioning branch sampled at 1 frame / 5 s — see
+`references/CAPTIONING.md` for the full element breakdown, parameters and
+model requirements. Never hand-build this branch when `camera_config.py`
+already derives the correct `_<vlm>` pipeline name for a captioning-enabled
+camera.
+
+```
+... ! decodebin3 ! tee name=split allow-not-linked=true
+  split. ! queue ! gvadetect ... ! gvapython (telemetry overlay) ! gvametaconvert
+         ! gvametapublish ! gvafpscounter ! appsink name=appsink sync=false
+  split. ! queue leaky=downstream max-size-buffers=2
+         ! videorate drop-only=true ! video/x-raw,framerate=1/5
+         ! videoscale ! videoconvert ! video/x-raw,format=BGRA,width=[1,{parameters[frame_width]}],height=[1,{parameters[frame_height]}]
+         ! gvagenai name=captioner model-instance-id={parameters[captioner_instance_id]}
+                     model-path={parameters[captioner_model_path]} device=CPU|GPU
+                     prompt="{parameters[captioner_prompt]}" chunk-size=1
+                     generation-config="max_new_tokens={parameters[captioner_max_new_tokens]},num_beams=1,do_sample=false,temperature=0.1,repetition_penalty=1.1"
+                     frame-rate=0 metrics=true
+         ! gvametaconvert add-empty-results=true name=caption_metaconvert
+         ! gvapython class=MQTTPublisher function=process
+                      module=/home/pipeline-server/gvapython/mqtt_publisher/mqtt_publisher.py
+                      name=mqtt_publisher kwarg={"topic":"{parameters[mqtt_topic]}"}
+         ! fakesink sync=false async=false
 ```
 
 ---

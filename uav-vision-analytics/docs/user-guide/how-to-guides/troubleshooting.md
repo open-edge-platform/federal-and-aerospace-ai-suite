@@ -77,6 +77,40 @@ services:
         RUN pip install --no-cache-dir pymavlink
 ```
 
+### `make model` / `make vlm-model` fail behind a corporate proxy
+
+**Symptom:** `make model` hangs or fails downloading `yolo11s.pt` from
+Ultralytics' GitHub releases (inside the `resources/venv` it creates), or
+`make vlm-model` fails fetching `download_models.sh` from
+`raw.githubusercontent.com` with a TLS/certificate error or a timeout, even
+though `docker pull` works fine.
+
+**Cause:** Unlike the Docker-build-time `pip install pymavlink` issue above,
+`make model` and `make vlm-model` run `yolo export`, `curl`, and (for a
+custom VLM export) `optimum-cli`/`huggingface_hub` directly **on the host**,
+in the calling shell — they need `http_proxy`/`https_proxy`/`no_proxy` set in
+*that* shell (not just `/etc/environment`), and if the proxy does TLS
+inspection, its root CA must be trusted by the host's CA store for
+`curl`/`pip` to accept it.
+
+**Resolution:**
+
+```bash
+export http_proxy=http://proxy.example.com:911
+export https_proxy=http://proxy.example.com:911
+export no_proxy=localhost,127.0.0.0/8
+make model
+make vlm-model
+```
+
+If the proxy does TLS inspection, install its root CA into the host's trust
+store (e.g., `sudo update-ca-certificates` on Ubuntu, after copying the CA
+into `/usr/local/share/ca-certificates/`) before retrying. Never use `curl
+-k`/`--insecure` for these downloads — that flag is only safe against this
+app's own self-signed nginx certificate (see
+[REST API calls fail or get a proxy error](#rest-api-calls-to-httpshost_ip-fail-or-get-a-proxy-error)
+below), never against an external download host.
+
 ### `make pymav-up` fails — `/dev/dri/card0: no such file or directory`
 
 On some machines the Intel iGPU is assigned `card1` instead of `card0` (e.g.,
@@ -161,6 +195,94 @@ ffmpeg -rtsp_transport tcp \
 ```
 
 ## Pipelines
+
+### REST API calls to `https://<HOST_IP>/...` fail or get a proxy error
+
+**Symptom:** `curl -k https://<HOST_IP>/pipelines/status` (or any other REST
+call from [Manage Pipelines](../how-to-customize/pipeline-management/manage-pipelines.md#rest-api))
+hangs, returns `403`/`502` from an unrelated proxy server, or
+`Connection refused`, even though the stack is healthy and `ffplay` can read
+the RTSP stream fine.
+
+**Cause:** A shell-level `http_proxy`/`https_proxy` (often set system-wide by
+a corporate device policy) routes LAN/host-local traffic through a proxy that
+cannot reach `<HOST_IP>` or terminates TLS itself and rejects nginx's
+self-signed certificate.
+
+**Resolution:** Exclude local nginx calls from the proxy, the same way
+`benchmark/calc_stream_density.sh` does for every REST call it makes:
+
+```bash
+unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+export no_proxy="*" NO_PROXY="*"
+curl -k -s https://<HOST_IP>/pipelines/status
+```
+
+Resolve `HOST_IP` from `.env` instead of assuming `localhost` if the request
+is issued from a different host/VM than the one running the stack:
+
+```bash
+HOST_IP=$(grep -E '^HOST_IP=' .env | cut -d= -f2)
+curl -k -s --noproxy '*' "https://${HOST_IP}/pipelines/status"
+```
+
+### `/pipelines/status` keeps old pipeline entries after they were stopped
+
+**Symptom:** A benchmark/monitoring script that counts entries in
+`GET /pipelines/status` reports more pipelines than are actually running, or
+keeps counting a pipeline that was `DELETE`d or disarmed minutes ago.
+
+**Cause:** `/pipelines/status` retains **every** instance's history
+(`COMPLETED`, `ERROR`, `ABORTED`, and any instance stopped mid-run) until the
+`dlstreamer-pipeline-server` container restarts — it does not shrink back
+down after a `DELETE` or a camera disarms.
+
+**Resolution:** Always filter on `state`, never trust the raw array length.
+`benchmark/calc_stream_density.sh` does this consistently:
+
+- Counting/stopping active instances: `state in ("RUNNING", "QUEUED", "STARTING")`
+- Averaging FPS/throughput: `state == "RUNNING"` only
+- Counting failures: `state in ("ERROR", "ABORTED", "COMPLETED")`
+
+```bash
+curl -k -s https://<HOST_IP>/pipelines/status | \
+  jq '[.[] | select(.state=="RUNNING" or .state=="QUEUED" or .state=="STARTING")] | length'
+```
+
+See [Manage Pipelines — stop all running pipelines](../how-to-customize/pipeline-management/manage-pipelines.md#stop-all-running-pipelines).
+
+### `make start-rtsp` silently does nothing from a script / CI / non-interactive shell
+
+**Symptom:**
+
+```text
+cannot attach stdin to a TTY-enabled container because stdin is not a terminal
+```
+
+...but `make` itself exits `0` and the "manager started" step of an automated
+script reports success even though no camera ever starts.
+
+**Cause:** `make start-rtsp`'s recipe runs `docker exec -it ...`, which needs
+a real terminal. Its Makefile line is prefixed with `-` (meaning "ignore this
+recipe's exit status"), so `make` reports success regardless. Run from an
+interactive terminal (a normal SSH session, a local shell) it works fine;
+run from `nohup ... &`, a CI job, a cron job, or any other non-tty context,
+`docker exec -it` fails immediately and nothing is listening for the
+vehicle's armed state.
+
+**Resolution:** For interactive use, run `make start-rtsp` directly in a
+terminal you keep open (or a `screen`/`tmux` session). For scripted/CI
+validation where there is no vehicle to arm, skip the manager's
+wait-for-MAVLink loop entirely and start every enabled camera once, right
+now, with:
+
+```bash
+docker exec -d <dlstreamer-pipeline-server container name> \
+  python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now
+```
+
+(`docker exec -d` detaches immediately and needs no tty.) Confirm with
+`make cameras-status`, not by trusting the launch command's own exit code.
 
 ### `make start-rtsp` fails in uav-mission-compute-sdk mode — `ConnectionRefusedError` / RTSP `404 Not Found`
 

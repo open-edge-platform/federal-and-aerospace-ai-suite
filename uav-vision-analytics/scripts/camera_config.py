@@ -5,7 +5,7 @@
 One entry per camera says where its images come from (a video file, or a live camera such as an Intel
 RealSense or a USB webcam, through its /dev/video node, or an RTSP stream), which device and model detect objects, whether the VLM
 captions it (and on which device, with which model and prompt) and whether detections are drawn on the
-stream. From that the manager picks one of the eighteen pipelines in ``configs/config-pymavlink.json``:
+stream. From that the manager picks one pipeline of ``configs/config-pymavlink.json`` (9 file/RTSP ones, plus the live-camera ``uav_camera_npu[_gpu]``):
 
     video file     detection only          uav_object_detection_<det>             det: cpu | gpu | npu
                    detection + captioning  uav_object_detection_<det>_<vlm>      vlm: cpu | gpu

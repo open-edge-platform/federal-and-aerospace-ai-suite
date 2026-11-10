@@ -94,6 +94,10 @@ _check_vss_env:
 	if [ -n "$$missing" ]; then \
 		echo "ERROR: set these in .env before make up-vss (see .env.example):$$missing" >&2; \
 		exit 1; \
+	fi; \
+	if [ $${#VSS_MINIO_USER} -lt 3 ] || [ $${#VSS_MINIO_PASSWORD} -lt 8 ]; then \
+		echo "ERROR: MinIO needs VSS_MINIO_USER with at least 3 characters and VSS_MINIO_PASSWORD with at least 8 characters." >&2; \
+		exit 1; \
 	fi
 
 up-vss: init _check_vss_env _build_if_changed ## Relay mode + VSS search containers (enables Live Natural Language Search)

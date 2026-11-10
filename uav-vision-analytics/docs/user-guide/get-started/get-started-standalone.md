@@ -201,12 +201,34 @@ ffplay rtsp://<HOST_IP>:8555/uav-back-camera
 Cameras with captioning on publish a caption on the MQTT topic `uav/caption/<camera>`:
 
 ```bash
-mosquitto_sub -h <HOST_IP> -t uav/caption/front_camera
+docker exec uav-va-broker mosquitto_sub -t 'uav/caption/#' -C 3
 ```
 
 The annotated stream includes bounding boxes for detected objects
 (person, car, bus, truck, bicycle, and other classes)
 and a live telemetry overlay (GPS, altitude, speed, heading).
+
+#### View in the ground-station dashboard (optional)
+
+The `uav-ground-station` web dashboard shows every camera stream, the scene captions and the CPU/GPU/NPU load of this host in one page. It is a separate stack, best run on another machine (the folder sits next to `uav-vision-analytics` in the ZIP and in the cloned repository):
+
+```bash
+cd ../uav-ground-station
+make up
+```
+
+Then open `http://<VIZ_HOST_IP>:8080` (the address `make init`, run automatically by `make up`, detected -- see the ground station's `.env`), enter the **UAV host's IP** (the `HOST_IP` of this application's `.env`, `<HOST_IP>` above) and press **Connect**. The camera cards appear once the cameras run (after the vehicle is armed). The ground-station machine must reach ports `443`, `1883` and `8555` of this host. See the [UAV Ground Station README](../../../../uav-ground-station/README.md) for all options.
+
+> [!NOTE]
+> `make up` shows video, captions, Flight Summary, and per-host metrics only.
+> For the dashboard's **Search Videos** button and natural-language search
+> over indexed footage, run `make up-vss` instead of `make up` (it brings up
+> everything `make up` does, plus 8 extra VSS containers) -- it needs its own
+> required `.env` variables first (MinIO/Postgres credentials, an embedding
+> model, and a detection model). See [VSS search in the UAV Ground Station
+> README](../../../../uav-ground-station/README.md#vss-search), and
+> [tune VSS search results](../how-to-customize/search-tuning/vss-search-tuning.md)
+> once it's running.
 
 > [!NOTE]
 > Other ways to view the stream:

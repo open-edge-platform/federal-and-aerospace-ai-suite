@@ -9,7 +9,7 @@ This guide provides a step-by-step walkthrough for testing the UAV Vision Analyt
 
 ## How It Works
 
-A minimal single-container stack. Telemetry is received via MQTT from the `uav-mission-compute-sdk` project, which must be started first. The DL Streamer Pipeline Server container reads armed/disarmed state from `uav/{id}/telemetry/status` and subscribes to three RTSP camera streams (nadir, forward, rear).
+A minimal stack. Telemetry is received via MQTT from the `uav-mission-compute-sdk` project, which must be started first. The DL Streamer Pipeline Server container reads armed/disarmed state from `uav/{id}/telemetry/status` and subscribes to three RTSP camera streams (nadir, forward, rear).
 
 ![uav vision analytics sdk](../_assets/FedAero-uav-vision-uavsdk.svg)
 
@@ -287,6 +287,45 @@ and a live telemetry overlay (GPS, altitude, speed, heading).
 >
 > - Leverage versatile streaming media players such as VLC Player to seamlessly handle, manage, and playback the incoming streams with ease and efficiency.
 
+#### View in the ground-station dashboard (optional)
+
+The `uav-ground-station` web dashboard shows every camera stream, the scene captions and the CPU/GPU/NPU load of this host in one page. Run it on a **separate** machine from the UAV SDK companion-compute board:
+
+```bash
+cd ../uav-ground-station
+make up
+```
+
+Then open `http://<VIZ_HOST_IP>:8080`, enter the **UAV host's IP** (`<HOST_IP>` above) and press **Connect**. The camera cards appear once the cameras run (after the drone arms). See the [UAV Ground Station README](../../../../uav-ground-station/README.md).
+
+> [!IMPORTANT]
+> If you do need to run the dashboard on the **same** host as
+> `uav-mission-compute-sdk` (e.g. a single-machine test), it will conflict
+> on port `8080`: the SDK's own REST API (`arm`/`takeoff`/`land`/`goto`)
+> already binds `localhost:8080` on that host, which is also
+> `uav-ground-station`'s default `VIZ_PORT`. Before `make up`, set a
+> different port in `uav-ground-station/.env` (`make init` creates it first):
+> `VIZ_PORT=8081`, then open `http://<VIZ_HOST_IP>:8081` instead.
+>
+> The SDK's own `mediamtx` (the sim's camera-streaming container) also
+> publishes WebRTC on `8889` + ICE on `8189` to the host, the same defaults
+> `uav-ground-station`'s own `mediamtx` (`MEDIAMTX_WEBRTC_PORT` /
+> `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT`) uses —
+> a single-machine test will fail to start with a `port is already
+> allocated` error unless one side is moved, e.g. add to
+> `uav-ground-station/.env`: `MEDIAMTX_WEBRTC_PORT=8890` and
+> `MEDIAMTX_WEBRTC_ICE_UDP_PORT=8190` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT=8190`.
+>
+> `make up` shows video, captions, Flight Summary, and per-host metrics only.
+> For the dashboard's **Search Videos** button and natural-language search
+> over indexed footage, run `make up-vss` instead of `make up` (it brings up
+> everything `make up` does, plus 8 extra VSS containers) -- it needs its own
+> required `.env` variables first (MinIO/Postgres credentials, an embedding
+> model, and a detection model). See [VSS search in the UAV Ground Station
+> README](../../../../uav-ground-station/README.md#vss-search), and
+> [tune VSS search results](../how-to-customize/search-tuning/vss-search-tuning.md)
+> once it's running.
+
 **Stop an individual pipeline** (only needed if you started one manually via Option B in [Step 6](#6-start-inference-pipelines)):
 
 ```bash
@@ -318,9 +357,9 @@ Nine pipelines with the same names as the simulator stack: `uav_object_detection
 
 | Camera | Pipeline | Source (inside Docker) | Output RTSP (host) |
 | --- | --- | --- | --- |
-| `nadir_camera` | `uav_object_detection_cpu` | `rtsp://host.docker.internal:8554/<UAV_ID>/nadir` | `rtsp://<HOST_IP>:8555/uav-nadir-camera` |
-| `forward_camera` | `uav_object_detection_gpu` | `rtsp://host.docker.internal:8554/<UAV_ID>/forward` | `rtsp://<HOST_IP>:8555/uav-forward-camera` |
-| `rear_camera` | `uav_object_detection_npu` | `rtsp://host.docker.internal:8554/<UAV_ID>/rear` | `rtsp://<HOST_IP>:8555/uav-rear-camera` |
+| `nadir_camera` | `uav_object_detection_cpu_gpu` | `rtsp://host.docker.internal:8554/<UAV_ID>/nadir` | `rtsp://<HOST_IP>:8555/uav-nadir-camera` |
+| `forward_camera` | `uav_object_detection_gpu_gpu` | `rtsp://host.docker.internal:8554/<UAV_ID>/forward` | `rtsp://<HOST_IP>:8555/uav-forward-camera` |
+| `rear_camera` | `uav_object_detection_npu_gpu` | `rtsp://host.docker.internal:8554/<UAV_ID>/rear` | `rtsp://<HOST_IP>:8555/uav-rear-camera` |
 
 > [!NOTE]
 > `<UAV_ID>` is the `UAV_ID` environment variable (default: `uav-1`); set another value in `.env` if your SDK project uses a different vehicle ID. The cameras file uses the placeholder `{uav_id}`, so nothing else has to change.

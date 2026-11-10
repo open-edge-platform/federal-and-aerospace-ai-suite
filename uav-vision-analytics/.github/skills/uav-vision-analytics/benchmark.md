@@ -8,26 +8,35 @@ Evaluation baseline for the `uav-vision-analytics` skill. Compares agent output
 
 ## Scope
 
-The skill scaffolds a complete UAV object detection and MAVLink telemetry
-overlay application using Intel DL Streamer Pipeline Server. The key
-differentiator is correct wiring of:
+The skill scaffolds a complete UAV object detection, MAVLink telemetry
+overlay, and optional VLM scene-captioning application using Intel DL
+Streamer Pipeline Server. The key differentiator is correct wiring of:
 
+- `configs/cameras-*.yaml` as the single declarative source of which cameras run, on
+  which detection device, and whether/how they caption — never hand-written per-camera
+  pipeline definitions
 - `gvapython` telemetry overlay (MAVLink thread → frame labels → `gvawatermark`)
-- Correct DL Streamer Pipeline Server REST API paths (`/pipelines/user_defined_pipelines/{name}`, integer `instance_id` for DELETE)
-- pymavlink armed/disarmed pipeline lifecycle
+- Correct DL Streamer Pipeline Server REST API paths (`/pipelines/user_defined_pipelines/{name}`, `instance_id` string from the POST response for DELETE)
+- pymavlink armed/disarmed pipeline lifecycle, re-reading the camera file on every arming
 - UAVSDK MQTT-triggered lifecycle with `ffprobe` RTSP pre-flight check
 - OpenVINO device variants (CPU/GPU/NPU) with correct GStreamer elements
 - `ultralytics==8.4.67` pin (CumSum detection head issue on GPU/NPU)
+- VLM captioning branch (`tee` → `videorate 1/5` → `gvagenai` CPU/GPU only → MQTT `uav/caption/<camera>`)
+  without ever placing it on NPU or skipping the detection branch
+- `nginx` reverse proxy with self-signed TLS as the only service publishing ports to the
+  host — `dlstreamer-pipeline-server` and `broker` are never exposed directly
 - Docker Compose device access (`group_add`, `device_cgroup_rules`, tmpfs pipeline root)
+- Self-contained `mavlink-router` build context (never a sibling-repo path)
 
 ## Eval Cases
 
 | ID | Case | Should trigger | Focus |
 |----|------|---------------|-------|
-| 1 | PX4 SITL sim, looped video, all devices (CPU+GPU+NPU) | Yes | Core pymavlink stack, all three device variants, telemetry overlay |
-| 2 | UAVSDK three-camera (nadir/forward/rear) | Yes | UAVSDK mode, ffprobe probe, MQTT trigger, three pipelines |
-| 3 | RealSense GPU, RTSP output, pymavlink | Yes | v4l2src, GPU pipeline, device group_add |
+| 1 | PX4 SITL sim, looped video, all devices (CPU+GPU+NPU) | Yes | Core pymavlink stack, camera-config file, nginx proxy, telemetry overlay |
+| 2 | UAVSDK three-camera (nadir/forward/rear) | Yes | UAVSDK mode, ffprobe probe, MQTT trigger, three cameras via one config file |
+| 3 | RealSense GPU, RTSP output, pymavlink | Yes | v4l2src, GPU pipeline, device group_add, nginx RTSP passthrough |
 | 4 | Cloud-only Prometheus metrics dashboard (no MAVLink) | No | DO NOT USE FOR boundary — no telemetry, no MAVLink |
+| 5 | Three cameras, VLM captioning on two of them | Yes | Captioning branch wiring, CPU/GPU-only VLM device, MQTT caption topics, `make vlm-model` |
 
 ## What "pass" means
 
@@ -39,6 +48,9 @@ passes when every expectation is satisfied. Case 4 passes when the skill does
 
 Without the skill, a baseline agent commonly:
 
+- Hand-writes a one-off pipeline string per camera instead of using/extending the fixed
+  `config.json` matrix and a `cameras-*.yaml` declaration, making every new camera a
+  pipeline-authoring exercise instead of a config edit
 - Uses wrong REST DELETE path (`/pipelines/{name}/1` instead of `/pipelines/{id}`)
 - Omits the `instance_id` capture from POST response
 - Misses the `ultralytics==8.4.67` pin causing GPU/NPU inference failures
@@ -47,6 +59,12 @@ Without the skill, a baseline agent commonly:
 - Omits `device_cgroup_rules` and `group_add` (GPU/NPU inaccessible in container)
 - Hardcodes `version` in `config.json` (collapses all pipelines to one REST path)
 - Missing `ffprobe` RTSP probe in UAVSDK mode (pipelines fail on unavailable streams)
+- Publishes `dlstreamer-pipeline-server`'s ports directly instead of routing everything
+  through a TLS-terminating `nginx` reverse proxy
+- Points the `mavlink-router` build context at a sibling repository, so the generated
+  stack fails `docker compose up` on any machine without that sibling checked out
+- Puts the VLM captioning branch on NPU (`gvagenai` has no NPU plugin) or samples it at
+  full frame rate instead of throttling with `videorate drop-only=true framerate=1/5`
 
 ## How to Re-run Evals
 
@@ -73,8 +91,9 @@ python3 run_multi_cli_eval.py \
 | 2 | UAVSDK three-camera | 4/5 (80%) | 1/5 (20%) |
 | 3 | RealSense + GPU | 4/5 (80%) | 1/5 (20%) |
 | 4 | Cloud-only (should NOT trigger) | 3/3 (100%) | 3/3 (100%) |
+| 5 | Captioning (two of three cameras) | 5/6 (83%) | 1/6 (17%) |
 
 | Metric | With skill | Baseline |
 |--------|-----------|---------|
-| Expectation pass rate (mean) | **90%** | 20% |
-| Trigger accuracy | **4/4** | — |
+| Expectation pass rate (mean) | **90%** | 19% |
+| Trigger accuracy | **5/5** | — |

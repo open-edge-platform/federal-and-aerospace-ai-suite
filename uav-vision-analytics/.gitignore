@@ -18,3 +18,10 @@ resources/ov_models/
 
 # Benchmark output written by benchmark/calc_stream_density.sh
 benchmark/results/
+
+# Python bytecode caches
+**/__pycache__/
+
+# Logs from any ad-hoc model-download tooling (e.g. a local model-download
+# helper container/script run while behind a corporate proxy) — never commit
+.model_download_logs/

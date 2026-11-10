@@ -116,6 +116,12 @@ running. See [Configure the Cameras](docs/user-guide/how-to-customize/camera-man
 Streams are published as `rtsp://<HOST_IP>:8555/uav-<camera>` (for example `uav-front-camera`) and the captions of a
 camera on MQTT `uav/caption/<camera>`. Captions need the VLM model (`make vlm-model`, Step 1).
 
+### Step 4 (optional): Watch the cameras in the ground-station dashboard
+
+The [`uav-ground-station`](../uav-ground-station/README.md) web dashboard shows all camera streams, the captions and the
+CPU/GPU/NPU load of this host. Run it on another machine (`make up` in `uav-ground-station`, see its README), open
+`http://<VIZ_HOST_IP>:8080`, enter this host's `HOST_IP` and press **Connect**.
+
 ### Using your own videos
 
 The cameras play looping `.avi` files from `resources/videos/` (`uav_sample_front.avi`,

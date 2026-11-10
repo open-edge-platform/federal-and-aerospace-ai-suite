@@ -14,18 +14,20 @@ the simulated flight controller.
 
 **Requirements:**
 - Deployment mode: `pymavlink`
-- Video source: `realsense` (v4l2src `/dev/video0`, 640×480 BGR)
-- Inference device: `GPU`
+- Video source: `device` (RealSense colour node, `/dev/v4l/by-id/...`, also set as `CAMERA_DEVICE_1` in `.env`)
+- Detection device: `gpu`, captioning `off`
 - Model: `yolo11s`
 - Output directory: `./uav-realsense-stack/`
 
 Produce:
 - `docker-compose-pymavlink.yml` with all required services
-- `configs/config-realsense.json` with a RealSense GPU pipeline
+- `configs/cameras-pymavlink.yaml` with one `device:` camera on `gpu` (selects `uav_camera_gpu`)
+- `configs/config-pymavlink.json` with the `uav_camera_gpu` pipeline copied from
+  `config-pymavlink-realsense.json` (the default file only ships `uav_camera_npu[_gpu]`)
 - `gvapython/telemetry-overlay-pymavlink.py` overlay
-- `scripts/mavlink_pipeline_manager.py`
+- `scripts/mavlink_pipeline_manager.py` and `scripts/camera_config.py`
 - `mavlink-router/main.conf`
-- `Makefile` with model, up/down, start-rtsp targets
+- `Makefile` with model, up/down, check-cameras, start-rtsp targets
 - `.env` template
 - `tests/` pytest suite
 
