@@ -37,7 +37,7 @@ Container names use the prefix `uav-va-` (vision analytics), for example `uav-va
 ### Standalone Mode (pymavlink)
 
 | Service | Image | Role |
-|---------|-------|------|
+| ------- | ----- | ---- |
 | `broker` | `eclipse-mosquitto:2.0.22` | MQTT broker for telemetry and pipeline events |
 | `px4` | `px4io/px4-sitl:latest` | PX4 SITL flight controller simulation |
 | `mavlink-router` | Built from `uav-mission-compute-sdk/infra/px4-sim/mavlink-router` | Routes MAVLink telemetry between PX4 and the pipeline server; publishes UDP `14551` for a remote QGroundControl |
@@ -50,7 +50,7 @@ All services share the `app_network` Docker network and are defined in [`docker-
 ### UAV Mission Compute SDK Mode
 
 | Service | Image | Role |
-|---------|-------|------|
+| ------- | ----- | ---- |
 | `dlstreamer-pipeline-server` | `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc1` | Core inference engine — YOLO11s detection and telemetry overlay; connects to an externally running UAV Mission Compute SDK stack |
 | `nginx` | `nginx:1.27-alpine` | Reverse proxy — the only service that publishes ports to the host |
 
@@ -60,7 +60,7 @@ Defined in [`docker-compose-uavsdk.yml`](docker-compose-uavsdk.yml). Requires th
 ## Prerequisites
 
 | Requirement | Notes |
-|-------------|-------|
+| ----------- | ----- |
 | Docker Engine release 24 or later | [Install guide](https://docs.docker.com/engine/install/) |
 | Docker Compose v2 | Included with Docker Desktop; on Linux OS, install the `docker-compose-plugin` package. Use `docker compose` (space), not `docker-compose` (hyphen). |
 | Intel® GPU with OpenVINO support | Required for `GPU_DEVICE` / `GPU_RENDER_DEVICE` in `.env`. |
@@ -85,6 +85,7 @@ make vlm-model
 `make model` creates a Python virtual environment, downloads YOLO11s, and exports it to OpenVINO FP16 format under `resources/models/yolo11s/`.
 
 `make vlm-model` downloads/converts `OpenGVLab/InternVL2-1B` (override with `VLM_MODEL_ID=...`) to OpenVINO IR for `CPU` and `GPU` (override with `VLM_DEVICE=gpu`, etc.; the VLM does not run on the NPU) under `resources/ov_models/<device>/`. The shipped `configs/cameras-pymavlink.yaml` turns captions on for two cameras, so it is needed for the default setup; skip it only if you switch captioning off for every camera.
+
 ### Step 2: Start a deployment mode
 
 **Standalone Mode (pymavlink)** — self-contained, no external dependencies:
@@ -156,11 +157,11 @@ The RTSP output is H.264 encoded, which is what the `uav-ground-station` relay e
 ## Endpoints
 
 All HTTP(S) traffic is served through the nginx reverse proxy on port 443 (HTTPS,
-self-signed cert; plain HTTP on port 80 redirects to HTTPS. `dlstreamer-pipeline-server`
+self-signed cert; plain HTTP on port 80 redirects to HTTPS). `dlstreamer-pipeline-server`
 and `metrics-manager` no longer publish ports directly to the host.
 
 | Service | URL / Path | Notes |
-|---------|-----------|-------|
+| ------- | ---------- | ----- |
 | DL Streamer Pipeline Server REST API | `https://<HOST_IP>/` | Pipeline control and status, proxied to `dlstreamer-pipeline-server:8081` |
 | RTSP annotated streams | `rtsp://<HOST_IP>:8555/uav-<camera>` | One stream per camera of `configs/cameras-pymavlink.yaml`: detection + telemetry overlay output (H.264; the overlay can be switched off per camera); TCP passthrough via nginx `stream {}` |
 | MQTT scene captions (cameras with captioning on) | `mqtt://<HOST_IP>:1883`, topic `uav/caption/<camera>` | VLM-generated natural-language scene description from the raw (non-overlaid) video; one topic per camera; TCP passthrough via nginx `stream {}` to the `broker` container (e.g. `mosquitto_sub -h <HOST_IP> -t uav/caption/<camera> -v`) |
@@ -174,7 +175,7 @@ and `metrics-manager` no longer publish ports directly to the host.
 > reachable from your LAN by default (needed for QGroundControl/VLC/ffplay on other
 > devices, and for subscribing to MQTT captions remotely) — not just `localhost`. RTSP
 > and MQTT traffic are both unencrypted, and neither the REST API, the RTSP stream, nor
-> the MQTT broker is authenticated. Set `HOST_IP=127.0.0.1` in `.env` to restrict access
+> the MQTT broker are authenticated. Set `HOST_IP=127.0.0.1` in `.env` to restrict access
 > to the local host only.
 
 ## Make Targets

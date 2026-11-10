@@ -289,18 +289,22 @@ and a live telemetry overlay (GPS, altitude, speed, heading).
 
 #### View in the ground-station dashboard (optional)
 
-The `uav-ground-station` web dashboard shows every camera stream, the scene captions and the CPU/GPU/NPU load of this host in one page. Run it on a **separate** machine from the UAV SDK companion-compute board:
+The `uav-ground-station` web dashboard shows every camera stream, the scene captions and the
+CPU/GPU/NPU load of this host in one page. Run it on a **separate** machine from the UAV SDK
+companion-compute board:
 
 ```bash
 cd ../uav-ground-station
 make up
 ```
 
-Then open `http://<VIZ_HOST_IP>:8080`, enter the **UAV host's IP** (`<HOST_IP>` above) and press **Connect**. The camera cards appear once the cameras run (after the drone arms). See the [UAV Ground Station README](../../../../uav-ground-station/README.md).
+Then open `http://<VIZ_HOST_IP>:8080`, enter the **UAV host's IP** (`<HOST_IP>` above) and
+press **Connect**. The camera cards appear once the cameras run (after the drone arms). See
+the [UAV Ground Station README](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/README.md).
 
 > [!IMPORTANT]
 > If you do need to run the dashboard on the **same** host as
-> `uav-mission-compute-sdk` (e.g. a single-machine test), it will conflict
+> `uav-mission-compute-sdk` (e.g., a single-machine test), it will conflict
 > on port `8080`: the SDK's own REST API (`arm`/`takeoff`/`land`/`goto`)
 > already binds `localhost:8080` on that host, which is also
 > `uav-ground-station`'s default `VIZ_PORT`. Before `make up`, set a
@@ -312,19 +316,18 @@ Then open `http://<VIZ_HOST_IP>:8080`, enter the **UAV host's IP** (`<HOST_IP>` 
 > `uav-ground-station`'s own `mediamtx` (`MEDIAMTX_WEBRTC_PORT` /
 > `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT`) uses —
 > a single-machine test will fail to start with a `port is already
-> allocated` error unless one side is moved, e.g. add to
+> allocated` error unless one side is moved; to solve this, for example, add to
 > `uav-ground-station/.env`: `MEDIAMTX_WEBRTC_PORT=8890` and
 > `MEDIAMTX_WEBRTC_ICE_UDP_PORT=8190` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT=8190`.
 >
 > `make up` shows video, captions, Flight Summary, and per-host metrics only.
 > For the dashboard's **Search Videos** button and natural-language search
 > over indexed footage, run `make up-vss` instead of `make up` (it brings up
-> everything `make up` does, plus 8 extra VSS containers) -- it needs its own
+> everything `make up` does, plus 8 extra VSS containers) — it needs its own
 > required `.env` variables first (MinIO/Postgres credentials, an embedding
-> model, and a detection model). See [VSS search in the UAV Ground Station
-> README](../../../../uav-ground-station/README.md#vss-search), and
-> [tune VSS search results](../how-to-customize/search-tuning/vss-search-tuning.md)
-> once it's running.
+> model, and a detection model). See [VSS search in the UAV Ground Station README](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/README.md#vss-search),
+> and [tune the VSS search results](../how-to-customize/search-tuning/vss-search-tuning.md)
+> once it is running.
 
 **Stop an individual pipeline** (only needed if you started one manually via Option B in [Step 6](#6-start-inference-pipelines)):
 
