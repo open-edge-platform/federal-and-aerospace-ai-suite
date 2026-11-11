@@ -22,9 +22,9 @@ VLM_WEIGHT_FORMAT ?= int8
 # demand and cached locally rather than vendored, so there's a single source of
 # truth. Pinned to a commit for reproducibility — bump VLM_DOWNLOAD_SCRIPT_REF to
 # pick up upstream changes.
-VLM_DOWNLOAD_SCRIPT_REPO ?= open-edge-platform/edge-ai-suites
-VLM_DOWNLOAD_SCRIPT_REF  ?= 3e8fea635ef8e8484dbd18a35238caa90e65f111
-VLM_DOWNLOAD_SCRIPT_PATH := metro-ai-suite/live-video-analysis/live-video-captioning/model_download_scripts/download_models.sh
+VLM_DOWNLOAD_SCRIPT_REPO ?= open-edge-platform/metro-ai-suites
+VLM_DOWNLOAD_SCRIPT_REF  ?= a6d9f1e85fc20c04babe7f5dedea3215fd57e9af
+VLM_DOWNLOAD_SCRIPT_PATH := live-video-analysis/live-video-captioning/model_download_scripts/download_models.sh
 VLM_DOWNLOAD_SCRIPT_URL  ?= https://raw.githubusercontent.com/$(VLM_DOWNLOAD_SCRIPT_REPO)/$(VLM_DOWNLOAD_SCRIPT_REF)/$(VLM_DOWNLOAD_SCRIPT_PATH)
 VLM_DOWNLOAD_SCRIPT      := $(CURDIR)/.cache/download_models.sh
 

@@ -88,13 +88,25 @@ change between releases; do not hardcode a remembered value.
    - Bind address: LAN-reachable (`VIZ_HOST_IP`/`VIZ_PUBLIC_HOST` = this
      machine's IP, `make init` auto-detects it) or loopback-only
      (`127.0.0.1`, safer if this host is not on a trusted/isolated network)? [LAN]
-   - If VSS requested: embedding model [`CLIP/clip-vit-b-32`], detection
-     model [`OpenVINO/yolox_s-int8-ov`], and device for ingest/detection/query
-     embedding (`CPU`/`GPU`/`NPU`, independently) [`CPU` for all three].
+   - If VSS requested: embedding model [`CLIP/clip-vit-b-32`, offered by
+     `make init`'s download-consent prompt — only ask if they want a
+     different model], detection model [`OpenVINO/yolox_s-int8-ov`, same
+     prompt — only ask if they want a different model], and device for
+     ingest/detection/query embedding (`CPU`/`GPU`/`NPU`, independently)
+     [`CPU` for all three]. `VSS_MINIO_*`/`VSS_POSTGRES_*` credentials need no
+     question at all — `make init` auto-generates them; only mention this if
+     the user wants to set their own instead.
 3. Read `README.md`/`.env.example` for the exact current variable names and
    defaults before writing `.env`.
-4. Run `make init`, edit `.env` for the choices above, then `make up` (or
-   `make up-vss`).
+4. Run `make init` (auto-generates VSS credentials and auto-detects host
+   IP/GPU/NPU; for the VSS models it prints the two Hugging Face model names
+   plus their license pages and asks `Pre-fill .env with these default models
+   now? [y/N]` before writing anything — relay that prompt/its answer to the
+   user rather than silently accepting; `ACCEPT_VSS_MODELS=y` answers yes
+   non-interactively if they've already said so). Edit `.env` only for
+   choices that differ from the defaults above (or if they declined the
+   prompt and need `VSS_EMBEDDING_MODEL`/`DATAPREP_DETECTION_MODEL` set by
+   hand), then `make up` (or `make up-vss`).
 5. Verify per the guardrails/completion criteria below.
 
 ## Parameter Validation (enforce BEFORE editing `.env` or starting the stack)
@@ -104,10 +116,10 @@ change between releases; do not hardcode a remembered value.
 | `VIZ_HOST_IP` / `VIZ_PUBLIC_HOST` | valid IP/hostname, or `127.0.0.1` | binds the dashboard/mediamtx ports; `0.0.0.0` needs `VIZ_PUBLIC_HOST` set separately since mediamtx can't advertise `0.0.0.0` as a WebRTC candidate |
 | `VIZ_COMPANION_HOST` | optional; IP/hostname, no scheme/port | only pre-fills the UI field — never a hard dependency at stack-start time |
 | VSS mode | only requested if the user actually wants natural-language search; never default to it | 8 extra containers + a first-run multi-hundred-MB-to-~1.6GB model download |
-| `VSS_MINIO_USER` | length ≥ 3 | MinIO refuses to start otherwise |
-| `VSS_MINIO_PASSWORD` | length ≥ 8 | MinIO refuses to start otherwise |
-| `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | non-empty | `make up-vss` fails fast (one message listing everything missing) otherwise |
-| `VSS_EMBEDDING_MODEL` / `DATAPREP_DETECTION_MODEL` | non-empty, no default | `make up-vss` fails fast otherwise |
+| `VSS_MINIO_USER` | length ≥ 3 | MinIO refuses to start otherwise; `make init` auto-generates a valid value, don't ask the user for one unless they want to override it |
+| `VSS_MINIO_PASSWORD` | length ≥ 8 | MinIO refuses to start otherwise; `make init` auto-generates a valid value (random, via `openssl rand`), don't ask the user for one unless they want to override it |
+| `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | non-empty | `make init` auto-generates these too; `make up-vss` fails fast (one message listing everything missing) only if `.env` was hand-edited/created without running `make init` |
+| `VSS_EMBEDDING_MODEL` / `DATAPREP_DETECTION_MODEL` | non-empty | these are downloaded from Hugging Face on first `make up-vss`, so `make init` only pre-fills `CLIP/clip-vit-b-32` / `OpenVINO/yolox_s-int8-ov` (the defaults declared in `.env.example`) after an explicit y/N download-consent prompt (`ACCEPT_VSS_MODELS=y` to skip it); if declined, both are left blank and `make up-vss` fails fast listing them until set manually |
 | `VSS_INGEST_EMBEDDING_DEVICE` / `VSS_DETECTION_DEVICE` / `VSS_QUERY_EMBEDDING_DEVICE` | `CPU`/`GPU`/`NPU` | GPU/NPU need `GPU_DEVICE`/`GPU_RENDER_DEVICE`/`NPU_DEVICE` and `VIDEO_GROUP_ID`/`RENDER_GROUP_ID` already set (`make init` auto-detects) |
 
 ## Execution Guardrails
@@ -134,14 +146,28 @@ change between releases; do not hardcode a remembered value.
   otherwise compose fails with "port is already allocated". The dashboard URL
   then uses that `VIZ_PORT`, not `8080`.
 - Never fabricate/accept committed `VSS_MINIO_PASSWORD`/`VSS_POSTGRES_PASSWORD`
-  values into any tracked file — these live only in the gitignored `.env`;
-  ask the user for them or generate a strong random value and show it once.
+  values into any tracked file — these live only in the gitignored `.env`.
+  `make init` already auto-generates a strong random value for both
+  passwords (plus fixed usernames) on first run and never prints them to the
+  console; don't ask the user for these unless they explicitly want to set
+  their own instead of the generated default.
+- Never let `VSS_EMBEDDING_MODEL`/`DATAPREP_DETECTION_MODEL` get downloaded
+  without the user's explicit knowledge — this is why `make init` shows both
+  Hugging Face model names and their license pages and requires a `y`/`N`
+  answer (`ACCEPT_VSS_MODELS=y` only for a user who has already agreed, e.g.
+  scripted/CI deploys) before writing `VSS_EMBEDDING_MODEL=CLIP/clip-vit-b-32`
+  / `DATAPREP_DETECTION_MODEL=OpenVINO/yolox_s-int8-ov` into `.env`. Relay
+  that prompt to an interactive user instead of answering it yourself; if
+  they decline (or already have), tell them how to set their own values by
+  hand (`sed -i` one-liners are printed, or edit `.env` directly) before
+  `make up-vss`.
 - Before `make up-vss`, confirm all six `VSS_REQUIRED_VARS`
   (`VSS_MINIO_USER`, `VSS_MINIO_PASSWORD`, `VSS_POSTGRES_USER`,
   `VSS_POSTGRES_PASSWORD`, `VSS_EMBEDDING_MODEL`, `DATAPREP_DETECTION_MODEL`)
-  are set — `make up-vss`'s own `_check_vss_env` target fails fast with a
-  single message if not, but tell the user proactively so they aren't
-  guessing from a Makefile error.
+  are set — normally true automatically once `make init` has run.
+  `make up-vss`'s own `_check_vss_env` target fails fast with a single
+  message if not (e.g. `.env` was hand-created without `make init`), but
+  tell the user proactively so they aren't guessing from a Makefile error.
 - `make up-vss`'s first run downloads the embedding/detection models into
   the `vss-ov-models`/`vss-yolox-models` volumes — this can take several
   minutes and needs network/proxy access exactly like `make vlm-model` in
