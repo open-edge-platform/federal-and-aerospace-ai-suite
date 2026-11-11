@@ -1,9 +1,18 @@
-# How-to Guides
+<!--hide_directive
+```{eval-rst}
+.. meta::
+   :description: Guides for configuring the Moxa Time-Sensitive Networking (TSN) switch and the Basler cameras.
+   :keywords: how-to guides, Moxa TSN switch, VLAN, PTP, gPTP, IEEE 802.1Qbv, Basler cameras, Scenescape
+```
+hide_directive-->
 
-Reference guides for the pieces [Get started](./get-started.md) relies on. You only need them to
-change or repair the setup.
+# How-To Guides
 
-## Moxa TSN switch
+This section collects the guides for configuring the Moxa Time-Sensitive Networking (TSN)
+switch and the Basler cameras that are used in [Get started](./get-started.md).
+You need these guides only when you want to change or repair your setup.
+
+## Moxa TSN Switch
 
 - [Configure the Moxa TSN switch](./how-to-guides/moxa/configure-moxa-switch.md)
 - [Configure VLANs on the Moxa switch](./how-to-guides/moxa/configure-vlan-on-moxa-switch.md)
@@ -12,10 +21,10 @@ change or repair the setup.
 - [Configure PTP, IEEE 802.1AS (gPTP)](./how-to-guides/moxa/configure-ptp-gptp.md)
 - [Enable TSN traffic shaping (IEEE 802.1Qbv)](./how-to-guides/moxa/enable-tsn-traffic-shaping.md)
 
-## Basler cameras
+## Basler Cameras
 
 - [Configure Basler PTP timestamps](./how-to-guides/basler/configure-basler-ptp-timestamps.md)
-- [Integrate Basler cameras with SceneScape](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md)
+- [Integrate Basler cameras with Scenescape](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md)
 
 <!--hide_directive
 :::{toctree}
