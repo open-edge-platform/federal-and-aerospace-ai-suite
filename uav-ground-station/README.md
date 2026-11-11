@@ -157,18 +157,20 @@ All configuration is via `.env` (see `.env.example`):
 | `VIZ_COMPANION_HOST` | `127.0.0.1` | UAV Companion Compute IP field |
 | `VIZ_CAMERA_ORDER` | `front,bottom,back` | Camera card order, by a word in the stream name; unlisted cameras follow alphabetically |
 | `VIZ_REMOTE_HTTPS_PORT` | `443` | UAV host's nginx HTTPS port |
+| `VIZ_REMOTE_TLS_VERIFY` | `false` | Set `true` to verify the UAV host's TLS certificate (it is self-signed by default, so off keeps it working out of the box; a warning is logged) |
+| `VIZ_REMOTE_TLS_CA_BUNDLE` | empty (system CAs) | Used when verification is on: PEM file (under `configs/certs/`, as `/certs/<file>.pem`) with the UAV hosts' certificates |
 | `VIZ_REMOTE_MQTT_PORT` | `1883` | UAV host's nginx MQTT passthrough port |
 | `VIZ_REMOTE_RTSP_PORT` | `8555` | UAV host's raw RTSP port, pulled by the mediamtx relay |
 | `VIZ_PUBLIC_HOST` | `127.0.0.1` (`make init` sets the host's LAN IP) | Address browsers use to reach this machine; advertised as the WebRTC ICE candidate. Set it when `VIZ_HOST_IP` is `0.0.0.0` |
 | `MEDIAMTX_WEBRTC_PORT` / `MEDIAMTX_WEBRTC_ICE_UDP_PORT` / `MEDIAMTX_WEBRTC_ICE_TCP_PORT` | `8889` / `8189` / `8189` | Published WebRTC (WHEP) port and ICE UDP/TCP ports of the relay |
 | `GPU_DEVICE` / `GPU_RENDER_DEVICE` / `NPU_DEVICE` | `/dev/null` (`make init` auto-detects) | Devices passed to `gs-metrics-manager` for this machine's utilization panel |
-| `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(required with `make up-vss`)_ | Credentials for the VSS overlay's MinIO and Postgres |
+| `VSS_MINIO_USER` / `VSS_MINIO_PASSWORD` / `VSS_POSTGRES_USER` / `VSS_POSTGRES_PASSWORD` | _(`make init` auto-generates: a fixed username + password)_ | Credentials for the VSS overlay's MinIO and Postgres -- internal to this stack only, edit `.env` yourself before `make up-vss` for different values |
 | `VSS_REGISTRY` / `VSS_TAG` | `intel/` / `2026.3.0-rc1` | Registry and tag of the VSS images used by `make up-vss` |
 | `VSS_ENABLED` / `VSS_MANAGER_URL` / `VSS_DATASTORE_URL` | `false` / `http://host.docker.internal:12345/manager` / `.../datastore` | Only for a VSS deployed separately; `make up-vss` sets them itself |
 | `VSS_MANAGER_PORT` | `3001` | Host port (bound to `VIZ_HOST_IP`) for the VSS pipeline-manager API |
 | `VIDEO_GROUP_ID` / `RENDER_GROUP_ID` | `44` / `992` | Host's `video`/`render` group ids (`getent group video render`; `make init` does not set them), needed for GPU/NPU VSS devices |
-| `VSS_EMBEDDING_MODEL` | _(required with `make up-vss`)_ | Embedding model VSS uses for frames and queries, for example `CLIP/clip-vit-b-32` |
-| `DATAPREP_DETECTION_MODEL` | _(required with `make up-vss`)_ | Object detection model VSS dataprep uses for crop extraction. Must be a Hugging Face OpenVINO Model API repo in the `OpenVINO/` namespace, for example `OpenVINO/yolox_s-int8-ov` |
+| `VSS_EMBEDDING_MODEL` | `CLIP/clip-vit-b-32` (`make init` pre-fills this only after confirming the download prompt, `ACCEPT_VSS_MODELS=y` to skip it) | Embedding model VSS uses for frames and queries; edit `.env` before `make up-vss` for a different model |
+| `DATAPREP_DETECTION_MODEL` | `OpenVINO/yolox_s-int8-ov` (`make init` pre-fills this only after confirming the download prompt, `ACCEPT_VSS_MODELS=y` to skip it) | Object detection model VSS dataprep uses for crop extraction. Must be a Hugging Face OpenVINO Model API repo in the `OpenVINO/` namespace |
 | `VSS_ENABLE_OBJECT_DETECTION` | `true` | Run object-detection crops alongside embedding during ingestion |
 | `VSS_INGEST_EMBEDDING_DEVICE` / `VSS_DETECTION_DEVICE` / `VSS_QUERY_EMBEDDING_DEVICE` | `CPU` | Devices for VSS indexing, object detection and query embedding |
 | `VSS_FRAME_INTERVAL` | `15` | Live ingest embeds one frame every N frames |
@@ -202,16 +204,24 @@ multimodal-embedding-serving, vector-retriever, vdms-vector-db, postgres,
 minio; container names `uav-gs-vss-*`). With the default `make up` the search UI is hidden
 and the search routes return 404.
 
-1. Set the required `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials (choose your own; MinIO needs a user of at least 3
-   and a password of at least 8 characters, or its container keeps restarting), plus
-   `VSS_EMBEDDING_MODEL` and `DATAPREP_DETECTION_MODEL` (no defaults), and,
-   optionally, devices in `.env` -- see `.env.example`. For example:
+1. `make init` (run once, on first setup) already takes care of auto-generating
+   the `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials (a fixed username and a
+   random password -- these are internal to this stack's own MinIO/Postgres
+   containers only, never exposed outside the docker network). For
+   `VSS_EMBEDDING_MODEL` / `DATAPREP_DETECTION_MODEL` it shows the two
+   Hugging Face models that would be downloaded (and their license pages) and
+   asks for confirmation -- nothing is downloaded or pre-filled into `.env`
+   without saying yes.
+
+   Only edit `.env` by yourself if you want different credentials or
+   declined the model prompt -- see `.env.example` for the full set of VSS
+   variables (optional devices included):
 
    ```bash
-   VSS_MINIO_USER=minioadmin
-   VSS_MINIO_PASSWORD=<at least 8 characters>
-   VSS_POSTGRES_USER=vssuser
-   VSS_POSTGRES_PASSWORD=<your password>
+   VSS_MINIO_USER=vss-admin
+   VSS_MINIO_PASSWORD=<random characters>
+   VSS_POSTGRES_USER=vss
+   VSS_POSTGRES_PASSWORD=<random characters>
    VSS_EMBEDDING_MODEL=CLIP/clip-vit-b-32
    DATAPREP_DETECTION_MODEL=OpenVINO/yolox_s-int8-ov
    ```
@@ -219,6 +229,12 @@ and the search routes return 404.
    > [!IMPORTANT]
    > `DATAPREP_DETECTION_MODEL` must be a Hugging Face **OpenVINO Model API**
    > repo under the `OpenVINO/` namespace (`OpenVINO/yolox_s-int8-ov` above).
+   > If `.env` was created by hand instead of via `make init` and any of the
+   > six `VSS_MINIO_*`/`VSS_POSTGRES_*`/`VSS_EMBEDDING_MODEL`/
+   > `DATAPREP_DETECTION_MODEL` vars are left blank, `make up-vss` fails fast
+   > with one message listing everything missing (MinIO also needs a user of
+   > at least 3 and a password of at least 8 characters, or its container
+   > keeps restarting).
 2. `make up-vss` (base + mediamtx + VSS overlay; use this instead of plain
    `make up` whenever Live Natural Language Search is wanted -- `make up`
    alone never starts the 8 VSS containers or exposes the Search UI). The
@@ -347,9 +363,17 @@ caption evidence around the same time window.
 
 ## Notes
 
-- The UAV host's TLS certificate is self-signed; the backend skips
-  verification when calling it (trusted-LAN tool posture, consistent with the
-  `-k`/`--insecure` curl examples in `uav-vision-analytics`'s own README).
+- The UAV host's TLS certificate is self-signed, so the backend does not
+  verify it by default (trusted-LAN tool posture, consistent with the
+  `-k`/`--insecure` curl examples in `uav-vision-analytics`'s own README) and
+  logs a warning at startup. To verify it, set `VIZ_REMOTE_TLS_VERIFY=true`,
+  copy the UAV's `uav-vision-analytics/configs/nginx/ssl/server.crt`
+  (concatenate several for several UAVs) into `configs/certs/` and set
+  `VIZ_REMOTE_TLS_CA_BUNDLE=/certs/<file>.pem` in `.env`. The certificate must
+  list the address you connect to in its subject alternative names; `make pymav-up`
+  / `make uavsdk-up` in `uav-vision-analytics` generate it (when missing) with
+  `localhost`, `127.0.0.1` and the host's `HOST_IP`; delete
+  `configs/nginx/ssl/server.*` there to regenerate an old one.
 - This project makes outbound, read-only requests to whatever host you enter;
   it never starts/stops pipelines on the remote stack.
 

@@ -194,6 +194,64 @@ ffmpeg -rtsp_transport tcp \
 +image: px4io/px4-sitl@sha256:01866d912ac22ca6119a996b830cf628a6d47dfb60fdccc41cd9f44b62935a44
 ```
 
+### `make pymav-up` / `make uavsdk-up` fails — `address already in use` (port `1883`, `14551`, etc.)
+
+**Symptom:**
+
+```text
+Error response from daemon: failed to set up container networking: driver failed
+programming external connectivity on endpoint mqtt-broker (...): failed to bind
+host port 0.0.0.0:1883/tcp: address already in use
+make: *** [Makefile:91: up-sim-camera] Error 1
+```
+
+and killing the process holding the port (`sudo lsof -i :1883`, then `sudo kill
+-9 <PID>`) only has it come right back under a new PID a moment later.
+
+**Cause:** This is **not** a container cleanup problem — a prior **standalone
+deployment** installed a host-level service (for example a `mosquitto`
+systemd unit) that is still enabled and bound to the same port the compose
+stack wants to publish (`1883` for MQTT, `14551` for mavlink-router, etc.).
+A plain `kill`/`kill -9` only kills the current process; `systemd`'s restart
+policy immediately respawns it, which looks like "cleanup isn't happening"\
+but is actually the host service winning the race against Docker every time.
+
+**Resolution:**
+
+1. Identify the service, not just the PID:
+
+   ```bash
+   sudo lsof -i :1883
+   systemctl status mosquitto --no-pager   # substitute the actual service name
+   systemctl is-enabled mosquitto
+   ```
+
+2. If it's a leftover host service from a prior standalone install (not a
+   `docker-proxy` entry for one of this stack's own containers), disable and
+   mask it so it can't be auto-started again, instead of just killing the
+   process:
+
+   ```bash
+   sudo systemctl disable --now mosquitto
+   sudo systemctl mask mosquitto
+   ```
+
+3. Confirm the port is free, then re-run the `make` target:
+
+   ```bash
+   sudo lsof -i :1883   # expect no output
+   make up-sim-camera
+   ```
+
+> [!TIP]
+> Before switching a machine from standalone mode to SDK/containerized mode
+> (or back), explicitly uninstall/disable any host-level services the
+> standalone deployment installed. Otherwise this same class of issue can
+> recur for *any* port the two deployment modes both use — not just MQTT, but
+> MediaMTX/WebRTC (`8889`/`8189`), the Viz UI (`8080`), or mavlink-router
+> (`14551`, see [QGroundControl shows "not connected"](#qgroundcontrol-shows-not-connected--failed-to-bind-udp-socket-to-port-14551)
+> below) — whichever one happens to collide on the machine.
+
 ## Pipelines
 
 ### REST API calls to `https://<HOST_IP>/...` fail or get a proxy error
@@ -554,6 +612,57 @@ loader error; revert `captioning.model` and re-arm to recover. The required
 file set is listed in
 [Change the Captioning Model — Required format](../how-to-customize/model-and-video-management/vlm-model.md#required-format).
 
+### `make vlm-model` fails — `Service failed to start within 180s`
+
+**Symptom:**
+
+```text
+INFO: Starting container: model-download-ephemeral (pulling image if needed)...
+INFO: Service URL: http://localhost:32768
+INFO: Waiting for service to become ready (timeout: 180s)...
+ERROR: Service failed to start within 180s.
+ERROR: Container logs:
+ ...
+ Using Python 3.12.15 environment at: .venv-openvino
+   Updating https://github.com/huggingface/optimum-intel.git (d4dd21a...)
+INFO: Stopping container model-download-ephemeral...
+ERROR LOG: .../.model_download_logs/model_download_<timestamp>.log
+make: *** [Makefile:199: vlm-model] Error 1
+```
+
+**Cause:** `make vlm-model` runs `.cache/download_models.sh`, which on every
+invocation fetches a separate helper script, `get_model.sh`, fresh from
+`edge-ai-libraries` (`main` branch) into a temp file and runs it immediately
+— nothing from that helper is cached or vendored locally. That helper starts
+the `model-download-ephemeral` container and polls `/health` for up to a
+**hardcoded, non-configurable 180 seconds** before giving up. The container
+installs a Python venv and builds `optimum-intel` from its GitHub source on
+every single run (there is no persisted pip/venv cache across runs — the
+container is started with `docker run --rm` and no cache volume), so on a
+slow network or corporate proxy/mirror this routinely takes longer than
+180s, especially on the first run on a given machine.
+
+**Resolution:** `download_models.sh` already supports pointing at a
+different helper script via `MODEL_DOWNLOAD_EPHEMERAL_SCRIPT_URL` (it falls
+back to the upstream URL only if this is unset) — including a local file,
+since `curl`/this variable also accepts a `file://` URL. Pre-fetch, patch,
+and point at it once:
+
+```bash
+curl -fsSL \
+  https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/main/microservices/model-download/scripts/get_model.sh \
+  -o /tmp/get_model_patched.sh
+
+# Raise the health-check timeout from 180s to, e.g., 900s
+sed -i 's/^HEALTH_TIMEOUT=180/HEALTH_TIMEOUT=900/' /tmp/get_model_patched.sh
+
+MODEL_DOWNLOAD_EPHEMERAL_SCRIPT_URL="file:///tmp/get_model_patched.sh" make vlm-model
+```
+
+Re-run with the same `MODEL_DOWNLOAD_EPHEMERAL_SCRIPT_URL` export set for
+any later `make vlm-model` / `make model` call on that machine until the
+upstream helper script changes.
+
 ### Captions arrive slowly or stop
 
 The VLM takes longer than the 5 s frame interval per caption. Reduce
@@ -699,6 +808,69 @@ it contains newer fixes not yet in the stable release:
 > [!CAUTION]
 > The daily build is pre-release software and may be less stable
 > overall. Only use it if the Stable v5.1 release does not work for your setup.
+
+### QGroundControl shows "not connected" — `Failed to bind UDP socket to port 14551`
+
+See [QGroundControl](./qgroundcontrol.md) for the primary installation instructions.
+
+**Symptom:** QGroundControl never shows a connected vehicle, and its logs show:
+
+```text
+Failed to bind UDP socket to port 14551 - Comms.UDPLink - (UDPWorker::connectLink:353)
+    40.200 Warning: Communication error: "The bound address is already in use" - Comms.UDPLink - (UDPLink::_onErrorOccurred:582)
+```
+
+**Cause:** Port `14551` is already in use by something else on the host, so
+QGroundControl's own UDP listener fails to bind to it. This has two common
+root causes, and it's worth checking both:
+
+1. **`14551` is the mavlink-router container's published port**, not a port
+   QGroundControl should be trying to listen on itself. If QGroundControl's
+   comm link is configured with **Listening Port = 14551**, it is colliding
+   with the `uav-va-mavlink-router` container, which already binds host
+   `14551` (check with `docker ps --format '{{.Names}}\t{{.Ports}}' | grep
+   mavlink-router`). QGroundControl's link should instead be a UDP client
+   that *sends to* `<HOST_IP>:14551` (mavlink-router's endpoint) while
+   listening on a different local port of its own (for example `14552`).
+2. **A leftover `mavlink-routerd` process from a previous deployemnt might
+   still running on the host** and never got cleaned up — the same class of
+   stale-process issue as [`address already in use` on `make pymav-up`/`make uavsdk-up`](#make-pymav-up--make-uavsdk-up-fails--address-already-in-use-port-1883-14551-etc).
+   Check for it with:
+
+   ```bash
+   sudo ss -ulpn | grep 14551
+   # or
+   sudo lsof -i :14551
+   ```
+
+   If the process is an old `mavlink-routerd` (not a `docker-proxy` entry for
+   the container), it's a leftover from a prior standalone install and safe
+   to stop:
+
+   ```bash
+   sudo kill <PID>
+   ```
+
+**Resolution:**
+
+1. Stop QGroundControl.
+2. Edit its comm link so the **Listening Port** no longer collides with
+   `14551` (used by mavlink-router) — for example set it to `14552` in
+   `~/.config/QGroundControl/QGroundControl.ini`:
+
+   ```bash
+   sed -i 's/^Link0\\port=14551/Link0\\port=14552/' \
+     ~/.config/QGroundControl/QGroundControl.ini
+   ```
+
+   (Equivalently, in the UI: **Application Settings → Comm Links → \<your
+   link\> → Edit**, change **Listening Port** to `14552`, leaving the
+   **Target Host**/`14551` pointed at the UAV host unchanged.)
+3. Clean up any leftover standalone-mode `mavlink-routerd` process still
+   holding `14551` on the host, per the **Cause** section above.
+4. Restart QGroundControl. It should now bind its own listening socket
+   without conflict and begin receiving the MAVLink heartbeat/telemetry
+   stream from the containerized mavlink-router.
 
 ### RTSP video stream does not play on a remote Windows machine (system proxy configured)
 

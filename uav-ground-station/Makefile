@@ -49,6 +49,39 @@ init: ## Create .env from template if missing, and auto-detect host IP and GPU/N
 		else \
 			echo "⚠  No Intel NPU found at /dev/accel/ — leaving NPU_DEVICE=/dev/null (gs-metrics-manager won't report NPU usage)."; \
 		fi; \
+		echo ""; \
+		echo "[init] Generating VSS overlay credentials (MinIO/Postgres are internal to this"; \
+		echo "       stack only, never exposed beyond the docker network."; \
+		echo "       see .env, or edit it yourself with your own values before 'make up-vss'):"; \
+		sed -i "s|^VSS_MINIO_USER=.*|VSS_MINIO_USER=vss-admin|" .env; \
+		sed -i "s|^VSS_MINIO_PASSWORD=.*|VSS_MINIO_PASSWORD=$$(openssl rand -hex 16)|" .env; \
+		sed -i "s|^VSS_POSTGRES_USER=.*|VSS_POSTGRES_USER=vss|" .env; \
+		sed -i "s|^VSS_POSTGRES_PASSWORD=.*|VSS_POSTGRES_PASSWORD=$$(openssl rand -hex 16)|" .env; \
+		echo "   ✅ VSS_MINIO_USER / VSS_MINIO_PASSWORD / VSS_POSTGRES_USER / VSS_POSTGRES_PASSWORD set"; \
+		echo ""; \
+		echo "[init] VSS downloads two Hugging Face models the first time 'make up-vss' runs"; \
+		echo "       (by the vss-dataprep/vss-embedding containers), subject to their"; \
+		echo "       publishers' license terms:"; \
+		echo "         VSS_EMBEDDING_MODEL=CLIP/clip-vit-b-32"; \
+		echo "         DATAPREP_DETECTION_MODEL=OpenVINO/yolox_s-int8-ov"; \
+		if [ "$(ACCEPT_VSS_MODELS)" = "y" ]; then ANSWER=y; \
+		else printf "Pre-fill .env with these default models now? [y/N]: "; read ANSWER || ANSWER=N; fi; \
+		case "$$ANSWER" in \
+			y|Y|yes|YES) \
+				sed -i "s|^VSS_EMBEDDING_MODEL=.*|VSS_EMBEDDING_MODEL=CLIP/clip-vit-b-32|" .env; \
+				sed -i "s|^DATAPREP_DETECTION_MODEL=.*|DATAPREP_DETECTION_MODEL=OpenVINO/yolox_s-int8-ov|" .env; \
+				echo "   ✅ VSS_EMBEDDING_MODEL / DATAPREP_DETECTION_MODEL set to the defaults above"; \
+				;; \
+			*) \
+				echo "   ⚠  Skipped -- VSS_EMBEDDING_MODEL / DATAPREP_DETECTION_MODEL left blank in .env."; \
+				echo "      Before running 'make up-vss', set your own models, either by editing .env"; \
+				echo "      directly or with:"; \
+				echo "        sed -i 's|^VSS_EMBEDDING_MODEL=.*|VSS_EMBEDDING_MODEL=<org>/<model>|' .env"; \
+				echo "        sed -i 's|^DATAPREP_DETECTION_MODEL=.*|DATAPREP_DETECTION_MODEL=OpenVINO/<model>|' .env"; \
+				echo "      then run 'make up-vss' -- 'make up' (no VSS) needs no change. _check_vss_env"; \
+				echo "      fails fast with a clear message if either is still blank at that point."; \
+				;; \
+		esac; \
 	fi
 
 build: ## Force a rebuild of the viz-backend image (up and up-vss rebuild it only when missing or backend/ changed)
