@@ -107,7 +107,7 @@ If the proxy does TLS inspection, install its root CA into the host's trust
 store (e.g., `sudo update-ca-certificates` on Ubuntu, after copying the CA
 into `/usr/local/share/ca-certificates/`) before retrying. Never use `curl
 -k`/`--insecure` for these downloads — that flag is only safe against this
-app's own self-signed nginx certificate (see
+application's own self-signed nginx certificate (see
 [REST API calls fail or get a proxy error](#rest-api-calls-to-httpshost_ip-fail-or-get-a-proxy-error)
 below), never against an external download host.
 
@@ -228,7 +228,7 @@ curl -k -s --noproxy '*' "https://${HOST_IP}/pipelines/status"
 
 ### `/pipelines/status` keeps old pipeline entries after they were stopped
 
-**Symptom:** A benchmark/monitoring script that counts entries in
+**Symptom:** A benchmark or monitoring script that counts entries in
 `GET /pipelines/status` reports more pipelines than are actually running, or
 keeps counting a pipeline that was `DELETE`d or disarmed minutes ago.
 
@@ -273,8 +273,7 @@ vehicle's armed state.
 **Resolution:** For interactive use, run `make start-rtsp` directly in a
 terminal you keep open (or a `screen`/`tmux` session). For scripted/CI
 validation where there is no vehicle to arm, skip the manager's
-wait-for-MAVLink loop entirely and start every enabled camera once, right
-now, with:
+wait-for-MAVLink loop entirely and start every enabled camera once, immediately, with:
 
 ```bash
 docker exec -d <dlstreamer-pipeline-server container name> \
@@ -282,7 +281,7 @@ docker exec -d <dlstreamer-pipeline-server container name> \
 ```
 
 (`docker exec -d` detaches immediately and needs no tty.) Confirm with
-`make cameras-status`, not by trusting the launch command's own exit code.
+`make cameras-status`, do not rely on the launch command's own exit code.
 
 ### `make start-rtsp` fails in uav-mission-compute-sdk mode — `ConnectionRefusedError` / RTSP `404 Not Found`
 
@@ -308,7 +307,7 @@ cannot reach loopback-bound ports on the host.
 `HOST_IP=0.0.0.0` in `.env` **before** starting the stack:
 
 ```bash
-cd edge-ai-suites/federal-and-aerospace-ai-suite/uav-mission-compute-sdk
+cd federal-and-aerospace-ai-suite/uav-mission-compute-sdk
 sed -i 's|^HOST_IP=.*|HOST_IP=0.0.0.0|' .env
 make down && make up-sim-camera
 ```

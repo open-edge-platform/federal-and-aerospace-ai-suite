@@ -171,7 +171,7 @@ or lower `max_new_tokens` if captions fall behind.
 > Try Gemma 4 on one camera first. On an Intel Core Ultra iGPU it takes about 1 minute to load and
 > about 17-27 s per caption. Loaded on the GPU next to two other GPU VLM instances and GPU detection,
 > it failed with `CL_OUT_OF_RESOURCES` and left the pipeline server unresponsive
-> (`docker restart uav-va-dlstreamer-pipeline-server` recovers).
+> (use `docker restart uav-va-dlstreamer-pipeline-server` to recover).
 
 ## Apply it
 
