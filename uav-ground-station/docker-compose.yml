@@ -52,6 +52,8 @@ services:
       - REMOTE_HTTPS_PORT=${VIZ_REMOTE_HTTPS_PORT:-443}
       - REMOTE_MQTT_PORT=${VIZ_REMOTE_MQTT_PORT:-1883}
       - REMOTE_RTSP_PORT=${VIZ_REMOTE_RTSP_PORT:-8555}
+      - REMOTE_TLS_VERIFY=${VIZ_REMOTE_TLS_VERIFY:-false}
+      - REMOTE_TLS_CA_BUNDLE=${VIZ_REMOTE_TLS_CA_BUNDLE:-}
       # "Live Natural Language Search" is off (and hidden) unless the
       # docker-compose-vss.yml overlay is added, which sets VSS_ENABLED=true
       # and points the URLs at its own VSS containers. To use a full VSS
@@ -79,6 +81,10 @@ services:
       # Lets the default VSS_*_URL reach a VSS stack published on this same
       # machine's host ports.
       - "host.docker.internal:host-gateway"
+    volumes:
+      # Put the UAV hosts' server.crt files in configs/certs/ (concatenated
+      # PEM) and set VIZ_REMOTE_TLS_CA_BUNDLE=/certs/<file>.pem.
+      - ./configs/certs:/certs:ro
     ports:
       - "${VIZ_HOST_IP:-127.0.0.1}:${VIZ_PORT:-8080}:8080"
     depends_on:

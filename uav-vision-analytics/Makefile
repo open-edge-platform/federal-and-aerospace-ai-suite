@@ -22,9 +22,9 @@ VLM_WEIGHT_FORMAT ?= int8
 # demand and cached locally rather than vendored, so there's a single source of
 # truth. Pinned to a commit for reproducibility — bump VLM_DOWNLOAD_SCRIPT_REF to
 # pick up upstream changes.
-VLM_DOWNLOAD_SCRIPT_REPO ?= open-edge-platform/edge-ai-suites
-VLM_DOWNLOAD_SCRIPT_REF  ?= 3e8fea635ef8e8484dbd18a35238caa90e65f111
-VLM_DOWNLOAD_SCRIPT_PATH := metro-ai-suite/live-video-analysis/live-video-captioning/model_download_scripts/download_models.sh
+VLM_DOWNLOAD_SCRIPT_REPO ?= open-edge-platform/metro-ai-suite
+VLM_DOWNLOAD_SCRIPT_REF  ?= a6d9f1e85fc20c04babe7f5dedea3215fd57e9af
+VLM_DOWNLOAD_SCRIPT_PATH := live-video-analysis/live-video-captioning/model_download_scripts/download_models.sh
 VLM_DOWNLOAD_SCRIPT_URL  ?= https://raw.githubusercontent.com/$(VLM_DOWNLOAD_SCRIPT_REPO)/$(VLM_DOWNLOAD_SCRIPT_REF)/$(VLM_DOWNLOAD_SCRIPT_PATH)
 VLM_DOWNLOAD_SCRIPT      := $(CURDIR)/.cache/download_models.sh
 
@@ -123,9 +123,12 @@ _check_certs: ## Generate a self-signed TLS certificate for nginx if missing
 	@mkdir -p $(SSL_DIR); \
 	if [ ! -f "$(SSL_DIR)/server.crt" ] || [ ! -f "$(SSL_DIR)/server.key" ]; then \
 		echo "Generate self-signed certificate..."; \
+		SAN="DNS:localhost,IP:127.0.0.1"; \
+		if [ -n "$(HOST_IP)" ]; then SAN="$$SAN,IP:$(HOST_IP)"; fi; \
 		openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 		  -keyout $(SSL_DIR)/server.key -out $(SSL_DIR)/server.crt \
-		  -subj "/C=US/ST=CA/L=San Francisco/O=Intel/OU=Edge AI/CN=localhost"; \
+		  -subj "/C=US/ST=CA/L=San Francisco/O=Intel/OU=Edge AI/CN=localhost" \
+		  -addext "subjectAltName=$$SAN"; \
 		chmod 600 $(SSL_DIR)/server.key 2>/dev/null || true; \
 		chown -R "$$(id -u):$$(id -g)" $(SSL_DIR)/server.key $(SSL_DIR)/server.crt 2>/dev/null || true; \
 	fi

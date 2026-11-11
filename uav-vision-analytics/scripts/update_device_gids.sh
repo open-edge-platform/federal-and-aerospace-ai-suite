@@ -54,4 +54,9 @@ set_unique GPU_CARD_GID "$(gid_of "${gpu_card:-/dev/dri/card0}")"
 set_unique NPU_GID "$(gid_of "$npu")"
 set_unique CAMERA_GID "$(gid_of "$camera")"
 
-echo "[gids] card=$(env_get GPU_CARD_GID) render=$(env_get GPU_RENDER_GID) npu=$(env_get NPU_GID) camera=$(env_get CAMERA_GID)"
+# Resolved GIDs are written to .env for compose/group_add to consume; only surface them
+# on the terminal when explicitly asked for (e.g. debugging a permissions issue), so a
+# normal 'make pymav-up'/'uavsdk-up' deploy stays quiet.
+if [ "${GID_DEBUG:-0}" = "1" ]; then
+  echo "[gids] card=$(env_get GPU_CARD_GID) render=$(env_get GPU_RENDER_GID) npu=$(env_get NPU_GID) camera=$(env_get CAMERA_GID)" >&2
+fi
