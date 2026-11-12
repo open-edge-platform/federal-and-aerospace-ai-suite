@@ -62,11 +62,11 @@ sequenceDiagram
 - The following system packages:
 
 ```bash
-sudo apt install -y python3.12-venv ffmpeg
+sudo apt install -y python3-venv ffmpeg
 ```
 
 > [!NOTE]
-> `python3.12-venv` is required by `make model` to create a Python virtual environment.
+> `python3-venv` is required by `make model` to create a Python virtual environment.
 > `ffmpeg` provides `ffplay` for viewing the RTSP output stream and `ffmpeg` for recording.
 
 ### 1. Start the UAV Mission Compute SDK
