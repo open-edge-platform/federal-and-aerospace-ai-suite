@@ -30,7 +30,7 @@ model, see [Change the Captioning Model](./vlm-model.md).
 ## Download and export (`make model`)
 
 Prerequisites: Python 3.10+ with `python3-venv` (`sudo apt install
-python3.12-venv` on Ubuntu 24.04), and internet access (set
+python3-venv` on Ubuntu 24.04 and 26.04), and internet access (set
 `https_proxy`/`http_proxy` first behind a proxy).
 
 ```bash

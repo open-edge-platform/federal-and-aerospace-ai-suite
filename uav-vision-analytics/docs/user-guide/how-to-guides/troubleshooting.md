@@ -31,7 +31,7 @@ grouped into the following categories:
 ```text
 The virtual environment was not created successfully because ensurepip is not available.
 On Debian/Ubuntu systems, you need to install the python3-venv package using the following command.
-    apt install python3.12-venv
+    apt install python3-venv
 Failing command: .../resources/venv/bin/python3
 make: *** [Makefile:28: model] Error 1
 ```
@@ -39,7 +39,7 @@ make: *** [Makefile:28: model] Error 1
 **Resolution:** Install the `python3-venv` package and re-run:
 
 ```bash
-sudo apt install python3.12-venv
+sudo apt install python3-venv
 make model
 ```
 

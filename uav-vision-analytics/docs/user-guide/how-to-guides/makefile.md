@@ -164,7 +164,7 @@ Convenience alias for `make pymav-up`. Starts the default standalone stack.
 
 ```bash
 # 0. Install system prerequisites
-sudo apt install python3.12-venv ffmpeg
+sudo apt install python3-venv ffmpeg
 
 # 1. Create .env and auto-detect the host IP, GPU, NPU, and camera devices
 make init
