@@ -13,12 +13,15 @@
 
 Follow the steps below to set up and run the UAV Blueprint:
 
-1. [Infrastructure Setup
-2. [Install OEP SDK and Usage
-3. [Install
-4. [How-To Guides
-5. [How to Customize
-6. [Benchmarks
+1. Infrastructure Setup
+2. Install OEP SDK and Usage
+3. Install
+4. How-To Guides
+5. How to Customize
+6. Benchmarks
+
+
+
 
 ## AI Agent Skills
 
@@ -36,6 +39,8 @@ application creation (scaffolding new Pymavlink or UAVSDK stacks). See
 :hidden:
 
 Infrastructure Setup <./infrastructure-setup.md>
+Deterministic Threat Detection <./deterministic-threat-detection/index.md>
+Benchmarks <./benchmark.md>
 
 :::
 hide_directive-->
