@@ -20,7 +20,7 @@ for one inference pipeline each.
 
 ## Network Topology
 
-![Network topology: four machines, the Moxa TSN switch, optional Basler cameras, and the lab network](_assets/network-topology.svg)
+![Network topology: four machines, the Moxa TSN switch, optional Basler cameras, and the lab network](../deterministic-threat-detection/_assets/network-topology.svg)
 
 Ports 1 to 4 carry VLAN 1 (camera data, priority 1), VLAN 3 (Basler cameras), and VLAN 5 (load, priority 5).
 The dotted lab network is never shaped.
