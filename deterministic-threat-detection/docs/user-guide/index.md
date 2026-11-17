@@ -41,6 +41,7 @@ application creation (scaffolding new Pymavlink or UAVSDK stacks). See
 Infrastructure Setup <./infrastructure-setup.md>
 Deterministic Threat Detection <./deterministic-threat-detection/index.md>
 Benchmarks <./benchmark.md>
+Release Notes <./release-notes.md>
 
 :::
 hide_directive-->
