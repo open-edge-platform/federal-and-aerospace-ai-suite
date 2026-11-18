@@ -1,8 +1,3 @@
-<!--
-SPDX-FileCopyrightText: (C) 2026 Intel Corporation
-SPDX-License-Identifier: Apache-2.0
--->
-
 # UAV Ground Station
 
 <!--hide_directive
@@ -39,9 +34,9 @@ application.
 :::{toctree}
 :hidden:
 
-get-started
-configuration
-release-notes
+Get Started <./get-started.md>
+Configuration <./configuration.md>
+Release Notes <./release-notes.md>
 
 :::
 hide_directive-->

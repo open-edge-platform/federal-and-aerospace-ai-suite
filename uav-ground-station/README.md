@@ -19,7 +19,15 @@ that host until you enter its IP in the dashboard and press **Connect**.
 > `uav-vision-analytics`'s `/pipelines/status` API and RTSP streams either way,
 > the Mission Compute SDK alone has no camera pipelines for it to see. Get at
 > least one camera pipeline running, then come back here. See
-> [Get Started](docs/user-guide/get-started.md) for the full walkthrough of both sides.
+> [Get Started](../uav-vision-analytics/docs/user-guide/uav-ground-station/get-started.md)
+> for the full walkthrough of both sides.
+
+
+Documentation for UAV Ground Station is maintained under the UAV Blueprint, for publishing
+reasons. You can find the source in the
+[user guide](../uav-vision-analytics/docs/user-guide/uav-ground-station/index.md)
+and the html version on
+[Open Edge Platform Docs](https://docs.openedgeplatform.intel.com/dev/edge-ai-suites/ai-suite-federal-and-aerospace/uav-vision-analytics/index.html).
 
 ## Quick Start
 
