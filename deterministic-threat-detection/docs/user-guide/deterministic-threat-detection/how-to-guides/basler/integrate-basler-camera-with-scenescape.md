@@ -28,8 +28,10 @@ run it to start the pipeline server on a network that can reach the cameras.
    Priority 3 would put the camera video in the same queue as other VLAN 3 traffic and starve
    MQTT under the IEEE 802.1Qbv Time-Aware Shaper (Qbv) schedule.
 
-   Run the following on machine-2 after `make -C src/dashboard deploy-switch`
-   (`<switch address>` is `SWITCH_IP` from `lab.env`):
+   `make up SOURCE=basler` does this for you: it sets ports 5 and 6 to priority 0 when they differ
+   (it changes only these ports, over machine-2; `BASLER_PORTS=<list>` selects other ports and
+   `BASLER_PRIORITY_FIX=0` skips the step). To do it by hand, run the following on machine-2 after
+   `make -C src/dashboard deploy-switch` (`<switch address>` is `SWITCH_IP` from `lab.env`):
 
    ```bash
    python3 -I ~/moxa/port_priority.py set --host <switch address> --ports 5,6 --value 0
