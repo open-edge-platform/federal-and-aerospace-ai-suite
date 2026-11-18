@@ -68,8 +68,8 @@ either skill's steps inside the other.
 | Task | Read this file in the target repo first |
 | --- | --- |
 | What the dashboard shows, architecture, Quick Start | `uav-ground-station/README.md` |
-| Full deployment walkthrough: both sides, VSS overlay, multi-UAV, Flight Summary | `uav-ground-station/docs/get-started.md` |
-| Every `.env` variable and the backend route reference | `uav-ground-station/docs/configuration.md` and `uav-ground-station/.env.example` |
+| Full deployment walkthrough: both sides, VSS overlay, multi-UAV, Flight Summary | `uav-ground-station/docs/user-guide/get-started.md` |
+| Every `.env` variable and the backend route reference | `uav-ground-station/docs/user-guide/configuration.md` and `uav-ground-station/.env.example` |
 | VSS search tuning once deployed (separate skill) | `uav-vision-analytics/docs/user-guide/how-to-customize/search-tuning/vss-search-tuning.md` |
 
 Read the live copy of these files in the target repo — port numbers,
@@ -99,7 +99,7 @@ change between releases; do not hardcode a remembered value.
      NPU > CPU from what `make init` already detected) — only ask about the
      three devices independently if the user explicitly wants a mixed
      setup (e.g. ingest on GPU, query on CPU).
-3. Read `README.md`/`docs/get-started.md`/`docs/configuration.md`/
+3. Read `README.md`/`docs/user-guide/get-started.md`/`docs/user-guide/configuration.md`/
    `.env.example` for the exact current variable names and defaults before
    writing `.env`.
 4. Run `make init` (auto-generates VSS credentials and auto-detects host

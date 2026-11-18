@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 All configuration is via `.env` (see `.env.example`). See
 [Get Started](get-started.md) for the deployment walkthrough these variables
-support.
+support and the [Release Notes](release-notes.md) for what changed per version.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -104,11 +104,3 @@ curl -s -X POST http://${VIZ_HOST_IP:-127.0.0.1}:${VIZ_PORT:-8080}/api/search \
   `-k`/`--insecure` curl examples in `uav-vision-analytics`'s own README).
 - This project makes outbound, read-only requests to whatever host you enter;
   it never starts/stops pipelines on the remote stack.
-
-## Notice for FFmpeg
-
-FFmpeg is an open source project licensed under LGPL and GPL. See
-<https://www.ffmpeg.org/legal.html>. You are solely responsible for determining
-if your use of FFmpeg requires any additional licenses. Intel is not
-responsible for obtaining any such licenses, nor liable for any licensing fees
-due, in connection with your use of FFmpeg.
