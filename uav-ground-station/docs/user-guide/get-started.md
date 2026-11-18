@@ -119,6 +119,8 @@ multimodal-embedding-serving, vector-retriever, vdms-vector-db, postgres,
 minio; container names `uav-gs-vss-*`). With the default `make up` the search UI is hidden
 and the search routes return 404.
 
+![Searching the live footage with a natural-language prompt and playing a result](./_assets/search-videos.gif)
+
 1. `make init` (run once, on first setup) already takes care of auto-generating
    the `VSS_MINIO_*` / `VSS_POSTGRES_*` credentials (a fixed username and a
    random password -- these are internal to this stack's own MinIO/Postgres
@@ -248,6 +250,8 @@ under each camera's video. It works independently of VSS: no extra containers,
 no LLM call, always available once a camera's pipeline is running with
 captioning on.
 
+![Generating a Flight Summary report from the scene captions](./_assets/flight-summary.gif)
+
 1. `uav-gs-backend` keeps a small ring buffer of recent captions per
    `(host, camera)` (`caption_log.py`), kept warm only while the dashboard's
    normal pipeline-info polling has observed that camera captioning; an idle
@@ -274,3 +278,26 @@ caption evidence around the same time window.
 
 See [Configuration](configuration.md#flight-summary) for the report's route
 reference.
+
+## Troubleshooting and related guides
+
+The UAV Vision Analytics user guide covers the problems that show up on both
+sides of this setup:
+
+- [Troubleshooting](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-guides/troubleshooting.md)
+  -- port clashes with the UAV Mission Compute SDK, cameras that skip or lose
+  their streams, VSS search and live-index behaviour, and the multi-UAV ground
+  station.
+- [Multi-UAV Operations in the Ground Station](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-guides/multi-uav-ground-station.md)
+  -- the same multi-UAV walkthrough, from the UAV side.
+- [VSS Live Search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-guides/vss-live-search.md)
+  and [Search Tuning](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-customize/search-tuning/vss-search-tuning.md)
+  -- the same search setup, with tuning of the `VSS_SEARCH_*` variables.
+- [Configure the Cameras](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-customize/camera-management/configure-cameras.md)
+  -- the camera files that decide which cards, captions and devices the
+  dashboard shows.
+
+If a card stays without video after the cameras on the UAV host were stopped and
+started again right away, restart the pipeline server there
+(`docker restart uav-va-dlstreamer-pipeline-server`) and start the cameras
+again; see the known issues in the [Release Notes](release-notes.md).

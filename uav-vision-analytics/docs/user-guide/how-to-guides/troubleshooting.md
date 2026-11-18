@@ -1093,9 +1093,9 @@ Confirm it reached `RUNNING` on the UAV host first (see
 `make cameras-status`); VSS only indexes RTSP streams it can see.
 
 See the Ground Station's own
-[Get Started — VSS search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/get-started.md#vss-search)
+[Get Started — VSS search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/get-started.md#vss-search)
 for the container list, and its
-[Configuration — VSS search routes](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/configuration.md#vss-search)
+[Configuration — VSS search routes](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/configuration.md#vss-search)
 for the full route reference.
 
 ## Multi-UAV Ground Station
@@ -1124,5 +1124,5 @@ sessions. This is a dashboard-session concept, not a UAV-side state change —
 nothing was lost on the UAV hosts themselves.
 
 See the Ground Station's own
-[Get Started — Multiple UAVs at once](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/get-started.md#multiple-uavs-at-once)
+[Get Started — Multiple UAVs at once](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/get-started.md#multiple-uavs-at-once)
 for the implementation details.

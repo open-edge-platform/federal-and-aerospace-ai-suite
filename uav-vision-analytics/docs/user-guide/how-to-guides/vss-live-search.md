@@ -62,7 +62,7 @@ make up-vss DEVICE=all    # auto-pick the best hardware 'make init' already dete
 `DEVICE=all` prefers GPU, then NPU, then CPU, based on whatever `GPU_DEVICE`/
 `NPU_DEVICE` `make init` already found on this host. Omit `DEVICE` entirely to
 leave whatever is currently in `.env` untouched. See `uav-ground-station`'s
-[Configuration](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/configuration.md)
+[Configuration](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/configuration.md)
 guide for what each of the three device variables individually controls if
 you want ingest, detection and query embedding to run on different devices.
 
@@ -134,7 +134,7 @@ dominating results, result clips that will not play, a new camera that never
 becomes searchable).
 
 See also the ground station's own
-[Get Started — VSS search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/get-started.md#vss-search)
+[Get Started — VSS search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/get-started.md#vss-search)
 for the container list, and its
-[Configuration — VSS search routes](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/configuration.md#vss-search)
+[Configuration — VSS search routes](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/configuration.md#vss-search)
 for the full route reference.

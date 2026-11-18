@@ -265,7 +265,7 @@ ports`443`, `1883` and `8555` of this host. See the [UAV Ground Station README](
 > over indexed footage, run `make up-vss` instead of `make up` (it brings up
 > everything `make up` does, plus 8 extra VSS containers) — it needs its own
 > required `.env` variables first (MinIO/Postgres credentials, an embedding
-> model, and a detection model). See [VSS search in the UAV Ground Station Get Started guide](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/get-started.md#vss-search),
+> model, and a detection model). See [VSS search in the UAV Ground Station Get Started guide](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/get-started.md#vss-search),
 > and [tune the VSS search results](../how-to-customize/search-tuning/vss-search-tuning.md)
 > once it is running.
 
