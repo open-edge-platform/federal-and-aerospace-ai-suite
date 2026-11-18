@@ -116,8 +116,9 @@ Use two Basler GigE cameras instead of the test videos for use case 2. Prepare t
 following these guides:
 [Configure Basler PTP timestamps](./how-to-guides/basler/configure-basler-ptp-timestamps.md) and
 [Integrate Basler cameras with Scenescape](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md).
-The second guide also explains how to build the pipeline server image with the Basler SDK
-yourself, because the project does not ship it.
+The second guide has the Dockerfile for the pipeline server image with the Basler SDK. Copy it
+to `src/scene/basler/` first, because the project does not ship the image; `make up SOURCE=basler`
+then builds it.
 
 ```bash
 make up SOURCE=basler
