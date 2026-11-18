@@ -89,8 +89,8 @@ Try it:
 
    ![Use case 2: tracking](./_assets/uc2-tracking-video.gif)
 
-3. Switch off Qbv and move **Network load** to 1000 Mbit/s. The toggle works only after you set
-   `SWITCH_ALLOW_WRITE=1`; see
+3. Switch off Qbv and move **Network load** to 1000 Mbit/s. The toggle changes the switch (set
+   `SWITCH_ALLOW_WRITE=0` in `src/dashboard/.env` for read-only); see
    [First-time setup](./first-time-setup.md#6-lab-configuration-machine-1). The latency climbs
    from milliseconds to seconds, and the tracker rate and HOTA (use case 2) collapse. The
    Architecture view shows the streams stalling and frames being lost.
@@ -136,7 +136,7 @@ shown instead.
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Browser shows `400 Bad Request`   | The host in the URL is not allowed; use the lab address printed by `make up`                                                    |
 | Qbv toggle disabled with a banner | Turn on **Schedule Gate** for port 1 in the switch web interface                                                                |
-| Qbv toggle disabled, read-only    | Set `SWITCH_ALLOW_WRITE=1` in `src/dashboard/.env` and run `make up` again                                                      |
+| Qbv toggle disabled, read-only    | Set `SWITCH_ALLOW_WRITE=1` in `src/dashboard/.env` (the default) and run `make up` again                                        |
 | Latency stays high with Qbv on    | Check the VLAN priority maps (`ip -d link show tsn0.1` lists `egress_qos`) and PTP (`sudo ptp-profile status`)                  |
 | Basler `Device::open()` fails     | Another process holds the camera. Stop the pipeline container with `docker stop -t 30`, then retry                              |
 | A start failed halfway            | Run `make down`, fix the cause, and run `make up` again. `make -C src/scene clean` also deletes the Scenescape database volumes |

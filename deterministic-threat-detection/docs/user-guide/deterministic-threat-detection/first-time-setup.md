@@ -119,8 +119,8 @@ make -C src/dashboard deploy-switch SWITCH_HOST=<user>@<machine-2 lab address>
 The switch scripts run from machine-2, so the switch is never reached over the shaped port.
 `deploy-switch` copies them to `~/moxa` on machine-2.
 
-The first `make up` creates `src/dashboard/.env`. To let the dashboard toggle Qbv, set
-`SWITCH_ALLOW_WRITE=1` in that file and run `make up` again (the default is read-only).
+The first `make up` creates `src/dashboard/.env`. It sets `SWITCH_ALLOW_WRITE=1`, so the
+dashboard can toggle Qbv; set it to `0` and run `make up` again for read-only.
 
 ## Basler Cameras Only
 
