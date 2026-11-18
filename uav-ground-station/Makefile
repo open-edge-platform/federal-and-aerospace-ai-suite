@@ -18,7 +18,8 @@ init: ## Create .env from template if missing, and auto-detect host IP and GPU/N
 	else \
 		cp .env.example .env; \
 		echo "[init] .env ready. Edit VIZ_COMPANION_HOST to point at your UAV companion-compute board's IP."; \
-		HOST_IP_DETECTED=$$(hostname -I 2>/dev/null | awk '{print $$1}'); \
+		HOST_IP_DETECTED=$$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($$i=="src") {print $$(i+1); exit}}'); \
+		[ -n "$$HOST_IP_DETECTED" ] || HOST_IP_DETECTED=$$(hostname -I 2>/dev/null | awk '{print $$1}'); \
 		if [ -z "$$HOST_IP_DETECTED" ]; then \
 			HOST_IP_DETECTED=127.0.0.1; \
 			echo "⚠  Could not auto-detect host IP — defaulting VIZ_HOST_IP/VIZ_PUBLIC_HOST=127.0.0.1 (edit .env manually if needed)."; \
