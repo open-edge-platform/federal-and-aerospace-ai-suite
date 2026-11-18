@@ -93,7 +93,7 @@ Check: from machine-1, `ping 192.168.127.12` reaches machine-2 over VLAN 1.
 
 ## 5. Switch Time-Aware Shaper
 
-In the switch web interface, turn on **Schedule Gate** for port 1 (Layer 2 Switching > Time-aware
+In the switch web interface, turn on **Schedule Gate** for port 1 (`SWITCH_PORT`) (Layer 2 Switching > Time-aware
 Shaper). The dashboard then adds and removes the schedule. For details, see
 [Enable TSN traffic shaping](./how-to-guides/moxa/enable-tsn-traffic-shaping.md).
 Check: once the dashboard runs, its Qbv toggle is enabled and shows no warning banner.
@@ -121,6 +121,9 @@ The switch scripts run from machine-2, so the switch is never reached over the s
 
 The first `make up` creates `src/dashboard/.env`. It sets `SWITCH_ALLOW_WRITE=1`, so the
 dashboard can toggle Qbv; set it to `0` and run `make up` again for read-only.
+It also sets `SWITCH_PORT=1`, the switch port machine-1 is connected to. Change it (not to 2,
+which is machine-2's management port) if machine-1 uses another port, and turn on **Schedule
+Gate** for that port.
 
 ## Basler Cameras Only
 
