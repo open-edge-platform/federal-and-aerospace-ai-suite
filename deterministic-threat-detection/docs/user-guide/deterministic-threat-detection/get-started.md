@@ -95,7 +95,7 @@ Try it:
    from milliseconds to seconds, and the tracker rate and HOTA (use case 2) collapse. The
    Architecture view shows the streams stalling and frames being lost.
 
-   With Basler cameras, we suggest 100 Mbit/s. A higher load might make camera detection fail; if a
+   With Basler cameras, 100 Mbit/s is suggested. A higher load might make camera detection fail; if a
    camera does not recover, restart the pipeline server (DLSPS). See
    [Network load limit](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md#network-load-limit).
 
