@@ -153,7 +153,7 @@ The Basler cameras stream over GigE Vision, which does not tolerate packet loss.
 high network load can make camera detection fail (`No frame received from the camera`), and the
 camera does not recover by itself.
 
-We suggest 100 Mbit/s when testing with Basler cameras. You can try a higher load, but camera
+100 Mbit/s is recommended when testing with Basler cameras. You can try a higher load, but camera
 detection might fail. The limit depends on the hardware, so raise the load in small steps and watch
 the camera frame rate in the dashboard. If a camera does not recover, set the load to 0 and restart
 the pipeline server (DLSPS) as described in [Troubleshooting](#troubleshooting).
