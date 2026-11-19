@@ -67,7 +67,7 @@ Manual commands: [Create VLANs on all machines](./how-to-guides/moxa/create-vlan
 The `ptp-install.sh` script installs `linuxptp`, the `ptp4l` and `phc2sys` services, and the
 `ptp-profile` command, and disables NTP clients. On Ubuntu it also adds an AppArmor override so that
 `phc2sys` can reach `ptp4l` (without it, `phc2sys` keeps logging `Waiting for ptp4l...`). The switch
-is the grandmaster; the machines are slaves.
+is the grandmaster, while the machines are receivers.
 
 ```bash
 sudo src/setup/ptp-install.sh               # machine-1; default profile: IEEE 1588v2
