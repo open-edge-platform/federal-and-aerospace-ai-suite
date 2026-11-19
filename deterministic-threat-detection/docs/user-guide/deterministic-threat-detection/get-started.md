@@ -95,6 +95,10 @@ Try it:
    from milliseconds to seconds, and the tracker rate and HOTA (use case 2) collapse. The
    Architecture view shows the streams stalling and frames being lost.
 
+   With Basler cameras, we suggest 100 Mbit/s. A higher load might make camera detection fail; if a
+   camera does not recover, restart the pipeline server (DLSPS). See
+   [Network load limit](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md#network-load-limit).
+
    ![Load with Qbv off](./_assets/architecture-video-load-qbv-off.gif)
 
 4. Switch Qbv on. The load is confined to its slot (about 95 Mbit/s gets through), and both
@@ -138,6 +142,7 @@ shown instead.
 | Qbv toggle disabled with a banner | Turn on **Schedule Gate** for port 1 in the switch web interface                                                                |
 | Qbv toggle disabled, read-only    | Set `SWITCH_ALLOW_WRITE=1` in `src/dashboard/.env` (the default) and run `make up` again                                        |
 | Latency stays high with Qbv on    | Check the VLAN priority maps (`ip -d link show tsn0.1` lists `egress_qos`) and PTP (`sudo ptp-profile status`)                  |
+| Basler camera detection stops     | Restart the pipeline server container (`docker stop -t 30`, wait, `docker start`) and keep the load at 100 Mbit/s or less |
 | Basler `Device::open()` fails     | Another process holds the camera. Stop the pipeline container with `docker stop -t 30`, then retry                              |
 | A start failed halfway            | Run `make down`, fix the cause, and run `make up` again. `make -C src/scene clean` also deletes the Scenescape database volumes |
 

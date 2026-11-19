@@ -147,7 +147,25 @@ The dashboard shows the tracker rate and the decoded frames. Higher Order Tracki
 - Runs `gencamsrc ... ! gvapython` with `src/scene/dlstreamer-pipeline-server/sscape_adapter.py`,
   which publishes the camera's PTP hardware timestamp as the frame time.
 
+## Network load limit
+
+The Basler cameras stream over GigE Vision, which does not tolerate packet loss. With Qbv off, a
+high network load can make camera detection fail (`No frame received from the camera`), and the
+camera does not recover by itself.
+
+We suggest 100 Mbit/s when testing with Basler cameras. You can try a higher load, but camera
+detection might fail. The limit depends on the hardware, so raise the load in small steps and watch
+the camera frame rate in the dashboard. If a camera does not recover, set the load to 0 and restart
+the pipeline server (DLSPS) as described in [Troubleshooting](#troubleshooting).
+
 ## Troubleshooting
+
+- A camera stops delivering frames and does not recover (the dashboard shows 0 fps and the pipeline
+  restart counter keeps rising, or the log shows `Camera ... not detected` or
+  `Requested resource is already in use`): set the network load to 0, then restart the pipeline server.
+  Stop it with `docker stop -t 30 tsn-scene-dlstreamer-pipeline-server-1`, wait about 20 seconds so the
+  cameras release, then run `docker start tsn-scene-dlstreamer-pipeline-server-1`. If it exits with
+  `Device::open() failed`, wait a little longer and start it again.
 
 - `Device::open()` fails: the camera is still held by another process. Stop the pipeline container with
   `docker stop -t 30`, wait, then run `make up SOURCE=basler` again.
