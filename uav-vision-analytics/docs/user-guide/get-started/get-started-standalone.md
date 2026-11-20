@@ -92,7 +92,7 @@ cd uav-vision-analytics
 Clone the repository and get into the directory:
 
 ```bash
-git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git -b release-2026.3.0
 cd federal-and-aerospace-ai-suite/uav-vision-analytics
 ```
 

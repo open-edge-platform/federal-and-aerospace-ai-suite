@@ -33,7 +33,7 @@ To check out only the directory for this SDK instead of the entire repo, use a s
 checkout:
 
 ```bash
-git clone -b main --filter=blob:none --sparse https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git
+git clone -b release-2026.3.0 --filter=blob:none --sparse https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git
 cd federal-and-aerospace-ai-suite
 git sparse-checkout set uav-mission-compute-sdk
 cd uav-mission-compute-sdk
