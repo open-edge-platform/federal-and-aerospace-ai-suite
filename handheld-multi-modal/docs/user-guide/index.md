@@ -49,6 +49,10 @@ Follow these steps to deploy the Handheld (Soldier System) Blueprint:
 6. [Application Operations](application-operations.md) — Lifecycle commands, offline copy to other devices, and model changes.
 7. [Benchmarks](benchmarks.md) — Benchmark AI workloads across the available hardware.
 
+Alternatively, on an Ubuntu 24.04 target, use [Installation on Ubuntu](installation-on-ubuntu.md) to
+install the Edge Pack components and the handheld suite with the OEP CLI Installer in place of
+steps 1–3.
+
 ## Features
 
 - **Live cameras** — YOLO26s INT8 object detection (NPU) and tracking, annotated WebRTC
@@ -117,6 +121,7 @@ application-level pipeline generation with Intel DL Streamer. See
 
 Infrastructure Setup <infrastructure-setup.md>
 Install OEP SDKs <install-oep-sdks.md>
+Installation on Ubuntu <installation-on-ubuntu.md>
 Install Handheld Multi-Modal Application <deploy-applications.md>
 Access Application User Interface <access-application.md>
 Operator Guide <operator-guide.md>
