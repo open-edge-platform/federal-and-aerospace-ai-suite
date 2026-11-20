@@ -34,7 +34,7 @@ and the html version on
 Prerequisites: Docker with the Compose plugin and `make` on this machine.
 
 ```bash
-git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch main
+git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git --branch release-2026.3.0
 cd federal-and-aerospace-ai-suite/uav-ground-station
 make up      # creates .env from template (host IP and devices auto-detected), builds, and starts the container
 ```

@@ -10,7 +10,7 @@ Covers building the OS image, flashing it to a bootable USB, and validating the 
 ## Step 1: Clone the repository
 
 ```bash
-git clone https://github.com/open-edge-platform/edge-node-infrastructure-blueprint.git -b main
+git clone https://github.com/open-edge-platform/edge-node-infrastructure-blueprint.git -b release-2026.3.0
 cd edge-node-infrastructure-blueprint
 ```
 

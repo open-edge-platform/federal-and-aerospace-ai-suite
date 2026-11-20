@@ -46,7 +46,7 @@ vainfo 2>/dev/null | grep -i "profile"
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/open-edge-platform/edge-workloads-and-benchmarks.git -b main
+git clone https://github.com/open-edge-platform/edge-workloads-and-benchmarks.git -b release-2026.3.0
 cd edge-workloads-and-benchmarks
 ```
 

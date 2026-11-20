@@ -29,8 +29,8 @@ This article will show you how to:
 
 ```bash
 # If edge-node-infrastructure-blueprint is not already cloned, uncomment the line below
-# git clone -b main https://github.com/open-edge-platform/edge-node-infrastructure-blueprint.git
-git clone -b main https://github.com/open-edge-platform/image-composer-tool.git
+# git clone -b release-2026.3.0 https://github.com/open-edge-platform/edge-node-infrastructure-blueprint.git
+git clone -b release-2026.3.0 https://github.com/open-edge-platform/image-composer-tool.git
 ```
 
 Now, you should have the source code available in `edge-node-infrastructure-blueprint` and `image-composer-tool` directories in your workspace (for example, `/home/user`).

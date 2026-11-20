@@ -116,7 +116,7 @@ sudo apt install -y make git
 ## Step 6 — Clone the Repository
 
 ```bash
-git clone -b main https://github.com/open-edge-platform/edge-node-infrastructure-blueprint.git
+git clone -b release-2026.3.0 https://github.com/open-edge-platform/edge-node-infrastructure-blueprint.git
 cd edge-node-infrastructure-blueprint
 ```
 
