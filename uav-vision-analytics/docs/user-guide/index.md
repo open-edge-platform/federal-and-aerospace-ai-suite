@@ -68,6 +68,10 @@ Follow the steps below to set up and run the UAV Blueprint:
 5. [How to Customize](./how-to-customize.md) — Change cameras, models, pipelines, the overlay and live-search tuning.
 6. [Benchmarks](./benchmark.md) — Measure stream density and hardware utilization.
 
+Alternatively, on an Ubuntu 24.04 target, use [Installation on Ubuntu](./installation-on-ubuntu.md) to
+install and start the UAV Vision Analytics application with the OEP CLI Installer in place of
+steps 1–3.
+
 ## AI Agent Skills
 
 This application supports AI agent skills for GitHub Copilot and compatible coding agents.
@@ -100,6 +104,7 @@ immediately.
 
 Infrastructure Setup <./infrastructure-setup.md>
 Install UAV SDK and Usage <./get-started/install-oep-sdks.md>
+Installation on Ubuntu <./installation-on-ubuntu.md>
 UAV Vision Analytics Application <install-uav-app.md>
 UAV Ground Station Application <./uav-ground-station/index.md>
 How-To Guides <./how-to-guides.md>
