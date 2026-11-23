@@ -1,4 +1,4 @@
-# QGroundControl
+# View the UAV Video Stream in QGroundControl
 
 ## Installation
 

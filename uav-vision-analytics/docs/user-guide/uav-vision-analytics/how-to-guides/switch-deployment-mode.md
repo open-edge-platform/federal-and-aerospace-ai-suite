@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Switch Between Pymavlink and UAV Mission Compute SDK Deployment Modes
+# Switch Between Standalone and UAV Mission Compute SDK Modes
 
 UAV Vision Analytics supports two independent deployment modes. This tutorial
 explains the architecture difference, how to switch between them cleanly, and

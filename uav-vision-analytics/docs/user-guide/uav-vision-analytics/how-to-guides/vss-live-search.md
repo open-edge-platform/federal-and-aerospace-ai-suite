@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Search Live Video with VSS
+# Search Live Video with Natural Language
 
 `uav-ground-station` can optionally index every running camera's live RTSP
 stream into a

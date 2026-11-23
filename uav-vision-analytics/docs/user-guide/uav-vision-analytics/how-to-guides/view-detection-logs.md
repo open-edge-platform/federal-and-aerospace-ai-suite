@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# View and Interpret Detection Logs (JSONL)
+# Read and Filter Detection Logs
 
 Every pipeline can write its detection results as newline-delimited JSON
 (`json-lines`) to a file inside the container — a durable, machine-readable

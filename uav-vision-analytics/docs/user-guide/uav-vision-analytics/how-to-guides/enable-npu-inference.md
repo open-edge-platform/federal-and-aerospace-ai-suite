@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Enable NPU Inference
+# Run Object Detection on the NPU
 
 NPU is a first-class supported inference device — it has its own pipeline
 entries (`..._npu`) selectable per camera in `configs/cameras-pymavlink.yaml`
