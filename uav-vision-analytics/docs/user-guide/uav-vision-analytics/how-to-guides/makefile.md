@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Makefile Reference
+# Makefile Target Reference
 
 The `Makefile` at the root of `uav-vision-analytics/` provides shorthand targets
 for the most common development and deployment tasks.

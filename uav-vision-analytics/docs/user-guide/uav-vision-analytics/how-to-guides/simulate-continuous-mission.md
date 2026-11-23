@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Test Against a Simulated, Continuously-Armed Mission
+# Keep PX4 SITL Armed During Pipeline Testing
 
 PX4 SITL auto-disarms after a short idle period with no RC/GCS input. Both
 `pipeline_manager.py`'s ARMED-triggered auto-start (standalone mode) and the

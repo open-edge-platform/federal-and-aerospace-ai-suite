@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Troubleshooting
+# Troubleshoot UAV Vision Analytics
 
 If you face a problem while working with UAV Vision Analytics, you can reach out to its
 maintainers in the [Discussions section](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/discussions),

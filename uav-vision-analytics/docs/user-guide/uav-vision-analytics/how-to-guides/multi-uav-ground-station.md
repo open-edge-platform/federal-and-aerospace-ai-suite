@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Multi-UAV Operations in the Ground Station
+# Monitor Multiple UAVs in the Ground Station
 
 `uav-ground-station` can connect to more than one `uav-vision-analytics`
 host at once from the same browser session — useful when operating a small

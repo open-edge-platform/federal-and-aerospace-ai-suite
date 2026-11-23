@@ -1,4 +1,4 @@
-# How to use UAV Vision Analytics
+# How To Use UAV Vision Analytics
 
 These guides cover what the application can do and how to operate it as
 shipped: viewing streams, running the ground station, deployment modes,
@@ -30,21 +30,20 @@ cameras, models, pipelines, overlay, search tuning — see
 
 - [Makefile Reference](./how-to-guides/makefile.md) — Shorthand targets for
   model setup, stack management, and pipeline control
-- [Troubleshooting](./how-to-guides/troubleshooting.md) — Common issues and
+- [Troubleshooting](../how-to-guides/troubleshooting.md) — Common issues and
   fixes for deployment, inference, and streaming problems
 
 <!--hide_directive
 :::{toctree}
 :hidden:
 
-QGroundControl <./how-to-guides/qgroundcontrol.md>
-Multi-UAV Operations in the Ground Station <./how-to-guides/multi-uav-ground-station.md>
+View With QGroundControl <./how-to-guides/qgroundcontrol.md>
+Monitor Multiple UAVs in Ground Station <./how-to-guides/multi-uav-ground-station.md>
 Search Live Video with VSS <./how-to-guides/vss-live-search.md>
 Switch Deployment Modes <./how-to-guides/switch-deployment-mode.md>
-Enable NPU Inference <./how-to-guides/enable-npu-inference.md>
-Simulate a Continuous Mission <./how-to-guides/simulate-continuous-mission.md>
+Run NPU Inference <./how-to-guides/enable-npu-inference.md>
+Simulate Continuous Mission <./how-to-guides/simulate-continuous-mission.md>
 View Detection Logs <./how-to-guides/view-detection-logs.md>
 Makefile Reference <./how-to-guides/makefile.md>
-Troubleshooting <./how-to-guides/troubleshooting.md>
 :::
 hide_directive-->
