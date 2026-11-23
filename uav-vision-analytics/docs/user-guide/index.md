@@ -45,13 +45,13 @@ The application supports two deployment modes.
 
 Self-contained mode using PX4 SITL simulation and Pymavlink for MAVLink communication. No external dependencies required.
 
-[Get Started — Standalone Mode](./uav-vision-analytics/get-started/get-started-standalone.md)
+[Deploy in Standalone Mode](./uav-vision-analytics/deploy/deploy-standalone.md)
 
 ### 2. UAV Mission Compute SDK Mode
 
 Integration mode that connects to a running instance of the UAV Mission Compute SDK, enabling full mission control and multi-camera pipeline management.
 
-[Get Started — UAV Mission Compute SDK Mode](./uav-vision-analytics/get-started/get-started-uavsdk.md)
+[Deploy in UAV Mission Compute SDK Mode](./uav-vision-analytics/deploy/deploy-uavsdk.md)
 
 To learn more about the application and how to use it, see
 [How-To Guides](./uav-vision-analytics/how-to-guides.md); to change what it does, see

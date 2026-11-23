@@ -33,7 +33,7 @@ container in that mode.
   `nginx` (`80`/`443`/`8555`/`1883`).
 - For UAVSDK mode: the `uav-mission-compute-sdk` project cloned alongside
   this repo (see
-  [Get Started — UAV Mission Compute SDK Mode](../get-started/get-started-uavsdk.md#1-start-the-uav-mission-compute-sdk)).
+  [Deploy in UAV Mission Compute SDK Mode](../deploy/deploy-uavsdk.md#1-start-the-uav-mission-compute-sdk)).
 
 ## Steps
 

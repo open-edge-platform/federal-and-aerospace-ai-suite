@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Get Started (Standalone Mode / Pymavlink)
+# Deploy in Standalone Mode (Pymavlink)
 
 This guide provides a step-by-step walkthrough for testing the UAV Vision Analytics application in standalone mode (Pymavlink) and running the demo with a simulated UAV camera feed/RealSense cameras.
 
@@ -265,7 +265,7 @@ ports`443`, `1883` and `8555` of this host. See the [UAV Ground Station README](
 > over indexed footage, run `make up-vss` instead of `make up` (it brings up
 > everything `make up` does, plus 8 extra VSS containers) — it needs its own
 > required `.env` variables first (MinIO/Postgres credentials, an embedding
-> model, and a detection model). See [VSS search in the UAV Ground Station Get Started guide](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/uav-ground-station/docs/user-guide/get-started.md#vss-search),
+> model, and a detection model). See [VSS search in the UAV Ground Station Get Started guide](../../uav-ground-station/get-started.md#vss-search),
 > and [tune the VSS search results](../how-to-customize/search-tuning/vss-search-tuning.md)
 > once it is running.
 

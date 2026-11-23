@@ -55,4 +55,4 @@ container. `make check-cameras` says which pipeline is missing.
 ## UAV Mission Compute SDK stack
 
 The SDK stack streams its cameras over RTSP and uses `configs/cameras-uavsdk.yaml`; see
-[Get started with the UAV Mission Compute SDK](../../get-started/get-started-uavsdk.md).
+[Deploy in UAV Mission Compute SDK Mode](../../deploy/deploy-uavsdk.md).

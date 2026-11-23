@@ -73,7 +73,7 @@ Run `make init` after cloning to create `.env` from `.env.example`, auto-detect 
 
 ## Quick Start
 
-Run the commands from the `uav-vision-analytics` directory (`cd federal-and-aerospace-ai-suite/uav-vision-analytics` after `git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git`, or the directory of the downloaded ZIP; see [Get Started](docs/user-guide/get-started/get-started-standalone.md)).
+Run the commands from the `uav-vision-analytics` directory (`cd federal-and-aerospace-ai-suite/uav-vision-analytics` after `git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git`, or the directory of the downloaded ZIP; see [Deploy in Standalone Mode](docs/user-guide/uav-vision-analytics/deploy/deploy-standalone.md)).
 
 ### Step 1: Initialize and download the models
 

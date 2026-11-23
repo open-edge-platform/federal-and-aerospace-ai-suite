@@ -370,7 +370,7 @@ sed -i 's|^HOST_IP=.*|HOST_IP=0.0.0.0|' .env
 make down && make up-sim-camera
 ```
 
-See [Get Started (UAV Mission Compute SDK Mode) — Step 1](./get-started/get-started-uavsdk.md#1-start-the-uav-mission-compute-sdk).
+See [Deploy in UAV Mission Compute SDK Mode — Step 1](./deploy/deploy-uavsdk.md#1-start-the-uav-mission-compute-sdk).
 
 ### Pipelines skip their cameras — the RTSP source is not available (UAV Mission Compute SDK mode)
 
@@ -1093,9 +1093,9 @@ Confirm it reached `RUNNING` on the UAV host first (see
 `make cameras-status`); VSS only indexes RTSP streams it can see.
 
 See the Ground Station's own
-[Get Started — VSS search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/uav-ground-station/docs/user-guide/get-started.md#vss-search)
+[Get Started — VSS search](../uav-ground-station/get-started.md#vss-search)
 for the container list, and its
-[Configuration — VSS search routes](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/uav-ground-station/docs/user-guide/configuration.md#vss-search)
+[Configuration — VSS search routes](../uav-ground-station/configuration.md#vss-search)
 for the full route reference.
 
 ## Multi-UAV Ground Station
@@ -1124,5 +1124,5 @@ sessions. This is a dashboard-session concept, not a UAV-side state change —
 nothing was lost on the UAV hosts themselves.
 
 See the Ground Station's own
-[Get Started — Multiple UAVs at once](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/uav-ground-station/docs/user-guide/get-started.md#multiple-uavs-at-once)
+[Get Started — Multiple UAVs at once](../uav-ground-station/get-started.md#multiple-uavs-at-once)
 for the implementation details.
