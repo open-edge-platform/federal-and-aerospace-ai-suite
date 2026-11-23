@@ -17,7 +17,7 @@ background, and how the per-host **Flight Summary** report works. This is a
 
 - Two or more `uav-vision-analytics` hosts reachable from the ground-station
   machine, each with at least one RTSP pipeline running (see
-  [Get Started](../get-started/get-started-standalone.md)).
+  [Deploy in Standalone Mode](../deploy/deploy-standalone.md)).
 - `uav-ground-station` running (`make up` or `make up-vss` — see
   [Search Live Video with Natural Language](./vss-live-search.md) if you
   also want cross-UAV search).
@@ -95,5 +95,5 @@ restart). For the UAV/Camera search filter, see
 [Search Live Video with Natural Language — Scope results to one UAV or camera](./vss-live-search.md#4-scope-results-to-one-uav-or-camera-multi-uav-setups).
 
 See also the Ground Station's own
-[Get Started — Multiple UAVs at once](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/get-started.md#multiple-uavs-at-once)
+[Get Started — Multiple UAVs at once](../../uav-ground-station/get-started.md#multiple-uavs-at-once)
 for the implementation details.

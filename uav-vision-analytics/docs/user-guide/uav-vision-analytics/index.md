@@ -27,10 +27,10 @@ detection to publish natural-language scene captions over MQTT. See
 The application supports two deployment modes, depending on whether an external SDK is
 available:
 
-- [Standalone Mode (Pymavlink)](./get-started/get-started-standalone.md): a self-contained
+- [Standalone Mode (Pymavlink)](./deploy/deploy-standalone.md): a self-contained
   mode that uses PX4 SITL simulation and Pymavlink for MAVLink communication. No external
   dependencies are required.
-- [UAV Mission Compute SDK Mode](./get-started/get-started-uavsdk.md): an integration mode
+- [UAV Mission Compute SDK Mode](./deploy/deploy-uavsdk.md): an integration mode
   that connects to a running instance of the UAV Mission Compute SDK, enabling full mission
   control and multi-camera pipeline management.
 
