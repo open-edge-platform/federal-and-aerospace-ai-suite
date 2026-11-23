@@ -57,7 +57,7 @@ restart the affected pipelines.
   previews in `uav-ground-station/.env`
 
 If something does not work after a change, start with the common
-[Troubleshooting](./how-to-guides/troubleshooting.md) guide; each page above
+[Troubleshooting](./troubleshooting.md) guide; each page above
 only lists the symptoms specific to it.
 
 <!--hide_directive

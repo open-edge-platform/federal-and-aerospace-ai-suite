@@ -19,7 +19,7 @@ background, and how the per-host **Flight Summary** report works. This is a
   machine, each with at least one RTSP pipeline running (see
   [Get Started](../get-started/get-started-standalone.md)).
 - `uav-ground-station` running (`make up` or `make up-vss` — see
-  [Searching Live Video with VSS](./vss-live-search.md) if you
+  [Search Live Video with Natural Language](./vss-live-search.md) if you
   also want cross-UAV search).
 
 ## Steps
@@ -88,11 +88,11 @@ confirms its cameras/pipelines are visible to the dashboard.
 
 ## Troubleshooting
 
-See [Troubleshooting — Multi-UAV Ground Station](./troubleshooting.md#multi-uav-ground-station)
+See [Troubleshooting — Multi-UAV Ground Station](../troubleshooting.md#multi-uav-ground-station)
 for common issues (one UAV's disconnect appearing to affect another,
 Flight Summary still generating after disconnect, lost tabs after a backend
 restart). For the UAV/Camera search filter, see
-[Searching Live Video with VSS — Scope results to one UAV or camera](./vss-live-search.md#4-scope-results-to-one-uav-or-camera-multi-uav-setups).
+[Search Live Video with Natural Language — Scope results to one UAV or camera](./vss-live-search.md#4-scope-results-to-one-uav-or-camera-multi-uav-setups).
 
 See also the Ground Station's own
 [Get Started — Multiple UAVs at once](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/uav-ground-station/docs/user-guide/get-started.md#multiple-uavs-at-once)

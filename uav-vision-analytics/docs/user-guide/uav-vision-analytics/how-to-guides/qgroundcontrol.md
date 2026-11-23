@@ -9,7 +9,7 @@ QGroundControl on your host machine where you are running the application.
 
 > [!TIP]
 > If you run into connection or video-stream issues with the stable release, see
-> [Troubleshooting: QGroundControl stable release fails to connect](./troubleshooting.md#qgroundcontrol-stable-release-fails-to-connect) for a fallback install option.
+> [Troubleshooting: QGroundControl stable release fails to connect](../troubleshooting.md#qgroundcontrol-stable-release-fails-to-connect) for a fallback install option.
 
 ## Enable video stream in QGroundControl
 
@@ -29,14 +29,14 @@ rtsp://<HOST_IP>:8555/uav-bottom-camera
 rtsp://<HOST_IP>:8555/uav-back-camera
 ```
 
-![QGroundControl RTSP stream](../_assets/QGC-rtsp.gif)
+![QGroundControl RTSP stream](../../_assets/QGC-rtsp.gif)
 
 > [!NOTE]
 > If QGroundControl is running on a **remote Windows machine** (connecting to a
 > UAV host on another machine) and that Windows machine has a system/corporate
 > HTTP(S) proxy configured, the RTSP video stream may never render even though
 > telemetry/MAVLink connects fine — see
-> [Troubleshooting: RTSP video stream does not play on a remote Windows machine](./troubleshooting.md#rtsp-video-stream-does-not-play-on-a-remote-windows-machine-system-proxy-configured)
+> [Troubleshooting: RTSP video stream does not play on a remote Windows machine](../troubleshooting.md#rtsp-video-stream-does-not-play-on-a-remote-windows-machine-system-proxy-configured)
 > for the `no_proxy` fix.
 
 > [!NOTE]
@@ -74,5 +74,5 @@ value for each vehicle when several connect to the same QGroundControl.
 
 ## Troubleshooting
 
-- ["Network Not Available" warnings](./troubleshooting.md#network-not-available-warnings)
-- [RTSP video stream does not play on a remote Windows machine (system proxy configured)](./troubleshooting.md#rtsp-video-stream-does-not-play-on-a-remote-windows-machine-system-proxy-configured)
+- ["Network Not Available" warnings](../troubleshooting.md#network-not-available-warnings)
+- [RTSP video stream does not play on a remote Windows machine (system proxy configured)](../troubleshooting.md#rtsp-video-stream-does-not-play-on-a-remote-windows-machine-system-proxy-configured)

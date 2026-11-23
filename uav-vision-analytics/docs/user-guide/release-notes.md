@@ -35,7 +35,7 @@
   until the pipeline server container is restarted (`docker restart uav-va-dlstreamer-pipeline-server`). Wait
   about a minute before starting the cameras again to avoid it.
 - A failed pipeline start poisons its model instance until the pipeline server restarts; see
-  [Troubleshooting](./how-to-guides/troubleshooting.md).
+  [Troubleshooting](./uav-vision-analytics/troubleshooting.md).
 - Pymavlink and UAV Mission Compute SDK modes cannot run at the same time, because both use ports `80`, `443`,
   and `8555`.
 - The first `make model` and `make vlm-model` runs download models and can take several minutes.

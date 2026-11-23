@@ -11,7 +11,7 @@ This guide provides a step-by-step walkthrough for testing the UAV Vision Analyt
 
 A minimal stack. Telemetry is received via MQTT from the `uav-mission-compute-sdk` project, which must be started first. The DL Streamer Pipeline Server container reads armed/disarmed state from `uav/{id}/telemetry/status` and subscribes to three RTSP camera streams (nadir, forward, rear).
 
-![uav vision analytics sdk](../_assets/FedAero-uav-vision-uavsdk.svg)
+![uav vision analytics sdk](../../_assets/FedAero-uav-vision-uavsdk.svg)
 
 **Telemetry / pipeline lifecycle flow:**
 
@@ -410,10 +410,10 @@ Each output frame carries these overlaid fields in the upper-left corner:
 
 | Document | Description |
 | --- | --- |
-| [index.md](../index.md) | Application overview and component block diagrams |
+| [index.md](../../index.md) | Application overview and component block diagrams |
 | [how-to-guides.md](../how-to-guides.md) | Operating the application: QGroundControl, ground station, deployment modes |
 | [how-to-customize.md](../how-to-customize.md) | Changing cameras, models, pipelines, overlay and search tuning |
 | [realsense-guide.md](../how-to-customize/camera-management/realsense-guide.md) | RealSense camera setup and pipelines |
-| [benchmark.md](../benchmark.md) | Performance benchmarking guide |
+| [benchmark.md](../../benchmark.md) | Performance benchmarking guide |
 | [makefile.md](../how-to-guides/makefile.md) | Makefile target reference |
-| [troubleshooting.md](../how-to-guides/troubleshooting.md) | Known issues and resolutions |
+| [troubleshooting.md](../troubleshooting.md) | Known issues and resolutions |

@@ -85,7 +85,7 @@ behaviour:
 A query that returns the full `VSS_MAX_RESULTS` every time, one stream
 dominating the results, and footage that never becomes searchable are
 covered in
-[Troubleshooting — VSS Live Search](../../how-to-guides/troubleshooting.md#vss-live-search).
+[Troubleshooting — VSS Live Search](../../troubleshooting.md#vss-live-search).
 If a matching query returns nothing, `VSS_SEARCH_MIN_PEAK_SCORE` is too high
 or the footage is not indexed yet (allow `VSS_LIVE_SYNC_INTERVAL_SECONDS`
 plus a few frame intervals); if search is slow, lower `VSS_MAX_RESULTS`,

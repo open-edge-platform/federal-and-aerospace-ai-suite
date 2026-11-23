@@ -11,7 +11,7 @@ This guide provides a step-by-step walkthrough for testing the UAV Vision Analyt
 
 A self-contained stack. PX4 SITL, MAVLink router, MQTT broker, and Metrics Manager are all started together (`docker-compose-pymavlink.yml`). Telemetry flows from PX4 SITL through `mavlink-router` to the DL Streamer container, where `pymavlink` reads it directly over UDP.
 
-![uav vision analytics standalone](../_assets/FedAero-uav-vision-pymavlink.svg)
+![uav vision analytics standalone](../../_assets/FedAero-uav-vision-pymavlink.svg)
 
 **Telemetry flow:**
 
@@ -61,7 +61,7 @@ sequenceDiagram
 
 ### System Requirements
 
-See [System Requirements](./system-requirements.md) for the full list of software and hardware prerequisites.
+See [System Requirements](../../get-started/system-requirements.md) for the full list of software and hardware prerequisites.
 
 ### 1. Configure environment
 
@@ -355,9 +355,9 @@ RealSense camera setup and pipelines details are provided in the [RealSense guid
 
 | Document | Description |
 | --- | --- |
-| [index.md](../index.md) | Application overview and component block diagrams |
+| [index.md](../../index.md) | Application overview and component block diagrams |
 | [how-to-guides.md](../how-to-guides.md) | Operating the application: QGroundControl, ground station, deployment modes |
 | [how-to-customize.md](../how-to-customize.md) | Changing cameras, models, pipelines, overlay and search tuning |
-| [benchmark.md](../benchmark.md) | Performance benchmarking guide |
+| [benchmark.md](../../benchmark.md) | Performance benchmarking guide |
 | [makefile.md](../how-to-guides/makefile.md) | Makefile target reference |
-| [troubleshooting.md](../how-to-guides/troubleshooting.md) | Known issues and resolutions |
+| [troubleshooting.md](../troubleshooting.md) | Known issues and resolutions |

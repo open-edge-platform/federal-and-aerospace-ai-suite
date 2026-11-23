@@ -92,7 +92,7 @@ ffplay -rtsp_transport tcp rtsp://<HOST_IP>:8555/uav-front-camera
 
 Boxes and labels should reflect the new model's classes. The detection log
 (`destination.metadata`, see
-[View Detection Logs](../../how-to-guides/view-detection-logs.md)) shows the
+[Read and Filter Detection Logs](../../how-to-guides/view-detection-logs.md)) shows the
 labels as text.
 
 ## Troubleshooting
@@ -100,6 +100,6 @@ labels as text.
 No detections with the new model (`threshold`), `400` from the REST API
 (path outside `resources/models/`), a model that fails on GPU/NPU, and
 `detection model not found` are covered in
-[Troubleshooting — Models & Captioning](../../how-to-guides/troubleshooting.md#models--captioning).
+[Troubleshooting — Models & Captioning](../../troubleshooting.md#models--captioning).
 A larger model may not keep up with 30 fps on the CPU — use the GPU or NPU,
 or raise `inference-interval` in the pipeline string.

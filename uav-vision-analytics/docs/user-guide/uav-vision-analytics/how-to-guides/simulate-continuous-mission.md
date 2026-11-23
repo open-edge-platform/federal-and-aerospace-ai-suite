@@ -72,6 +72,6 @@ idle-disarm timeout, instead of stopping a few tens of seconds in.
 ## Troubleshooting
 
 Arm/disarm flapping that leaves a stream down is covered in
-[Troubleshooting — Rapid arm/disarm flapping](./troubleshooting.md#rapid-armdisarm-flapping-leaves-a-stream-down-sitl).
+[Troubleshooting — Rapid arm/disarm flapping](../troubleshooting.md#rapid-armdisarm-flapping-leaves-a-stream-down-sitl).
 This keep-alive pattern is for SITL testing only; do not work around PX4's
 idle-disarm safety behavior on real flight hardware.

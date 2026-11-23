@@ -100,7 +100,7 @@ Confirm the `..._npu` pipeline shows `"state": "RUNNING"`, and that
 
 `[pipeline] Skipping ... NPU_DEVICE not available`, a poisoned
 `model-instance-id`, and the driver checks are covered in
-[Troubleshooting — NPU inference fails](./troubleshooting.md#npu-inference-fails).
+[Troubleshooting — NPU inference fails](../troubleshooting.md#npu-inference-fails).
 Until the NPU is detected, set the camera to `cpu` or `gpu`; `make
 check-cameras` reports an NPU camera as unavailable rather than silently
 falling back.

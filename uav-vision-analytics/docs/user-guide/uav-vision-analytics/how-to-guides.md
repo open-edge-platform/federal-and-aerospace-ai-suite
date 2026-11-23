@@ -8,29 +8,29 @@ cameras, models, pipelines, overlay, search tuning — see
 
 ## Ground Station
 
-- [QGroundControl](./how-to-guides/qgroundcontrol.md) — Configure QGroundControl
+- [View the UAV Video Stream in QGroundControl](./how-to-guides/qgroundcontrol.md) — Configure QGroundControl
   to receive the UAV Vision Analytics video stream
-- [Multi-UAV Operations in the Ground Station](./how-to-guides/multi-uav-ground-station.md) —
+- [Monitor Multiple UAVs in the Ground Station](./how-to-guides/multi-uav-ground-station.md) —
   Connect multiple UAVs, per-UAV tabs, and the per-host Flight Summary
-- [Search Live Video with VSS](./how-to-guides/vss-live-search.md) —
+- [Search Live Video with Natural Language](./how-to-guides/vss-live-search.md) —
   How live indexing and UAV/camera-scoped search work in the ground station
 
 ## Deployment and Operations
 
-- [Switch Between Pymavlink and UAV Mission Compute SDK Deployment Modes](./how-to-guides/switch-deployment-mode.md) —
+- [Switch Between Standalone and UAV Mission Compute SDK Modes](./how-to-guides/switch-deployment-mode.md) —
   Architecture differences and the `HOST_IP` binding requirement
-- [Enable NPU Inference](./how-to-guides/enable-npu-inference.md) — NPU
+- [Run Object Detection on the NPU](./how-to-guides/enable-npu-inference.md) — NPU
   enablement end-to-end, including common failure modes
-- [Test Against a Simulated, Continuously-Armed Mission](./how-to-guides/simulate-continuous-mission.md) —
+- [Keep PX4 SITL Armed During Pipeline Testing](./how-to-guides/simulate-continuous-mission.md) —
   Keep PX4 SITL armed during interactive pipeline testing
-- [View and Interpret Detection Logs (JSONL)](./how-to-guides/view-detection-logs.md) —
+- [Read and Filter Detection Logs](./how-to-guides/view-detection-logs.md) —
   Tail, filter, and correlate the per-pipeline detection metadata
 
 ## Reference
 
-- [Makefile Reference](./how-to-guides/makefile.md) — Shorthand targets for
+- [Makefile Target Reference](./how-to-guides/makefile.md) — Shorthand targets for
   model setup, stack management, and pipeline control
-- [Troubleshooting](../how-to-guides/troubleshooting.md) — Common issues and
+- [Troubleshoot UAV Vision Analytics](./troubleshooting.md) — Common issues and
   fixes for deployment, inference, and streaming problems
 
 <!--hide_directive

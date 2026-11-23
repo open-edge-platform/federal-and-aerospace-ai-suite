@@ -11,7 +11,7 @@ this page is the short walk-through.
 
 ## Prerequisites
 
-See [System Requirements](../../get-started/system-requirements.md) for the full list of software and hardware prerequisites.
+See [System Requirements](../../../get-started/system-requirements.md) for the full list of software and hardware prerequisites.
 
 ## Steps
 
