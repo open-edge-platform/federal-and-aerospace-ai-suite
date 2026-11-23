@@ -256,7 +256,7 @@ services:
   # Uses the stock default SpeechT5 model. Parler-TTS is not used because the
   # pinned image does not include the parler-tts pip package.
   tts:
-    image: intel/text-to-speech:2026.3.0-rc1
+    image: intel/text-to-speech:2026.3.0-rc2
     container_name: handheld-multi-modal-tts
     restart: "no"
     # Hardcoded to match the image's baked-in app user and the ownership of
@@ -280,6 +280,10 @@ services:
       # recreated GPU container recompiled for minutes.
       NEO_CACHE_DIR: /app/text-to-speech/.cache
       HF_TOKEN: "${HF_TOKEN:-${HF_ACCESS_TOKEN:-}}"
+      # Workaround: the image's inherited PYTHONPATH loads OpenVINO 2026.5, but
+      # its pinned OpenVINO Tokenizers 2026.1 requires the 2026.1 runtime.
+      # Use the app's virtual environment until the image is fixed.
+      PYTHONPATH: ""
       <<: *proxy-env-real
     volumes:
       - ../config/tts/config.yaml:/app/text-to-speech/config.yaml:ro
