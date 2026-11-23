@@ -9,13 +9,13 @@ This page covers installing the UAV Mission Compute SDK on a provisioned Uncrewe
 
 The provisioned image ships with system-level dependencies only — kernel, GPU/NPU drivers, Docker Engine, and container device plugins. The UAV Mission Compute SDK, container images, simulation stack, and OpenVINO™ Python runtime must be installed on the target as described below.
 
-For image build and platform provisioning, see [Infrastructure Setup](../infrastructure-setup.md).
+For image build and platform provisioning, see [Advanced Image Customization](../infrastructure/advanced-image-customization.md).
 
 ## OEP SDK installation
 
 ### Prerequisites
 
-- UAV platform provisioned per [Infrastructure Setup](../infrastructure-setup.md).
+- UAV platform provisioned per [Advanced Image Customization](../infrastructure/advanced-image-customization.md).
 - Passwordless SSH or console access to the target.
 - Internet connectivity (or configured proxy) on the target for package and container image downloads.
 - Minimum 16 GB RAM (32 GB recommended) and 100 GB free disk space for the simulation stack, container images, and models.

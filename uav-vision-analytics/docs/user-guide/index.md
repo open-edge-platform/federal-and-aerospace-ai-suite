@@ -61,7 +61,7 @@ To learn more about the application and how to use it, see
 
 Follow the steps below to set up and run the UAV Blueprint:
 
-1. [Infrastructure Setup](./infrastructure-setup.md) — Build the OS image, flash it to a bootable USB, and validate the provisioned platform.
+1. [Custom Image](./custom-image.md) — Build a customized Ubuntu image, write it to a bootable USB, and install it on the target.
 2. [Install OEP SDK and Usage](./get-started/install-oep-sdks.md) — Verify hardware accelerators and install the UAV Mission Compute SDK on the provisioned target.
 3. [Install UAV Vision Analytics Application](install-uav-app.md) — Choose and follow the deployment mode that matches your setup (Standalone or UAV Mission Compute SDK).
 4. [How-To Guides](./how-to-guides.md) — Operate the application: QGroundControl, the ground station, deployment modes, troubleshooting.
@@ -70,7 +70,8 @@ Follow the steps below to set up and run the UAV Blueprint:
 
 Alternatively, on an Ubuntu 24.04 target, use [Installation on Ubuntu](./installation-on-ubuntu.md) to
 install and start the UAV Vision Analytics application with the OEP CLI Installer in place of
-steps 1–3.
+steps 1–3. To view the cameras on a ground station, see
+[Installation of the UAV Ground Station on Ubuntu](./uav-ground-station/installation-on-ubuntu.md).
 
 ## AI Agent Skills
 
@@ -102,13 +103,13 @@ immediately.
 :::{toctree}
 :hidden:
 
-Infrastructure Setup <./infrastructure-setup.md>
+Installation <./installation.md>
 Install UAV SDK and Usage <./get-started/install-oep-sdks.md>
-Installation on Ubuntu <./installation-on-ubuntu.md>
 UAV Vision Analytics Application <install-uav-app.md>
 UAV Ground Station Application <./uav-ground-station/index.md>
 How-To Guides <./how-to-guides.md>
 How to Customize <./how-to-customize.md>
+Platform Capabilities <./infrastructure/platform-capabilities.md>
 Benchmarks <./benchmark.md>
 Agent SKILLs <./agents.md>
 Release Notes <./release-notes.md>

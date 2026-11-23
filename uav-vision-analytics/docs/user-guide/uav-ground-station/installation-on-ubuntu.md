@@ -11,6 +11,7 @@ This guide installs the UAV Ground Station on an Ubuntu 24.04 machine using the
 packages, downloads the application, and builds the images, including the optional VSS search overlay.
 
 For the manual `make` and Docker Compose path instead, see [Get Started](./get-started.md).
+To build a customized OS image first, see [Custom Image](../custom-image.md).
 
 ## Prerequisites
 

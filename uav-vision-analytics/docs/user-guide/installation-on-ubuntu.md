@@ -13,6 +13,7 @@ packages, downloads the application, fetches the models, and builds the images. 
 simulated cameras on the same host.
 
 For the manual path instead, see [Install UAV Vision Analytics Application](install-uav-app.md).
+To build a customized OS image first, see [Custom Image](./custom-image.md).
 To add the browser dashboard on top, see the
 [UAV Ground Station installation](./uav-ground-station/installation-on-ubuntu.md).
 
@@ -110,4 +111,4 @@ openedge-cli remove uncrewed_aerial_vehicle_vision_analytics
 
 - [OEP CLI Installer README](https://github.com/open-edge-platform/edge-ai-libraries/blob/main/frameworks/oep-installer-cli/README.md): full command reference, options, and credentials handling.
 - [Install UAV Vision Analytics Application](install-uav-app.md): manual deployment of the Standalone and UAV Mission Compute SDK modes.
-- [Infrastructure Setup](infrastructure-setup.md): OS image build and bootable-USB provisioning path.
+- [Custom Image](custom-image.md): build a customized Ubuntu image and install it from a bootable USB stick.

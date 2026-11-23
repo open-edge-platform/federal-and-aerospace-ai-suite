@@ -31,6 +31,9 @@ and the html version on
 
 ## Quick Start
 
+To install and run the ground station on Ubuntu 24.04 with the OEP CLI Installer instead, see
+[Installation on Ubuntu](../uav-vision-analytics/docs/user-guide/uav-ground-station/installation-on-ubuntu.md).
+
 Prerequisites: Docker with the Compose plugin and `make` on this machine.
 
 ```bash
