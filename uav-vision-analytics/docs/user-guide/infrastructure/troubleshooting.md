@@ -10,4 +10,4 @@ SPDX-License-Identifier: Apache-2.0
 - `kubectl` issues: Confirm that the Kubernetes installation has completed and the node status is `Ready`.
 - GPU or NPU not detected: Inspect `dmesg` for driver load failures.
 - After a successful OS provisioning reboot, if the edge node boots from USB and starts provisioning again, the Boot Override option is enabled in the target system BIOS. Disable Boot Override, or ensure USB is not the first option in the Boot Override list. Set the hard disk as the default boot option, then save and exit.
-- OS installation fails: Rewrite the USB stick (see [OS installation](./advanced-image-customization.md#os-installation)), confirming that `dd` completes without errors, then boot again and check the installer console output for the failing step.
+- OS installation fails: Rewrite the USB stick (see [OS installation](./customized-image.md#os-installation)), confirming that `dd` completes without errors, then boot again and check the installer console output for the failing step.

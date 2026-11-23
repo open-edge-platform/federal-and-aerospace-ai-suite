@@ -9,13 +9,13 @@ This guide installs the UAV Vision Analytics application on an Ubuntu 24.04 targ
 [Open Edge Platform (OEP) CLI Installer](https://github.com/open-edge-platform/edge-ai-libraries/tree/main/frameworks/oep-installer-cli)
 (`openedge-cli`). It is a single self-contained shell script that installs the required system
 packages, downloads the application, fetches the models, and builds the images. It deploys the
-[Standalone Mode (Pymavlink)](./get-started/get-started-standalone.md) stack, which runs PX4 SITL and
+[Standalone Mode (Pymavlink)](../get-started/get-started-standalone.md) stack, which runs PX4 SITL and
 simulated cameras on the same host.
 
-For the manual path instead, see [Install UAV Vision Analytics Application](install-uav-app.md).
-To build a customized OS image first, see [Custom Image](./custom-image.md).
+For the manual path instead, see [Install UAV Vision Analytics Application](../install-uav-app.md).
+To build a customized OS image first, see [Customized Image](./customized-image.md).
 To add the browser dashboard on top, see the
-[UAV Ground Station installation](./uav-ground-station/installation-on-ubuntu.md).
+[UAV Ground Station installation](../uav-ground-station/installation-on-ubuntu.md).
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ To add the browser dashboard on top, see the
 - Sudo access on the target. The installer prompts for the sudo password unless `SUDO_PASSWORD` or
   `SUDO_ASKPASS` is set, or passwordless sudo is granted.
 - An Intel GPU and NPU for the default camera configuration (NPU object detection, GPU captioning).
-  See the [camera configuration](./how-to-customize/camera-management/configure-cameras.md) to change devices.
+  See the [camera configuration](../how-to-customize/camera-management/configure-cameras.md) to change devices.
 
 ## Step 1: (Optional) Install the Edge Pack Components
 
@@ -90,7 +90,7 @@ rtsp://<HOST_IP>:8555/uav-bottom-camera
 rtsp://<HOST_IP>:8555/uav-back-camera
 ```
 
-Continue with [How-To Guides](./how-to-guides.md) to view them, connect QGroundControl, or add the ground station.
+Continue with [How-To Guides](../how-to-guides.md) to view them, connect QGroundControl, or add the ground station.
 
 ## Stop the Application
 
@@ -110,5 +110,5 @@ openedge-cli remove uncrewed_aerial_vehicle_vision_analytics
 ## Related Guides
 
 - [OEP CLI Installer README](https://github.com/open-edge-platform/edge-ai-libraries/blob/main/frameworks/oep-installer-cli/README.md): full command reference, options, and credentials handling.
-- [Install UAV Vision Analytics Application](install-uav-app.md): manual deployment of the Standalone and UAV Mission Compute SDK modes.
-- [Custom Image](custom-image.md): build a customized Ubuntu image and install it from a bootable USB stick.
+- [Install UAV Vision Analytics Application](../install-uav-app.md): manual deployment of the Standalone and UAV Mission Compute SDK modes.
+- [Customized Image](./customized-image.md): build a customized Ubuntu image and install it from a bootable USB stick.

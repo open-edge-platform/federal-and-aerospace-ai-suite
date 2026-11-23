@@ -22,7 +22,7 @@ Use this guide after provisioning an edge node with the Infrastructure software 
 
 ## Prerequisites
 
-- An edge node set up per [Installation on Ubuntu](../installation-on-ubuntu.md) or [Custom Image](../custom-image.md).
+- An edge node set up per [Infrastructure Setup](../infrastructure-setup.md).
 - Docker Engine installed on the target.
 - Network connectivity for model and media downloads.
 

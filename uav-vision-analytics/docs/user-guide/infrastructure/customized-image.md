@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Advanced Image Customization (Using Image Composer Tool)
+# Customized Image (Using Image Composer Tool)
 
 The [Image Composer Tool (ICT)](https://docs.openedgeplatform.intel.com/dev/platform-software/image-composer-tool/index.html)
 is a command-line tool for building custom Linux images from pre-built packages.
@@ -14,7 +14,7 @@ distros on x86_64.
 > [!NOTE]
 > This path is intended for advanced users who need fine-grained control over disk
 > layout, installed packages, and package repositories. Most users can start with the simpler
-> path, [using standrd Ubuntu image](../installation-on-ubuntu.md).
+> path, [using standard Ubuntu image](./installation-on-ubuntu.md).
 
 This article will show you how to:
 
@@ -154,7 +154,7 @@ stick under **Boot → Boot options**. Save the changes and reboot; the automati
 
 After the OS is installed, install the applications with `openedge-cli`:
 
-- [Install UAV Vision Analytics on Ubuntu](../installation-on-ubuntu.md)
+- [Install UAV Vision Analytics on Ubuntu](./installation-on-ubuntu.md)
 - [Install UAV Ground Station on Ubuntu](../uav-ground-station/installation-on-ubuntu.md)
 
 ## Package curation and template customization
