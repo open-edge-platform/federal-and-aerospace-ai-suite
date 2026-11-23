@@ -112,7 +112,7 @@ hf download OpenVINO/<model>-ov --local-dir resources/ov_models/gpu/<model>
 Options B and C use their own Python environment, separate from the one
 `make model` creates. Create it once from `uav-vision-analytics/`
 (requires `python3-venv`, see
-[Troubleshooting](../../how-to-guides/troubleshooting.md)):
+[Troubleshooting](../../troubleshooting.md)):
 
 ```bash
 python3 -m venv .cache/venv-vlm
@@ -207,6 +207,6 @@ short.
 
 `captioning model not found`, a captioning pipeline that goes to `ERROR` at
 start, and captions that arrive slowly or stop are covered in
-[Troubleshooting — Models & Captioning](../../how-to-guides/troubleshooting.md#models--captioning).
+[Troubleshooting — Models & Captioning](../../troubleshooting.md#models--captioning).
 If the model loads but captions are poor, adjust the prompt first; `fp16`
 weights on the GPU can be tried, INT8 rarely changes quality noticeably.

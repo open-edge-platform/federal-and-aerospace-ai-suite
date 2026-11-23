@@ -123,7 +123,7 @@ same-key change like this.
 3. If you remove the key from `latest_data` entirely, check whether anything
    downstream reads it — the overlay ROI labels are display-only, but if a
    JSONL metadata consumer (see
-   [View Detection Logs](../../how-to-guides/view-detection-logs.md)) or another script
+   [Read and Filter Detection Logs](../../how-to-guides/view-detection-logs.md)) or another script
    expects that field to exist, removing it upstream will break that
    consumer instead of just the overlay.
 
@@ -140,5 +140,5 @@ overlay, and that its value updates as the simulated UAV moves.
 
 An edit with no effect, a `KeyError` in `process_frame()`, and a field that
 stays at its default value are covered in
-[Troubleshooting — Overlay script edit has no effect](../../how-to-guides/troubleshooting.md#overlay-script-edit-has-no-effect)
-and [No telemetry overlay on stream](../../how-to-guides/troubleshooting.md#no-telemetry-overlay-on-stream-all-zeros).
+[Troubleshooting — Overlay script edit has no effect](../../troubleshooting.md#overlay-script-edit-has-no-effect)
+and [No telemetry overlay on stream](../../troubleshooting.md#no-telemetry-overlay-on-stream-all-zeros).

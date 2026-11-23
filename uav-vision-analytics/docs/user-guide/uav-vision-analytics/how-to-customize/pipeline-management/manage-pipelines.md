@@ -115,7 +115,7 @@ Useful request fields:
 | --- | --- |
 | `destination.frame.path` | Stream name: `rtsp://<HOST_IP>:8555/<path>`. Keep `"encoding": "h264"` (the ground station's relay needs H.264). |
 | `destination.frame.overlay: false` | Hide the detection boxes and telemetry text. |
-| `destination.metadata` | Add `{"type": "file", "path": "/tmp/results.jsonl", "format": "json-lines"}` to keep a per-frame detection log (see [View Detection Logs](../../how-to-guides/view-detection-logs.md)). |
+| `destination.metadata` | Add `{"type": "file", "path": "/tmp/results.jsonl", "format": "json-lines"}` to keep a per-frame detection log (see [Read and Filter Detection Logs](../../how-to-guides/view-detection-logs.md)). |
 | `parameters.video` | Standalone mode: file name in `resources/videos`. |
 | `parameters.rtsp_url` | SDK mode: the camera's RTSP source. |
 | `parameters.detection_model` | Container path of the OpenVINO™ IR model (see [Modify the Detection Model](../model-and-video-management/modify-model.md)). |
@@ -176,13 +176,13 @@ This also stops pipelines started by the manager. `make pymav-down` / `make uavs
 > raw array length. `benchmark/calc_stream_density.sh` does this:
 > `state == "RUNNING"` only when averaging FPS, `state in ("RUNNING", "QUEUED", "STARTING")`
 > when counting/stopping active instances.
-> See [Troubleshooting — `/pipelines/status` keeps old pipeline entries](../../how-to-guides/troubleshooting.md#pipelinesstatus-keeps-old-pipeline-entries-after-they-were-stopped).
+> See [Troubleshooting — `/pipelines/status` keeps old pipeline entries](../../troubleshooting.md#pipelinesstatus-keeps-old-pipeline-entries-after-they-were-stopped).
 
 ## Troubleshooting
 
 Common symptoms — `404`/`400` on POST, `model-instance-id ... errored out`,
 `RTSP Stream ... already exists`, a pipeline stuck in `QUEUED`, GPU running
 at CPU speed — are covered in
-[Troubleshooting — Pipelines](../../how-to-guides/troubleshooting.md#pipelines).
+[Troubleshooting — Pipelines](../../troubleshooting.md#pipelines).
 A camera that does not start on arm is explained by `make check-cameras`
 (see [Configure the Cameras — When something is wrong](../camera-management/configure-cameras.md#when-something-is-wrong)).

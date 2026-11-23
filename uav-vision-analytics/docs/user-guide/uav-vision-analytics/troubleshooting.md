@@ -257,7 +257,7 @@ but is actually the host service winning the race against Docker every time.
 ### REST API calls to `https://<HOST_IP>/...` fail or get a proxy error
 
 **Symptom:** `curl -k https://<HOST_IP>/pipelines/status` (or any other REST
-call from [Manage Pipelines](../how-to-customize/pipeline-management/manage-pipelines.md#rest-api))
+call from [Manage Pipelines](./how-to-customize/pipeline-management/manage-pipelines.md#rest-api))
 hangs, returns `403`/`502` from an unrelated proxy server, or
 `Connection refused`, even though the stack is healthy and `ffplay` can read
 the RTSP stream fine.
@@ -307,7 +307,7 @@ curl -k -s https://<HOST_IP>/pipelines/status | \
   jq '[.[] | select(.state=="RUNNING" or .state=="QUEUED" or .state=="STARTING")] | length'
 ```
 
-See [Manage Pipelines — stop all running pipelines](../how-to-customize/pipeline-management/manage-pipelines.md#stop-all-running-pipelines).
+See [Manage Pipelines — stop all running pipelines](./how-to-customize/pipeline-management/manage-pipelines.md#stop-all-running-pipelines).
 
 ### `make start-rtsp` silently does nothing from a script / CI / non-interactive shell
 
@@ -370,7 +370,7 @@ sed -i 's|^HOST_IP=.*|HOST_IP=0.0.0.0|' .env
 make down && make up-sim-camera
 ```
 
-See [Get Started (UAV Mission Compute SDK Mode) — Step 1](../get-started/get-started-uavsdk.md#1-start-the-uav-mission-compute-sdk).
+See [Get Started (UAV Mission Compute SDK Mode) — Step 1](./get-started/get-started-uavsdk.md#1-start-the-uav-mission-compute-sdk).
 
 ### Pipelines skip their cameras — the RTSP source is not available (UAV Mission Compute SDK mode)
 
@@ -505,7 +505,7 @@ Replace `vah264enc` with `vah264lpenc`
 
 The pipeline name in the URL is not in the loaded config file (names are
 case-sensitive). List them with the command in
-[Manage Pipelines — List the available pipelines](../how-to-customize/pipeline-management/manage-pipelines.md#list-the-available-pipelines).
+[Manage Pipelines — List the available pipelines](./how-to-customize/pipeline-management/manage-pipelines.md#list-the-available-pipelines).
 
 ### REST API returns `400` on POST
 
@@ -514,7 +514,7 @@ for example a `detection_model` outside `/home/pipeline-server/resources/models/
 (use the container path, not a host path), a `video` name with a folder in
 it, or a `captioner_prompt` with characters other than letters, digits,
 spaces, and `, . ? ' -`. The schemas are listed in
-[Modify Pipelines — The parameters schema](../how-to-customize/pipeline-management/modify-pipelines.md#the-parameters-schema).
+[Modify Pipelines — The parameters schema](./how-to-customize/pipeline-management/modify-pipelines.md#the-parameters-schema).
 
 ### `model-instance-id ... errored out on a prior run`
 
@@ -551,7 +551,7 @@ The camera's device/VLM combination has no pipeline of the derived name
 (e.g. a live camera on `cpu`, whose pipelines ship in
 `configs/config-pymavlink-realsense.json` only). Copy the pipeline into the
 loaded config and recreate the container, or change the camera's devices;
-see [Modify Pipelines — Add a pipeline](../how-to-customize/pipeline-management/modify-pipelines.md#add-a-pipeline).
+see [Modify Pipelines — Add a pipeline](./how-to-customize/pipeline-management/modify-pipelines.md#add-a-pipeline).
 
 ### Rapid arm/disarm flapping leaves a stream down (SITL)
 
@@ -559,7 +559,7 @@ A re-arm loop whose interval is close to PX4's idle-disarm timeout flaps the
 vehicle between armed and disarmed, repeatedly starting and stopping the
 pipelines. Use a clearly shorter re-arm interval; if a stream stays down,
 stop and start that pipeline by hand
-([Manage Pipelines](../how-to-customize/pipeline-management/manage-pipelines.md)).
+([Manage Pipelines](./how-to-customize/pipeline-management/manage-pipelines.md)).
 This pattern is for SITL testing only.
 
 ### Both stacks start but only one streams
@@ -578,7 +578,7 @@ If they stay at zero, see
 ### Detection log (JSONL) is missing or empty
 
 Only a pipeline started by hand with a `destination.metadata` block writes
-one; the camera-file manager does not add it. See [View Detection Logs](./view-detection-logs.md).
+one; the camera-file manager does not add it. See [Read and Filter Detection Logs](./how-to-guides/view-detection-logs.md).
 
 ## Cameras & Video
 
@@ -591,7 +591,7 @@ file name is accepted.
 
 The pipelines expect H.264 in an `.avi`/`.mp4`/`.mkv`/`.ts` container.
 Convert the file with `scripts/convert_video.sh` rather than copying the
-original — see [Use Your Own Videos](../how-to-customize/model-and-video-management/use-your-own-video.md).
+original — see [Use Your Own Videos](./how-to-customize/model-and-video-management/use-your-own-video.md).
 
 ### `scripts/convert_video.sh` errors
 
@@ -613,7 +613,7 @@ The node must be listed in `.env` (`CAMERA_DEVICE_1` … `CAMERA_DEVICE_4`)
 and the container recreated (`make pymav-up`) for it to be visible inside;
 use the stable `/dev/v4l/by-id/` path and the camera's color node (YUYV or
 UYVY format). See
-[Configure the Cameras — Live cameras](../how-to-customize/camera-management/configure-cameras.md#live-cameras-realsense-usb-webcams).
+[Configure the Cameras — Live cameras](./how-to-customize/camera-management/configure-cameras.md#live-cameras-realsense-usb-webcams).
 
 ## Models & Captioning
 
@@ -631,13 +631,13 @@ The exported IR uses an operation those plugins do not support — typically
 a detection model exported with `ultralytics` newer than the pinned `8.4.67`.
 Re-export with the pinned tools (`rm -rf resources/venv && make model`) or
 keep that camera on `cpu`. See
-[Manage the Detection Model](../how-to-customize/model-and-video-management/model.md).
+[Manage the Detection Model](./how-to-customize/model-and-video-management/model.md).
 
 ### No detections with a new detection model
 
 The `threshold=0.4` in the pipeline string may be too high for the model's
 confidence distribution; lower it as shown in
-[Modify Pipelines — Change an element's property](../how-to-customize/pipeline-management/modify-pipelines.md#change-an-elements-property).
+[Modify Pipelines — Change an element's property](./how-to-customize/pipeline-management/modify-pipelines.md#change-an-elements-property).
 
 ### Captioning pipeline goes to `ERROR` at start
 
@@ -646,7 +646,7 @@ architecture is not supported by the `openvino_genai` version in the
 pipeline-server image. `docker logs uav-va-dlstreamer-pipeline-server` shows the
 loader error; revert `captioning.model` and re-arm to recover. The required
 file set is listed in
-[Change the Captioning Model — Required format](../how-to-customize/model-and-video-management/vlm-model.md#required-format).
+[Change the Captioning Model — Required format](./how-to-customize/model-and-video-management/vlm-model.md#required-format).
 
 ### `make vlm-model` fails — `Service failed to start within 180s`
 
@@ -830,7 +830,7 @@ docker logs uav-va-metrics-manager 2>&1 | grep -iE "power|rapl|error"
 
 ### QGroundControl stable release fails to connect
 
-See [QGroundControl](./qgroundcontrol.md) for the primary installation instructions (Stable v5.1).
+See [QGroundControl](./how-to-guides/qgroundcontrol.md) for the primary installation instructions (Stable v5.1).
 
 **Symptom:** QGroundControl (Stable v5.1) fails to connect to the vehicle, or
 the RTSP video stream does not render, even though the RTSP URL and pipeline
@@ -847,7 +847,7 @@ it contains newer fixes not yet in the stable release:
 
 ### QGroundControl shows "not connected" — `Failed to bind UDP socket to port 14551`
 
-See [QGroundControl](./qgroundcontrol.md) for the primary installation instructions.
+See [QGroundControl](./how-to-guides/qgroundcontrol.md) for the primary installation instructions.
 
 **Symptom:** QGroundControl never shows a connected vehicle, and its logs show:
 
@@ -910,7 +910,7 @@ root causes, and it's worth checking both:
 
 ### RTSP video stream does not play on a remote Windows machine (system proxy configured)
 
-See [QGroundControl](./qgroundcontrol.md) for video stream configuration.
+See [QGroundControl](./how-to-guides/qgroundcontrol.md) for video stream configuration.
 
 **Symptom:** QGroundControl connects to the vehicle (telemetry/MAVLink works
 fine) but the RTSP video stream never renders, when QGroundControl is running
@@ -939,7 +939,7 @@ restart QGroundControl so it picks up the change:
 
 ### "Network Not Available" warnings
 
-See [QGroundControl](./qgroundcontrol.md) for installation and video stream configuration.
+See [QGroundControl](./how-to-guides/qgroundcontrol.md) for installation and video stream configuration.
 
 **Symptom:** The following warnings appear in the QGroundControl logs:
 
@@ -977,7 +977,7 @@ report the network as `limited` or `none` even when the host has a valid local c
 
 ## VSS Live Search
 
-See [Searching Live Video with VSS](./vss-live-search.md) for the feature
+See [Search Live Video with Natural Language](./how-to-guides/vss-live-search.md) for the feature
 this section covers.
 
 ### Search popup never appears / routes 404
@@ -1001,7 +1001,7 @@ query better, can take most of the slots. The ground station therefore also
 asks VSS for each UAV's and each camera's own best matches, merges them and
 interleaves the results by UAV/camera. The popup's UAV/Camera filters narrow
 that merged set without searching again; see
-[Tune VSS Live Search](../how-to-customize/search-tuning/vss-search-tuning.md).
+[Tune VSS Live Search](./how-to-customize/search-tuning/vss-search-tuning.md).
 If a camera's footage genuinely never matches (check by filtering to that
 camera alone), no setting will surface it.
 
@@ -1020,7 +1020,7 @@ about 30 s.
 
 Single words score lower against CLIP than full descriptions. Describe the
 scene ("a person walking on the road") or lower `VSS_SEARCH_MIN_PEAK_SCORE`
-(see [Tune VSS Live Search](../how-to-customize/search-tuning/vss-search-tuning.md)).
+(see [Tune VSS Live Search](./how-to-customize/search-tuning/vss-search-tuning.md)).
 
 ### A result does not show the object that was searched for
 
@@ -1077,7 +1077,7 @@ container with the corrected mount; the model downloads on the next start.
 
 The relevance filters are off or too low for the embedding model; see
 `VSS_SEARCH_MIN_PEAK_SCORE` / `VSS_SEARCH_RELATIVE_CUTOFF` in
-[Tune VSS Live Search](../how-to-customize/search-tuning/vss-search-tuning.md).
+[Tune VSS Live Search](./how-to-customize/search-tuning/vss-search-tuning.md).
 
 ### A result clip will not play in the browser
 
@@ -1089,7 +1089,7 @@ may no longer be available at all.
 ### New camera never becomes searchable
 
 Confirm it reached `RUNNING` on the UAV host first (see
-[Viewing and Interpreting Detection Logs](./view-detection-logs.md) or
+[Read and Filter Detection Logs](./how-to-guides/view-detection-logs.md) or
 `make cameras-status`); VSS only indexes RTSP streams it can see.
 
 See the Ground Station's own
@@ -1100,14 +1100,14 @@ for the full route reference.
 
 ## Multi-UAV Ground Station
 
-See [Multi-UAV Operations in the Ground Station](./multi-uav-ground-station.md)
+See [Monitor Multiple UAVs in the Ground Station](./how-to-guides/multi-uav-ground-station.md)
 for the feature this section covers.
 
 ### Disconnecting one UAV seems to affect another's video/metrics
 
 This should not happen; each host's relay path, metrics stream, and caption buffer are
 keyed by host. If this happens, check for a camera-name collision (see
-[Multi-UAV Operations — Avoid camera-name collisions](./multi-uav-ground-station.md#4-avoid-camera-name-collisions))
+[Monitor Multiple UAVs — Avoid camera-name collisions](./how-to-guides/multi-uav-ground-station.md#4-avoid-camera-name-collisions))
 that was not actually disambiguated — confirm the relay/VSS names include the
 expected host segment.
 

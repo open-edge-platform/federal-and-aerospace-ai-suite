@@ -97,5 +97,5 @@ The target system is the Intel edge node on which the provisioned OS and workloa
 ### Validation
 
 - Ensure all dependencies are installed and configured before proceeding to
-  [Get Started Standalone](./get-started-standalone.md)
-  [Get Started SDK](./get-started-uavsdk.md)
+  [Get Started Standalone](../uav-vision-analytics/get-started/get-started-standalone.md)
+  [Get Started SDK](../uav-vision-analytics/get-started/get-started-uavsdk.md)

@@ -93,5 +93,5 @@ ffplay -rtsp_transport tcp rtsp://<HOST_IP>:8555/uav-front-camera
 `scripts/convert_video.sh` error messages, `video not found` from
 `make check-cameras`, a pipeline that errors on an unconverted file, and a
 stream that still shows the old footage are covered in
-[Troubleshooting — Cameras & Video](../../how-to-guides/troubleshooting.md#cameras--video).
+[Troubleshooting — Cameras & Video](../../troubleshooting.md#cameras--video).
 A soft picture means a low-bitrate source; conversion cannot improve it.

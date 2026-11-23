@@ -62,7 +62,7 @@ docker exec uav-va-dlstreamer-pipeline-server tail -f /tmp/results.jsonl \
 > [!NOTE]
 > `jq` runs inside the container, which already has it available. To run it
 > from the host instead, see
-> [Troubleshooting — jq: command not found](./troubleshooting.md#jq-command-not-found).
+> [Troubleshooting — jq: command not found](../troubleshooting.md#jq-command-not-found).
 
 ### 3. Copy the log out for offline analysis
 
@@ -88,7 +88,7 @@ and match on the `destination.metadata.path` you started it with.
 ## Troubleshooting
 
 A missing or empty log file is covered in
-[Troubleshooting — Detection log (JSONL) is missing or empty](./troubleshooting.md#detection-log-jsonl-is-missing-or-empty);
-`jq` on the host in [jq: command not found](./troubleshooting.md#jq-command-not-found).
+[Troubleshooting — Detection log (JSONL) is missing or empty](../troubleshooting.md#detection-log-jsonl-is-missing-or-empty);
+`jq` on the host in [jq: command not found](../troubleshooting.md#jq-command-not-found).
 The JSONL carries no pipeline or camera name (the overlay label is drawn on
 the video only) — give each pipeline its own `path` to tell them apart.

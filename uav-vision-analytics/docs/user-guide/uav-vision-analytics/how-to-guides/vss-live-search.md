@@ -20,7 +20,7 @@ camera — this is a `uav-ground-station` feature; nothing changes on the
 > frames, not the MQTT scene captions. Captioning is a separate feature
 > (per-camera VLM captions and the Flight Summary report); see the
 > [VLM Model guide](../how-to-customize/model-and-video-management/vlm-model.md) and
-> [Multi-UAV Operations — Flight Summary](./multi-uav-ground-station.md#5-generate-a-flight-summary-for-a-specific-uav).
+> [Monitor Multiple UAVs — Flight Summary](./multi-uav-ground-station.md#5-generate-a-flight-summary-for-a-specific-uav).
 
 ## Prerequisites
 
@@ -128,7 +128,7 @@ cycle yet, or its pipeline is not `RUNNING`.
 
 ## Troubleshooting
 
-See [Troubleshooting — VSS Live Search](./troubleshooting.md#vss-live-search)
+See [Troubleshooting — VSS Live Search](../troubleshooting.md#vss-live-search)
 for common issues (search popup 404, "Unknown camera" results, one stream
 dominating results, result clips that will not play, a new camera that never
 becomes searchable).

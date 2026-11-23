@@ -129,4 +129,4 @@ is rejected with `400` (for example `detection_model` must be an `.xml` under
 An edit that has no effect, a container that restarts after an edit,
 `pipeline ... is not in the pipeline server's config.json` from
 `make check-cameras`, and `gst_parse_error: no element ...` are covered in
-[Troubleshooting — Pipelines](../../how-to-guides/troubleshooting.md#pipelines).
+[Troubleshooting — Pipelines](../../troubleshooting.md#pipelines).

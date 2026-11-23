@@ -99,5 +99,5 @@ make check-cameras         # reports a camera whose model file is missing
 
 `make model` failing on `python3-venv`, a model that loads on CPU but not on
 GPU/NPU, and a missing model reported by `make check-cameras` are covered in
-[Troubleshooting — Setup](../../how-to-guides/troubleshooting.md#make-model-fails--python3-venv-not-available)
-and [Troubleshooting — Models & Captioning](../../how-to-guides/troubleshooting.md#models--captioning).
+[Troubleshooting — Setup](../../troubleshooting.md#make-model-fails--python3-venv-not-available)
+and [Troubleshooting — Models & Captioning](../../troubleshooting.md#models--captioning).

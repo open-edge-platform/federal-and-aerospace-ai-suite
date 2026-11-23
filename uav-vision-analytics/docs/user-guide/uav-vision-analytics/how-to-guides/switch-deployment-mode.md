@@ -94,4 +94,4 @@ the `sed` step above and restart the SDK (`make down && make up-sim-camera`).
 `ConnectionRefusedError` / RTSP `404` in UAVSDK mode (the `HOST_IP` symptom
 above), both stacks starting but only one streaming, and an overlay that
 shows zeros right after switching are covered in
-[Troubleshooting — Pipelines](./troubleshooting.md#pipelines).
+[Troubleshooting — Pipelines](../troubleshooting.md#pipelines).
