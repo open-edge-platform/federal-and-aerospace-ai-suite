@@ -15,7 +15,7 @@ For the image-build and bootable-USB provisioning path instead, see
 [Customized Image](./customized-image.md) and [Install OEP SDKs](install-oep-sdks.md).
 
 For more detailed information on Edge Pack, refer to
-[Edge Pack documentation](https://docs.openedgeplatform.intel.com/dev/platform-software/edge-pack/index.html).
+[Edge Pack documentation](https://docs.openedgeplatform.intel.com/2026.3/platform-software/edge-pack/index.html).
 
 ## Prerequisites
 
