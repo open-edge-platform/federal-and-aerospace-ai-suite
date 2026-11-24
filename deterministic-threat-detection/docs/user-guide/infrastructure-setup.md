@@ -21,12 +21,18 @@ curl -fsSL https://raw.githubusercontent.com/open-edge-platform/edge-ai-librarie
 openedge-cli remove deterministic_threat_detection
 ```
 
-## Start and Stop
+## Start the Application
 
-To start and stop the application, see the
-[README](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/deterministic-threat-detection/README.md).
-For the one-time host, TSN and switch preparation, see the
-[System Requirements](./get-started/system-requirements.md).
+The installer places the application in
+`$HOME/.local/open-edge-platform/openedge-cli/installed/deterministic_threat_detection`. Go to that
+directory and follow the steps in the regular documentation:
+
+```bash
+cd $HOME/.local/open-edge-platform/openedge-cli/installed/deterministic_threat_detection
+```
+
+- [System Requirements](./get-started/system-requirements.md) for the host, TSN and switch preparation.
+- [Get Started](./deterministic-threat-detection/get-started.md) to start and stop the application.
 
 <!--hide_directive
 :::{toctree}
