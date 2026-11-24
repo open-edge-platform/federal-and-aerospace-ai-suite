@@ -6,7 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 # Infrastructure Setup
 
 Use the OEP CLI Installer to install or remove Deterministic Threat Detection on an existing
-Ubuntu 24.04 system. For the full installer documentation, see the
+Ubuntu 24.04 system. Run the install, remove and start steps on machine-1 only: `make up` copies
+what the other machines need. For the full installer documentation, see the
 [OEP CLI Installer guide](https://docs.openedgeplatform.intel.com/dev/OEP-articles/oep-cli-installer/index.html).
 
 ## Install
