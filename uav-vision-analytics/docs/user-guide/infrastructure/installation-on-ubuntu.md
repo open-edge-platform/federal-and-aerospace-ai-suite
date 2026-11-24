@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Installation on Ubuntu
 
 This guide installs the UAV Vision Analytics application on an Ubuntu 24.04 target using the
-[Open Edge Platform (OEP) CLI Installer](https://github.com/open-edge-platform/edge-ai-libraries/tree/main/frameworks/oep-installer-cli)
+[Open Edge Platform (OEP) CLI Installer](https://github.com/open-edge-platform/edge-ai-libraries/tree/release-2026.3.0/frameworks/oep-installer-cli)
 (`openedge-cli`). It is a single self-contained shell script that installs the required system
 packages, downloads the application, fetches the models, and builds the images. It deploys the
 [Standalone Mode (Pymavlink)](../uav-vision-analytics/deploy/deploy-standalone.md) stack, which runs PX4 SITL and
@@ -31,7 +31,7 @@ Edge Pack provides platform-level services (EP-IPU, EP-Manageability, and EP-TSN
 blueprint with `--edgepack` to add them:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/refs/heads/main/frameworks/oep-installer-cli/rendered/openedge-cli | bash -s -- install uncrewed_aerial_vehicle_blueprint --edgepack
+curl -fsSL https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/refs/heads/release-2026.3.0/frameworks/oep-installer-cli/rendered/openedge-cli-federal-aerospace | bash -s -- install uncrewed_aerial_vehicle_blueprint --edgepack
 ```
 
 During installation the system might reboot. After it is back online, follow the instructions from
@@ -40,7 +40,7 @@ the installer to resume. If the system did not reboot, go to the next step.
 ## Step 2: Install UAV Vision Analytics
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/refs/heads/main/frameworks/oep-installer-cli/rendered/openedge-cli | bash -s -- install uncrewed_aerial_vehicle_vision_analytics
+curl -fsSL https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/refs/heads/release-2026.3.0/frameworks/oep-installer-cli/rendered/openedge-cli-federal-aerospace | bash -s -- install uncrewed_aerial_vehicle_vision_analytics
 ```
 
 The installer:
@@ -109,6 +109,6 @@ openedge-cli remove uncrewed_aerial_vehicle_vision_analytics
 
 ## Related Guides
 
-- [OEP CLI Installer README](https://github.com/open-edge-platform/edge-ai-libraries/blob/main/frameworks/oep-installer-cli/README.md): full command reference, options, and credentials handling.
+- [OEP CLI Installer README](https://github.com/open-edge-platform/edge-ai-libraries/blob/release-2026.3.0/frameworks/oep-installer-cli/README.md): full command reference, options, and credentials handling.
 - [Install UAV Vision Analytics Application](../uav-vision-analytics/install-uav-app.md): manual deployment of the Standalone and UAV Mission Compute SDK modes.
 - [Customized Image](./customized-image.md): build a customized Ubuntu image and install it from a bootable USB stick.

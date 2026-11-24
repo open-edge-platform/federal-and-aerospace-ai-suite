@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 # Installation on Ubuntu
 
 This guide installs the UAV Ground Station on an Ubuntu 24.04 machine using the
-[Open Edge Platform (OEP) CLI Installer](https://github.com/open-edge-platform/edge-ai-libraries/tree/main/frameworks/oep-installer-cli)
+[Open Edge Platform (OEP) CLI Installer](https://github.com/open-edge-platform/edge-ai-libraries/tree/release-2026.3.0/frameworks/oep-installer-cli)
 (`openedge-cli`). It is a single self-contained shell script that installs the required system
 packages, downloads the application, and builds the images, including the optional VSS search overlay.
 
@@ -24,7 +24,7 @@ To build a customized OS image first, see [Customized Image](../infrastructure/c
 ## Step 1: Install the Ground Station
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/refs/heads/main/frameworks/oep-installer-cli/rendered/openedge-cli | bash -s -- install uncrewed_aerial_vehicle_ground_station
+curl -fsSL https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/refs/heads/release-2026.3.0/frameworks/oep-installer-cli/rendered/openedge-cli-federal-aerospace | bash -s -- install uncrewed_aerial_vehicle_ground_station
 ```
 
 The installer:
@@ -90,6 +90,6 @@ openedge-cli remove uncrewed_aerial_vehicle_ground_station
 
 ## Related Guides
 
-- [OEP CLI Installer README](https://github.com/open-edge-platform/edge-ai-libraries/blob/main/frameworks/oep-installer-cli/README.md): full command reference, options, and credentials handling.
+- [OEP CLI Installer README](https://github.com/open-edge-platform/edge-ai-libraries/blob/release-2026.3.0/frameworks/oep-installer-cli/README.md): full command reference, options, and credentials handling.
 - [Get Started](./get-started.md): manual deployment, VSS search, multiple UAVs, and Flight Summary.
 - [Configuration](./configuration.md): every `.env` variable and the backend route reference.
