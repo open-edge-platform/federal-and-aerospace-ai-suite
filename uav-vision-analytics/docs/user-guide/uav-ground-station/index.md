@@ -20,7 +20,7 @@ Live Natural Language Search over the camera footage, and it builds Flight Summa
 scene captions.
 
 Pair it with a UAV host running the
-[UAV Vision Analytics](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/index.md)
+[UAV Vision Analytics](../uav-vision-analytics/index.md)
 application.
 
 ## Documentation

@@ -1,12 +1,8 @@
 # Benchmark — Mission Systems
 
 This section explains how to measure the performance of the Mission Systems
-application. The blueprint offers two options, using the app-specific `calc_stream_density.sh`
-benchmarking script and the Edge Workloads and Benchmarks approach.
+application.
 
-The [benchmarking Guide for Mission Systems](./benchmarking/run-uav-benchmarks.md) explains
-how to determine the maximum number of concurrent drone-camera video streams the system can
-process (**stream density**) while sustaining a target frame rate, and simultaneously collects hardware utilization and power metrics from `metrics-manager`.
 
 [Edge Workloads and Benchmarks Guide](./benchmarking//run-edge-benchmarks.md) describes
 the more general, platform-level benchmarking process, a solution for end-to-end video
@@ -17,7 +13,6 @@ generative AI.
 :::{toctree}
 :hidden:
 
-Mission Systems Benchmarks Guide<./benchmarking/run-uav-benchmarks.md>
 Edge Workloads and Benchmarks Guide <./benchmarking/run-edge-benchmarks.md>
 :::
 hide_directive-->

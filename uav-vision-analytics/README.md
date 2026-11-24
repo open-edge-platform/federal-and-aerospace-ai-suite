@@ -76,7 +76,7 @@ Run `make init` after cloning to create `.env` from `.env.example`, auto-detect 
 To install and run the application on Ubuntu 24.04 with the OEP CLI Installer instead, see
 [Installation on Ubuntu](docs/user-guide/infrastructure/installation-on-ubuntu.md).
 
-Run the commands from the `uav-vision-analytics` directory (`cd federal-and-aerospace-ai-suite/uav-vision-analytics` after `git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git`, or the directory of the downloaded ZIP; see [Get Started](docs/user-guide/get-started/get-started-standalone.md)).
+Run the commands from the `uav-vision-analytics` directory (`cd federal-and-aerospace-ai-suite/uav-vision-analytics` after `git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git`, or the directory of the downloaded ZIP; see [Get Started](docs/user-guide/uav-vision-analytics/deploy/deploy-standalone.md)).
 
 ### Step 1: Initialize and download the models
 
@@ -116,7 +116,7 @@ detect objects, whether a VLM writes scene captions (device, model, prompt) and 
 The shipped file has three cameras (`front_camera`, `bottom_camera`, `back_camera`), detection on the NPU and captions from
 the VLM on the GPU, so arming the vehicle is all that is needed. After editing the file, `make check-cameras` validates
 it, `make start-rtsp` (or disarm and arm again) applies it, and `make cameras-status` compares the file with what is
-running. See [Configure the Cameras](docs/user-guide/how-to-customize/camera-management/configure-cameras.md).
+running. See [Configure the Cameras](docs/user-guide/uav-vision-analytics/how-to-customize/camera-management/configure-cameras.md).
 
 Streams are published as `rtsp://<HOST_IP>:8555/uav-<camera>` (for example `uav-front-camera`) and the captions of a
 camera on MQTT `uav/caption/<camera>`. Captions need the VLM model (`make vlm-model`, Step 1).
@@ -143,7 +143,7 @@ whole GOPs so the loop point is clean, and verifies the result. If you have seve
 Other options: `--bitrate`, `--fps`, `--size WxH`, `--gop`, `--no-trim`; run it with `--help`.
 It uses `ffmpeg` from the host if installed, otherwise the DL Streamer image from `.env`, so only Docker is
 required. Restart the cameras (`make start-rtsp`) after replacing a file. See
-[Use Your Own Videos](docs/user-guide/how-to-customize/model-and-video-management/use-your-own-video.md) for the full steps.
+[Use Your Own Videos](docs/user-guide/uav-vision-analytics/how-to-customize/model-and-video-management/use-your-own-video.md) for the full steps.
 
 ### Starting pipelines without arming the drone
 
@@ -155,7 +155,7 @@ docker exec -it -e HOST_IP=<HOST_IP> uav-va-dlstreamer-pipeline-server \
   python3 /home/pipeline-server/scripts/pipeline_manager.py --start-now
 ```
 
-For a single ad-hoc pipeline, use the REST API (see [Manage Pipelines](docs/user-guide/how-to-customize/pipeline-management/manage-pipelines.md#rest-api)).
+For a single ad-hoc pipeline, use the REST API (see [Manage Pipelines](docs/user-guide/uav-vision-analytics/how-to-customize/pipeline-management/manage-pipelines.md#rest-api)).
 The RTSP output is H.264 encoded, which is what the `uav-ground-station` relay expects.
 
 ## Endpoints

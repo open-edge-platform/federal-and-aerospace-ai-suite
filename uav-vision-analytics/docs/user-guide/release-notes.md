@@ -17,7 +17,7 @@
   a viewer for a UAV host on a separate machine. It relays the H.264 streams to the browser over WebRTC, shows
   captions and host utilization, supports several UAVs in one session, builds Flight Summary reports, and can
   add Live Natural Language Search with the Video Search and Summarization (VSS) stack. See the
-  [Ground Station release notes](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/docs/user-guide/release-notes.md).
+  [Ground Station release notes](./uav-ground-station/release-notes.md).
 - **Simpler setup**: `make init` detects the host IP from the default route and the GPU, NPU, and camera group
   IDs, and `make start-rtsp` picks up the device configured on a first run.
 - **1080p, 30 fps sample videos** for the front, bottom, and back cameras.
@@ -35,7 +35,7 @@
   until the pipeline server container is restarted (`docker restart uav-va-dlstreamer-pipeline-server`). Wait
   about a minute before starting the cameras again to avoid it.
 - A failed pipeline start poisons its model instance until the pipeline server restarts; see
-  [Troubleshooting](./how-to-guides/troubleshooting.md).
+  [Troubleshooting](./uav-vision-analytics/troubleshooting.md).
 - Pymavlink and UAV Mission Compute SDK modes cannot run at the same time, because both use ports `80`, `443`,
   and `8555`.
 - The first `make model` and `make vlm-model` runs download models and can take several minutes.

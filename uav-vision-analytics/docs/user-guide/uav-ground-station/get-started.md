@@ -14,12 +14,12 @@ first, on a **different machine** than this one:
 - For standalone (pymavlink) mode: deploy
   [`uav-vision-analytics`](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/README.md)
   following its
-  [Standalone Get Started](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/get-started/get-started-standalone.md)
+  [Deploy in Standalone Mode](../uav-vision-analytics/deploy/deploy-standalone.md)
   guide.
 - For SDK mode: deploy
   [`uav-mission-compute-sdk`](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-mission-compute-sdk/README.md)
   first, then `uav-vision-analytics` on top of it following
-  [SDK-mode Get Started](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/get-started/get-started-uavsdk.md)
+  [Deploy in UAV Mission Compute SDK Mode](../uav-vision-analytics/deploy/deploy-uavsdk.md)
   — the Mission Compute SDK alone has no camera pipelines or
   `/pipelines/status` API for this viewer to connect to; `uav-vision-analytics`
   is what actually provides those in both modes.
@@ -281,16 +281,16 @@ reference.
 The UAV Vision Analytics user guide covers the problems that show up on both
 sides of this setup:
 
-- [Troubleshooting](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-guides/troubleshooting.md)
+- [Troubleshooting](../uav-vision-analytics/troubleshooting.md)
   — port clashes with the UAV Mission Compute SDK, cameras that skip or lose
   their streams, VSS search and live-index behavior, and the multi-UAV ground
   station.
-- [Multi-UAV Operations in the Ground Station](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-guides/multi-uav-ground-station.md)
+- [Monitor Multiple UAVs in the Ground Station](../uav-vision-analytics/how-to-guides/multi-uav-ground-station.md)
   — the same multi-UAV walkthrough, from the UAV side.
-- [VSS Live Search](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-guides/vss-live-search.md)
-  and [Search Tuning](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-customize/search-tuning/vss-search-tuning.md)
+- [VSS Live Search](../uav-vision-analytics/how-to-guides/vss-live-search.md)
+  and [Search Tuning](../uav-vision-analytics/how-to-customize/search-tuning/vss-search-tuning.md)
   — the same search setup, with tuning of the `VSS_SEARCH_*` variables.
-- [Configure the Cameras](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-vision-analytics/docs/user-guide/how-to-customize/camera-management/configure-cameras.md)
+- [Configure the Cameras](../uav-vision-analytics/how-to-customize/camera-management/configure-cameras.md)
   — the camera files that decide which cards, captions, and devices the
   dashboard shows.
 
