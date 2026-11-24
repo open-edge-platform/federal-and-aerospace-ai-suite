@@ -21,8 +21,8 @@
 - **Simpler setup**: `make init` detects the host IP from the default route and the GPU, NPU, and camera group
   IDs, and `make start-rtsp` picks up the device configured on a first run.
 - **1080p, 30 fps sample videos** for the front, bottom, and back cameras.
-- **Updated components**: DL Streamer Pipeline Server `2026.3.0-ubuntu24-rc1`, Metrics Manager
-  `2026.3.0-rc1`, and PX4 SITL pinned to `v1.18.0-beta1-660-g61907962c9`.
+- **Updated components**: DL Streamer Pipeline Server `2026.3.0-ubuntu24`, Metrics Manager
+  `2026.3.0`, and PX4 SITL pinned to `v1.18.0-beta1-660-g61907962c9`.
 - **Documentation and agent skills** cover camera and model customization, captioning, QGroundControl, multi-UAV
   operations, VSS live search, and troubleshooting; the agent skills include captioning, VSS, and model
   customization.
