@@ -16,12 +16,12 @@ is set by `DLSTREAMER_PIPELINE_SERVER_IMAGE` (defaults in `.env.example`).
 
 ## Usage
 ```bash
-make up         # start RTSP streams on machines 2/3, then secrets, certs, .env, docker compose up -d
+make up SOURCE=video   # (or SOURCE=basler) start RTSP streams on machines 2/3, then secrets, certs, .env, docker compose up -d
 make status
 make test       # end-to-end test via the SceneScape UI and data flow (needs the stack running; this is `make test-e2e` in the repository root)
 make down       # stop the stack and the remote streams;  make clean also deletes volumes
 make streams-up | streams-down | streams-status   # remote streams only
-make up STREAMS=0   # skip the remote streams (also for down/clean)
+make up SOURCE=video STREAMS=0   # skip the remote streams (also for down/clean)
 ```
 Log in at `https://<machine-1 lab address>/` (or `https://localhost/` on machine-1) as `admin`; the password is in `secrets/supass`.
 The certificate is self-signed: accept the browser warning.

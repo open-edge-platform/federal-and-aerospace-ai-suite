@@ -107,7 +107,7 @@ run it to start the pipeline server on a network that can reach the cameras.
 
 5. In `src/scene/.env`, set the camera serial numbers and, if needed, the macvlan address, which
    must be a free address in the VLAN 3 subnet. The first `make up` creates the file from
-   `.env.example`, so run `make up` once first if the file does not exist yet:
+   `.env.example`, so run `make up SOURCE=basler` once first if the file does not exist yet:
 
    ```text
    BASLER_CAMERA1_SERIAL=<serial of camera 1>

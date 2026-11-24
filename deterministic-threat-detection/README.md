@@ -26,7 +26,7 @@ Then, on machine-1:
 git clone https://github.com/open-edge-platform/federal-and-aerospace-ai-suite.git
 cd federal-and-aerospace-ai-suite/deterministic-threat-detection
 cp lab.env.example lab.env      # fill in the addresses (once, see First-time setup, step 6)
-make up                         # test videos; or: make up SOURCE=basler
+make up SOURCE=video            # test videos; or: make up SOURCE=basler
 make down
 ```
 
