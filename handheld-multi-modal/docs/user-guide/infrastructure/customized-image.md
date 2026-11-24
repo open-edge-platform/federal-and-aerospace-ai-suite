@@ -14,7 +14,7 @@ distros on x86_64.
 > [!NOTE]
 > This path is intended for advanced users who need fine-grained control over disk
 > layout, installed packages, and package repositories. Most users can start with the simpler
-> path, [using the standard build](../infrastructure-setup.md#step-2-build-the-os-image).
+> path, [using standard Ubuntu image](./installation-on-ubuntu.md).
 
 This article will show you how to:
 
@@ -28,15 +28,12 @@ This article will show you how to:
 ### Clone the repositories
 
 ```bash
-# If edge-node-infrastructure-blueprint is not already cloned, uncomment the line below
-# git clone -b release-2026.3.0 https://github.com/open-edge-platform/edge-node-infrastructure-blueprint.git
-git clone -b release-2026.3.0 https://github.com/open-edge-platform/image-composer-tool.git
+git clone https://github.com/open-edge-platform/image-composer-tool.git -b ict-2026.3
 ```
 
-Now, you should have the source code available in `edge-node-infrastructure-blueprint` and `image-composer-tool` directories in your workspace (for example, `/home/user`).
+Now, you should have the source code available `image-composer-tool` directory in your workspace (for example, `/home/user`).
 
 ```bash
-export ENIB_HOME=$(pwd)/edge-node-infrastructure-blueprint
 export ICT_HOME=$(pwd)/image-composer-tool
 ```
 
@@ -47,6 +44,7 @@ Produces `./image-composer-tool` in the repo root:
 ```bash
 cd "$ICT_HOME"
 go build -buildmode=pie -ldflags "-s -w" ./cmd/image-composer-tool
+go build -buildmode=pie -o ./build/live-installer ./cmd/live-installer
 ```
 
 ### Install image composition prerequisites
@@ -66,10 +64,10 @@ Follow the instructions at [Image Composition Prerequisites](https://docs.opened
 
 ### Configure the template
 
-The default template location is `$ENIB_HOME/infrastructure/host-os/ict/generic-handheld-os-template.yml`.
+The default template location is `$ICT_HOME/image-templates/ubuntu24` or `$ICT_HOME/image-templates/ubuntu26` depending on OS of your choosing. Make sure to select one of the `edgepack` templates, as it will provide best developer experience, since it comes with all Intel drivers preinstalled.
 
 ```bash
-export TEMPLATE="$ENIB_HOME/infrastructure/host-os/ict/generic-handheld-os-template.yml"
+export TEMPLATE="$ICT_HOME/image-templates/ubuntu24/ubuntu24-x86_64-edgepack-unattended-iso.yml"
 ```
 
 In `$TEMPLATE`, set the values for `users.name` and `users.password` as desired.
@@ -108,41 +106,39 @@ sudo -E ./image-composer-tool build "$TEMPLATE"
 When the build completes, expect the following output on the console with build timings:
 
 ```bash
-2026-04-09T15:10:22.705+0530    INFO    display/display.go:21   Checking for image artifacts in: /home/user/image-composer-tool/workspace/ubuntu-ubuntu24-x86_64/imagebuild/minimal
-2026-04-09T15:10:22.705+0530    INFO    display/display.go:30   Found 2 total entries in directory
-2026-04-09T15:10:22.705+0530    INFO    display/display.go:36   Checking file: minimal-desktop-ubuntu-24.04.raw.gz (isDir=false)
-2026-04-09T15:10:22.705+0530    INFO    display/display.go:36   Checking file: spdx_manifest_deb_minimal-desktop-ubuntu_20260409_150520.json (isDir=false)
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:44   Found 2 artifacts after filtering
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:52
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:53   ╔════════════════════════════════════════════════════════════════════════════╗
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:54   ║                    ✓ IMAGE CREATED SUCCESSFULLY                            ║
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:55   ╚════════════════════════════════════════════════════════════════════════════╝
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:56
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:59     Image Type:   RAW
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:60
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:61     Generated Artifacts (including SBOM):
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:79       • minimal-desktop-ubuntu-24.04.raw.gz (2.62 GB)
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:80         /home/user/image-composer-tool/workspace/ubuntu-ubuntu24-x86_64/imagebuild/minimal/minimal-desktop-ubuntu-24.04.raw.gz
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:81
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:79       • spdx_manifest_deb_minimal-desktop-ubuntu_20260409_150520.json (1.37 MB)
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:80         /home/user/image-composer-tool/workspace/ubuntu-ubuntu24-x86_64/imagebuild/minimal/spdx_manifest_deb_minimal-desktop-ubuntu_20260409_150520.json
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:81
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:84   ════════════════════════════════════════════════════════════════════════════
-2026-04-09T15:10:22.706+0530    INFO    display/display.go:85
-2026-04-09T15:10:22.877+0530    INFO    image-composer-tool/build.go:137  image build completed successfully
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:154    Build Timings:
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:155    +----------------------------------+----------------+
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:156    | Stage                            | Duration       |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:157    +----------------------------------+----------------+
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:159    | Initialization and Configuration | 16.499s        |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:159    | Package Download                 | 3m20.339s      |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:159    | Chroot Env Initialization        | 52.647s        |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:159    | Image Build                      | 8m54.777s      |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:159    | Image Conversion                 | 4m58.711s      |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:159    | Finalization and Clean Up        | 1.264s         |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:161    +----------------------------------+----------------+
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:162    | Total Time                       | 18m24.237s     |
-2026-04-09T15:10:22.877+0530    INFO    display/display.go:163    +----------------------------------+----------------+
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:57	╔════════════════════════════════════════════════════════════════════════════╗
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:58	║                    ✓ IMAGE CREATED SUCCESSFULLY                            ║
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:59	╚════════════════════════════════════════════════════════════════════════════╝
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:60
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:63	  Image Type:   ISO
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:64
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:65	  Generated Artifacts (including SBOM):
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:83	    • edgepack-os-image-ubuntu-unattended-24.04.iso (2.74 GB)
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:84	      /home/user/image-composer-tool/workspace/ubuntu-ubuntu24-x86_64/imagebuild/Default_ISO/edgepack-os-image-ubuntu-unattended-24.04.iso
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:85
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:83	    • spdx_manifest_deb_edgepack-os-image-ubuntu-unattended_20261120_104723.json (1.55 MB)
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:84	      /home/user/image-composer-tool/workspace/ubuntu-ubuntu24-x86_64/imagebuild/Default_ISO/spdx_manifest_deb_edgepack-os-image-ubuntu-unattended_20261120_104723.json
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:85
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:88	════════════════════════════════════════════════════════════════════════════
+2026-11-20T10:47:56.152+0100	INFO	display/display.go:89
+2026-11-20T10:47:56.185+0100	INFO	system/ownership.go:110	returning build artifact ownership to invoking user 1000:1000 under /home/user/image-composer-tool/workspace
+2026-11-20T10:47:56.185+0100	INFO	system/ownership.go:177	returning ownership of /home/user/image-composer-tool/tmp to invoking user 1000:1000
+2026-11-20T10:47:56.185+0100	INFO	image-composer-tool/build.go:466	image build completed successfully
+2026-11-20T10:47:56.185+0100	INFO	display/display.go:164	  Build Timings:
+2026-11-20T10:47:56.185+0100	INFO	display/display.go:165	  +----------------------------------+----------------+
+2026-11-20T10:47:56.185+0100	INFO	display/display.go:166	  | Stage                            | Duration       |
+2026-11-20T10:47:56.185+0100	INFO	display/display.go:167	  +----------------------------------+----------------+
+2026-11-20T10:47:56.185+0100	INFO	display/display.go:169	  | Initialization and Configuration | 12.86s         |
+2026-11-20T10:47:56.185+0100	INFO	display/display.go:169	  | Package Download                 | 2m12.004s      |
+2026-11-20T10:47:56.185+0100	INFO	display/display.go:169	  | Chroot Package Download          | 32.15s         |
+2026-11-20T10:47:56.186+0100	INFO	display/display.go:169	  | Chroot Env Initialization        | 58.54s         |
+2026-11-20T10:47:56.186+0100	INFO	display/display.go:169	  | Image Build                      | 3m57.496s      |
+2026-11-20T10:47:56.186+0100	INFO	display/display.go:169	  | Image Conversion                 | 0s             |
+2026-11-20T10:47:56.186+0100	INFO	display/display.go:169	  | Finalization and Clean Up        | 0s             |
+2026-11-20T10:47:56.186+0100	INFO	display/display.go:171	  +----------------------------------+----------------+
+2026-11-20T10:47:56.186+0100	INFO	display/display.go:172	  | Total Time                       | 7m53.05s       |
+2026-11-20T10:47:56.186+0100	INFO	display/display.go:173	  +----------------------------------+----------------+
+
 
 ```
 
@@ -154,56 +150,41 @@ The output artefacts are written to:
 
 Expected artifact:
 
-| File                                  | Description                                |
-| ------------------------------------- | ------------------------------------------ |
-| `minimal-desktop-ubuntu-24.04.raw.gz` | Compressed raw disk image (ready to flash) |
+| File                                            | Description                                |
+| ----------------------------------------------- | ------------------------------------------ |
+| `edgepack-os-image-ubuntu-unattended-24.04.iso` | Compressed raw disk image (ready to flash) |
 
-## Package the image into artifacts
+## OS installation
 
-Use the `image-from-tool` mode with `make build` now to package the OS image into
-the USB artifacts:
+After ISO is created, use preferred way of installation (such as USB stick or KVM) to install it on target system. Following commands explain how to write image to USB stick:
 
-```bash
-cd "$ENIB_HOME"
-make build MODE=image-from-tool ICT_IMG=/absolute/path/to/image
-```
-
-`ICT_IMG` may be any readable file on the host — absolute path or path relative to
-the repository root. `make` resolves the path and bind-mounts the containing
-directory read-only into the build container, so the image does not need to live
-inside the repository.
-
-Example for handheld blueprint build:
+Run `lsblk` to undestand how USB stick is mapped to local filesystem. In this case, it is `/dev/sdb`
 
 ```bash
-cd "$ENIB_HOME"
-make build MODE=image-from-tool ICT_IMG=/home/user/image-composer-tool/workspace/ubuntu-ubuntu24-x86_64/imagebuild/minimal/minimal-desktop-ubuntu-24.04.raw.gz
+$ lsblk
+sdb           8:16   1  28.7G  0 disk
+├─sdb1        8:17   1   6.2G  0 part
+├─sdb2        8:18   1     5M  0 part
+├─sdb3        8:19   1   300K  0 part
+└─sdb4        8:20   1  22.5G  0 part
 ```
 
-Build output:
+Remove filesystem on USB stick and write ISO file. Make sure to replace `sdb` to correct path if it is different using output from previous command.
 
-- `usb-installation-files.tar.gz` in `infrastructure/build-artifacts/out`
+```bash
+sudo wipefs --all /dev/sdb
+sudo dd if=workspace/ubuntu-ubuntu24-x86_64/imagebuild/Default_ISO/edgepack-os-image-ubuntu-unattended-24.04.iso of=/dev/sdb bs=16M status=progress oflag=sync
+```
 
-Once `usb-installation-files.tar.gz` is ready, continue with
-[Step 3: Prepare the bootable USB](../infrastructure-setup.md#step-3-prepare-the-bootable-usb) in the Infrastructure Setup guide
-for the remaining steps: configuring the USB device, writing the artifacts, and booting the target system.
+After writing is done, remove USB stick from computer, connect it to target system and go into BIOS settings of target system. Select `Boot->Boot options` and select USB stick as boot device. Save changes and reboot. After reboot, automatic installation will start.
+
+After OS is installed, follow [Deploy Application](../deploy-applications.md) using `openedge-cli` tool to install application.
 
 ## Package curation and template customization
 
 This section explains how to curate package lists with the `update-install-packages` skill and produce a new Image Composer Tool (ICT) image variant on top of the default template.
 
 Use this flow when you want to build a custom image flavor (for example, debug, media-heavy, or minimal runtime) without editing the baseline files manually each time.
-
-### What you are modifying
-
-The package curation flow can update one or both of the following files:
-
-- The relevant curation script — consumed by the Docker-based standard image build:
-  - `infrastructure/host-os/curate-host-packages.sh`
-- The relevant ICT template — consumed by the ICT-based advanced image build:
-  - `infrastructure/host-os/ict/generic-handheld-os-template.yml`
-
-By default, if not explicitly specified, the skill updates package intent for both the Docker-based standard build and the ICT template.
 
 ### End-to-end flow
 
@@ -219,7 +200,7 @@ By default, if not explicitly specified, the skill updates package intent for bo
 If you are using Copilot Chat in agent mode, invoke the skill with a natural language prompt describing your intent. For example:
 
 ```text
-Add htop, jq, and iperf3 to the ict-template in /home/user/edge-node-infrastructure-blueprint
+Add htop, jq, and iperf3 to the ict-template
 ```
 
 ```text
