@@ -57,8 +57,11 @@ The same diagram is live in the dashboard (**Architecture** button).
 ## Application Deployment
 
 ```bash
-make up
+make up SOURCE=video
 ```
+
+Use `SOURCE=video` for the test videos, or `SOURCE=basler` for Basler cameras (see the
+[Basler guide](./how-to-guides/basler/integrate-basler-camera-with-scenescape.md)).
 
 `make up` starts the test-video streams, the dashboard, the load agent, the camera pipelines, and
 Scenescape.
