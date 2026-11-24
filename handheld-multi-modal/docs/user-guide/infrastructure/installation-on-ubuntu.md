@@ -8,10 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 This guide installs the Handheld (Soldier System) Blueprint on an Ubuntu 24.04 target using
 the [Open Edge Platform (OEP) CLI Installer](https://github.com/open-edge-platform/edge-ai-libraries/tree/release-2026.3.0/frameworks/oep-installer-cli)
 (`openedge-cli`). It is a single self-contained shell script that installs the Intel Edge Pack
-components and the Federal and Aerospace handheld suite without a manual OS image build.
+components and the Federal and Aerospace Handheld (Soldier System) Blueprint without the need
+for manual OS image build.
 
 For the image-build and bootable-USB provisioning path instead, see
 [Customized Image](./customized-image.md) and [Install OEP SDKs](install-oep-sdks.md).
+
+For more detailed information on Edge Pack, refer to
+[Edge Pack documentation](https://docs.openedgeplatform.intel.com/2026.3/platform-software/edge-pack/index.html).
 
 ## Prerequisites
 

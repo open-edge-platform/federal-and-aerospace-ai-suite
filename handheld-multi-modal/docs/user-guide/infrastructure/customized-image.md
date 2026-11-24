@@ -31,7 +31,8 @@ This article will show you how to:
 git clone https://github.com/open-edge-platform/image-composer-tool.git -b ict-2026.3
 ```
 
-Now, you should have the source code available `image-composer-tool` directory in your workspace (for example, `/home/user`).
+Now, you should have the source code available in `image-composer-tool` directory in your
+workspace (for example, `/home/user`).
 
 ```bash
 export ICT_HOME=$(pwd)/image-composer-tool

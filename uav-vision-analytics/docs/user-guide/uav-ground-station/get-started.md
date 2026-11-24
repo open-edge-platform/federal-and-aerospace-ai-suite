@@ -185,7 +185,7 @@ keeps the downloaded models; `make delete-vss-volumes` (asks for confirmation;
 `VIZ_HOST_IP:VSS_MANAGER_PORT` (default 3001) for uploading videos
 (`POST /videos`, then `POST /videos/search-embeddings/<videoId>`).
 
-Live RTSP ingestion needs the `intel/*:2026.3.0-rc1` (or newer) VSS images
+Live RTSP ingestion needs the `intel/*:2026.3.0` (or newer) VSS images
 (`VSS_REGISTRY` / `VSS_TAG`). To use a VSS
 deployed separately with its own `setup.sh --search` instead, set
 `VSS_ENABLED=true` and `VSS_MANAGER_URL` / `VSS_DATASTORE_URL` in `.env`.
