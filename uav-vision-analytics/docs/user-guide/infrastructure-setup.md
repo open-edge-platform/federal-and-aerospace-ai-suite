@@ -22,6 +22,7 @@ problems, see the [Troubleshooting guide](./infrastructure/troubleshooting.md).
 :::{toctree}
 :hidden:
 
+System Requirements <./get-started/system-requirements.md>
 Installation on Ubuntu <./infrastructure/installation-on-ubuntu.md>
 Customized Image <./infrastructure/customized-image.md>
 Infrastructure Capabilities <./infrastructure/platform-capabilities.md>
