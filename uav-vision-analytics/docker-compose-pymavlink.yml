@@ -18,6 +18,8 @@ services:
     image: px4io/px4-sitl:v1.18.0-beta1-660-g61907962c9
     hostname: px4-sitl
     container_name: uav-va-px4
+    environment:
+      - PX4_PARAM_MAV_SYS_ID=${MAV_SYS_ID:-1}
     volumes:
       - ./10040_sihsim_quadx.post:/opt/px4/etc/init.d-posix/airframes/10040_sihsim_quadx.post
     stdin_open: true

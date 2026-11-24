@@ -59,6 +59,10 @@ forwards telemetry to it and commands from it to PX4. Several stations can conne
 at the same time. To use a different host port, set `MAVLINK_UDP_PORT` in `.env`
 before `make pymav-up`.
 
+The simulated vehicle uses MAVLink system ID `1`. To change it, set `MAV_SYS_ID` in
+`.env` (1-250) and recreate the `px4` container (`make pymav-up`). Use a different
+value for each vehicle when several connect to the same QGroundControl.
+
 > [!NOTE]
 > The router's TCP server (port 5760) is disabled on purpose. With the router
 > built into this stack it accepts a TCP connection but fails to send to it
