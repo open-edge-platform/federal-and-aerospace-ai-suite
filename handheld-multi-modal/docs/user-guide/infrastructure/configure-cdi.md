@@ -277,7 +277,7 @@ If the VFs are not created, enable them first, then regenerate the CDI specifica
 
 ## References
 
-- [Intel GPU Plugin — CDI Support](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/main/cmd/gpu_plugin#cdi-support)
-- [Intel GPU Plugin — CDI and Docker Daemon Usage](https://github.com/intel/intel-device-plugins-for-kubernetes/blob/main/cmd/gpu_plugin/cdi.md)
-- [Intel NPU Plugin — CDI Leverage](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/main/cmd/npu_plugin#leverage-cdi)
-- [CDI Specification](https://github.com/cncf-tags/container-device-interface/blob/main/SPEC.md)
+- [Intel GPU Plugin — CDI Support](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/release-2026.3.0/cmd/gpu_plugin#cdi-support)
+- [Intel GPU Plugin — CDI and Docker Daemon Usage](https://github.com/intel/intel-device-plugins-for-kubernetes/blob/release-2026.3.0/cmd/gpu_plugin/cdi.md)
+- [Intel NPU Plugin — CDI Leverage](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/release-2026.3.0/cmd/npu_plugin#leverage-cdi)
+- [CDI Specification](https://github.com/cncf-tags/container-device-interface/blob/release-2026.3.0/SPEC.md)
