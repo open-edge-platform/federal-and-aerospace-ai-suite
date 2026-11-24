@@ -299,7 +299,7 @@ dmesg | grep -i vpu
 ## References
 
 - [Intel Device Plugins for Kubernetes](https://github.com/intel/intel-device-plugins-for-kubernetes)
-- [Intel GPU Plugin Documentation](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/main/cmd/gpu_plugin)
-- [Intel NPU Plugin Documentation](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/main/cmd/npu_plugin)
+- [Intel GPU Plugin Documentation](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/release-2026.3.0/cmd/gpu_plugin)
+- [Intel NPU Plugin Documentation](https://github.com/intel/intel-device-plugins-for-kubernetes/tree/release-2026.3.0/cmd/npu_plugin)
 - [Kubernetes Device Plugin Framework](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/)
 - [Container Device Interface Guide](configure-cdi.md) — for Docker/Podman usage without Kubernetes

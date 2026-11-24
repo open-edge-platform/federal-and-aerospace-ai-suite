@@ -68,7 +68,7 @@ across a reboot:
   these controls — verify them **before** applying a profile, or the script may
   succeed while the limits are silently ignored.
   Setting names and menu paths vary by vendor. See the **BIOS Settings**
-  sections in [set-power-profile skill](https://github.com/open-edge-platform/edge-node-infrastructure-blueprint/blob/main/skills/set-power-profile/SKILL.md)
+  sections in [set-power-profile skill](https://github.com/open-edge-platform/edge-node-infrastructure-blueprint/blob/release-2026.3.0/skills/set-power-profile/SKILL.md)
   for the full mandatory list plus optional settings (e.g. disabling firmware
   DBPM, unlocking the power-limit MSRs, and *Config Base Power* / cTDP). `sudo` access. The power scripts read/write MSRs and restart a system service,
   so they re-run themselves with `sudo`.
