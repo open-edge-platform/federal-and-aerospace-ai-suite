@@ -52,6 +52,7 @@ Follow the steps below to set up and run the blueprint:
 
 1. [Infrastructure Setup](./infrastructure-setup.md) — Install the application with the OEP CLI Installer.
 2. [Deterministic Threat Detection](./deterministic-threat-detection/index.md) — Prepare the machines and the switch, then start the application.
+3. [Edge Workloads and Benchmarks Guide](./benchmarking/run-edge-benchmarks.md) — Measure the platform performance of the edge node.
 
 <!--hide_directive
 :::{toctree}
@@ -59,6 +60,7 @@ Follow the steps below to set up and run the blueprint:
 
 Infrastructure Setup <./infrastructure-setup.md>
 Deterministic Threat Detection <./deterministic-threat-detection/index.md>
+Benchmarks <./benchmarking/run-edge-benchmarks.md>
 AI Agent SKILLs <agents.md>
 Release Notes <./release-notes.md>
 
