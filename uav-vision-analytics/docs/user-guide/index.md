@@ -104,11 +104,11 @@ immediately.
 :hidden:
 
 Infrastructure Setup <./infrastructure-setup.md>
-Install UAV SDK and Usage <./get-started/install-oep-sdks.md>
 UAV Vision Analytics Application <./uav-vision-analytics/index.md>
 UAV Ground Station Application <./uav-ground-station/index.md>
 Benchmarks <./benchmark.md>
 Agent SKILLs <./agents.md>
+Install UAV SDK and Usage <./get-started/install-oep-sdks.md>
 Release Notes <./release-notes.md>
 
 :::
