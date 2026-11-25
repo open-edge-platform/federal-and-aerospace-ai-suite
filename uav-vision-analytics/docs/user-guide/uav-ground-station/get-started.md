@@ -64,8 +64,8 @@ machine's LAN IP and detects the GPU/NPU devices; edit `.env` only to override t
 > *instead of* `make up` (it is not a flag to `make up`). See
 > [VSS Search](#vss-search) below for the extra `.env` variables it needs
 > and exactly what `make up-vss` adds.\
-> `make up-vss` always includes everything `make up` does (viewer + mediamtx
-> + the 8 VSS containers), so you only ever run one or the other, not both.\
+> `make up-vss` always includes everything `make up` does (viewer + mediamtx + the 8 VSS
+> containers), so you only ever run one or the other, not both.\
 > Started with plain `make up` and want Search later? Just run `make up-vss`
 > — it brings up the same viewer/mediamtx containers (unchanged, so this is
 > fast) plus the missing VSS ones, in place.\
