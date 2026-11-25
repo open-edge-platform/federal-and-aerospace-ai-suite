@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Customized Image (Using Image Composer Tool)
 
-The [Image Composer Tool (ICT)](https://docs.openedgeplatform.intel.com/dev/platform-software/image-composer-tool/index.html)
+The [Image Composer Tool (ICT)](https://docs.openedgeplatform.intel.com/2026.3/platform-software/image-composer-tool/index.html)
 is a command-line tool for building custom Linux images from pre-built packages.
 To get a bootable RAW or ISO image, you define the target OS, packages, kernel, and disk layout.
 ICT supports multiple distributions including Ubuntu, Azure Linux, and Red Hat compatible
@@ -55,7 +55,7 @@ These packages are required before composing any image:
 sudo apt install systemd-ukify mmdebstrap
 ```
 
-Follow the instructions at [Image Composition Prerequisites](https://docs.openedgeplatform.intel.com/dev/image-composer-tool/get-started/installation.html#image-composition-prerequisites) if you face issues installing packages using apt.
+Follow the instructions at [Image Composition Prerequisites](https://docs.openedgeplatform.intel.com/2026.3/image-composer-tool/get-started/installation.html#image-composition-prerequisites) if you face issues installing packages using apt.
 
 > [!NOTE]
 > `mmdebstrap` version 0.8.x (shipped with Ubuntu OS version 22.04) has known

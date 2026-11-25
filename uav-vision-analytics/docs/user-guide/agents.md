@@ -18,9 +18,9 @@ power and thermal tuning) to application-level pipeline generation with Intel DL
   the `uav-ground-station/.github/skills/uav-ground-station` directory
   bundles skills for setting up the applications and the Open Edge Platform microservices
   they use. You can find the skill files under:
-  [uav-vision-analytics/.github/skills](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/tree/main/uav-vision-analytics/.github/skills)
+  [uav-vision-analytics/.github/skills](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/tree/release-2026.3.0/uav-vision-analytics/.github/skills)
   and
-  [uav-ground-station/.github/skills](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/.github/skills/uav-ground-station/SKILL.md)
+  [uav-ground-station/.github/skills](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/uav-ground-station/.github/skills/uav-ground-station/SKILL.md)
 - Upstream skills — for the stock services, use the Open Edge Platform skills directly:
   [`chatqna-docker-deploy`](https://github.com/open-edge-platform/skills/tree/main/.agents/skills/chatqna-docker-deploy),
   [`dlsps-user`](https://github.com/open-edge-platform/skills/tree/main/.agents/skills/dlsps-user),

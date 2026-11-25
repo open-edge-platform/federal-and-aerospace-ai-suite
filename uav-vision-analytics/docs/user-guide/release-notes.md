@@ -14,7 +14,7 @@
   detection on any camera and are published over Message Queuing Telemetry Transport (MQTT) on
   `uav/caption/<camera>`.
 - **NPU inference** for YOLO11s detection, alongside the existing CPU and GPU pipelines.
-- **UAV Ground Station** ([`uav-ground-station`](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/tree/main/uav-ground-station/README.md)),
+- **UAV Ground Station** ([`uav-ground-station`](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/tree/release-2026.3.0/uav-ground-station/README.md)),
   a viewer for a UAV host on a separate machine. It relays the H.264 streams to the browser over WebRTC, shows
   captions and host utilization, supports several UAVs in one session, builds Flight Summary reports, and can
   add Live Natural Language Search with the Video Search and Summarization (VSS) stack. See the

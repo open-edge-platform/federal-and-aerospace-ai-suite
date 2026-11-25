@@ -27,7 +27,7 @@ Documentation for UAV Ground Station is maintained under the UAV Blueprint, for 
 reasons. You can find the source in the
 [user guide](../uav-vision-analytics/docs/user-guide/uav-ground-station/index.md)
 and the html version on
-[Open Edge Platform Docs](https://docs.openedgeplatform.intel.com/dev/edge-ai-suites/ai-suite-federal-and-aerospace/uav-vision-analytics/index.html).
+[Open Edge Platform Docs](https://docs.openedgeplatform.intel.com/2026.3/edge-ai-suites/ai-suite-federal-and-aerospace/uav-vision-analytics/index.html).
 
 ## Quick Start
 

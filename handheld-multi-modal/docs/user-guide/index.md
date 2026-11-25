@@ -92,7 +92,7 @@ an interactive architecture page at `/architecture.html`.
 | Backend and UI | `handheld/backend:dev` (built locally) | Application logic; calls stock microservice APIs only |
 
 Open Edge Platform services use unmodified published container images. Exact image tags are pinned in
-[`compose/handheld-multi-modal.yaml`](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/handheld-multi-modal/compose/handheld-multi-modal.yaml).
+[`compose/handheld-multi-modal.yaml`](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/handheld-multi-modal/compose/handheld-multi-modal.yaml).
 
 Model sources and licenses are listed in
 [third-party-components.spdx](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/release-2026.3.0/handheld-multi-modal/third-party-components.spdx).
