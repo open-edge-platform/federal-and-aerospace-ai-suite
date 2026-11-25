@@ -148,6 +148,7 @@ shown instead.
 | Basler camera detection stops     | Restart the pipeline server container (`docker stop -t 30`, wait, `docker start`) and keep the load at 100 Mbit/s or less |
 | Basler `Device::open()` fails     | Another process holds the camera. Stop the pipeline container with `docker stop -t 30`, then retry                              |
 | A start failed halfway            | Run `make down`, fix the cause, and run `make up` again. `make -C src/scene clean` also deletes the Scenescape database volumes |
+| `tsn-scene-web-1` fails with `password authentication failed for user "scenescape"` | The database volumes were created with older secrets. Run `make -C src/scene clean` to delete them, then `make up SOURCE=video` (or `basler`) |
 
 ## Key References
 
