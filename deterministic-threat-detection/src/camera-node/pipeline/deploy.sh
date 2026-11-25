@@ -25,7 +25,7 @@ MQTT_HOST=${MQTT_HOST:-${M1_TSN_IP:-192.168.127.11}}
 MQTT_PORT=${MQTT_PORT:-1884}
 STREAMS=${STREAMS:-1}
 REMOTE_DIR=${REMOTE_DIR:-camera-pipeline}
-IMAGE=${IMAGE:-intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc2}
+IMAGE=${IMAGE:-intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc3}
 MODELS=$ROOT/src/data/models
 
 SSH=(ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new)

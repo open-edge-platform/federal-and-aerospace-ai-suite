@@ -270,7 +270,7 @@ And set `UAV_ID` env var (default `uav-1`).
 | Var | Set by | Purpose |
 | --- | --- | --- |
 | `HOST_IP` | `make init` (auto-detects LAN IP) | Binds nginx's published ports (`80`/`443`/`8555`/`1883`) and is used in RTSP/REST URLs. `127.0.0.1` restricts to loopback (breaks remote QGroundControl/VLC/ffplay). |
-| `DLSTREAMER_PIPELINE_SERVER_IMAGE` | generated, pinned | e.g. `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc2` |
+| `DLSTREAMER_PIPELINE_SERVER_IMAGE` | generated, pinned | e.g. `intel/dlstreamer-pipeline-server:2026.3.0-ubuntu24-rc3` |
 | `GPU_DEVICE`, `GPU_RENDER_DEVICE` | `make init` (auto-detect) or manual | GPU device paths, e.g. `/dev/dri/card0`, `/dev/dri/renderD128` |
 | `NPU_DEVICE` | `make init` (auto-detect, `/dev/null` if absent) | NPU device path, e.g. `/dev/accel/accel0` |
 | `GPU_CARD_GID`, `GPU_RENDER_GID`, `NPU_GID`, `CAMERA_GID` | written by `scripts/update_device_gids.sh` on `pymav-up`/`uavsdk-up` | `group_add` values so the container can access the devices; never set these by hand |
