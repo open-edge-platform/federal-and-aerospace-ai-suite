@@ -19,8 +19,7 @@ Uncrewed Aerial Vehicle (UAV) flight controller telemetry on a companion compute
 
 The application runs YOLO11s, the pretrained small object detection model from Ultralytics.
 Each camera pipeline can optionally also run a Vision-Language Model (VLM) alongside
-detection to publish natural-language scene captions over MQTT. See
-[Configure the Cameras](./how-to-customize/camera-management/configure-cameras.md).
+detection to publish natural-language scene captions over MQTT.
 
 ![UAV drone](../_assets/fedaero-drone.svg)
 

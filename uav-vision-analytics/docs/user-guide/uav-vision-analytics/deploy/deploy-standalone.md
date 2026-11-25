@@ -257,7 +257,7 @@ Then open `http://<VIZ_HOST_IP>:8080` (the address `make init`, run automaticall
 detected — see the ground station's `.env`), enter the **UAV host's IP** (the `HOST_IP` of
 this application's `.env`, same as `<HOST_IP>` above) and press **Connect**. The camera cards
 appear once the cameras run (after the vehicle is armed). The ground-station machine must reach
-ports`443`, `1883` and `8555` of this host. See the [UAV Ground Station README](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/README.md) for all options.
+ports`443`, `1883` and `8555` of this host. See the [UAV Ground Station](../../uav-ground-station/get-started.md) for all options.
 
 > [!NOTE]
 > `make up` shows video, captions, Flight Summary, and per-host metrics only.

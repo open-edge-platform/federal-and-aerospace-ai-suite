@@ -302,7 +302,7 @@ make up
 
 Then open `http://<VIZ_HOST_IP>:8080`, enter the **UAV host's IP** (`<HOST_IP>` above) and
 press **Connect**. The camera cards appear once the cameras run (after the drone arms). See
-the [UAV Ground Station README](https://github.com/open-edge-platform/federal-and-aerospace-ai-suite/blob/main/uav-ground-station/README.md).
+the [UAV Ground Station](../../uav-ground-station/get-started.md).
 
 > [!IMPORTANT]
 > If you do need to run the dashboard on the **same** host as

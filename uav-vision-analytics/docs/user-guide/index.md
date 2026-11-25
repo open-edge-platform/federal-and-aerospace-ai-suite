@@ -21,8 +21,7 @@ Based on DL Streamer Pipeline Server, the application processes video from a UAV
 camera or a simulated video file, detects common object across 80 classes (person, car, truck, bus, bicycle, motorcycle, and more), and outputs an RTSP stream annotated with MAVLink telemetry (GPS, altitude, speed, heading). The stream is consumable by any capable client, such as QGroundControl (QGC), VLC, and ffplay.
 It runs the YOLO11s, Ultralytics' pretrained small object detection model. Each camera's
 pipeline can optionally also run a vision-language model (VLM) alongside detection to
-publish natural-language scene captions over MQTT -- see
-[Configure the Cameras](./uav-vision-analytics/how-to-customize/camera-management/configure-cameras.md).
+publish natural-language scene captions over MQTT.
 
 ![UAV drone](./_assets/fedaero-drone.svg)
 
