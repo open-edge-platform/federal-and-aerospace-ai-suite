@@ -49,7 +49,7 @@ Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-handheld-multi-modal
 
 PackageName: dlstreamer-pipeline-server
 SPDXID: SPDXRef-Package-dlstreamer-pipeline-server
-PackageVersion: 2026.3.0-ubuntu24-rc2
+PackageVersion: 2026.3.0-ubuntu24-rc3
 PackageSupplier: Organization: Intel Corporation
 PackageDownloadLocation: https://hub.docker.com/r/intel/dlstreamer-pipeline-server
 PackageHomePage: https://github.com/open-edge-platform/edge-ai-libraries/tree/main/microservices/dlstreamer-pipeline-server
@@ -57,7 +57,7 @@ PackageLicenseConcluded: Apache-2.0
 PackageLicenseDeclared: Apache-2.0
 PackageCopyrightText: <text>Copyright (C) Intel Corporation</text>
 PackageSummary: <text>Intel DL Streamer Pipeline Server (DLSPS); runs the YOLO26s detection and tracking pipelines on NPU/GPU/CPU, publishes annotated WebRTC video to MediaMTX, detection metadata over MQTT, and evidence crops.</text>
-ExternalRef: PACKAGE-MANAGER purl pkg:docker/intel/dlstreamer-pipeline-server@2026.3.0-ubuntu24-rc2
+ExternalRef: PACKAGE-MANAGER purl pkg:docker/intel/dlstreamer-pipeline-server@2026.3.0-ubuntu24-rc3
 FilesAnalyzed: false
 
 Relationship: SPDXRef-Package-handheld-multi-modal DEPENDS_ON SPDXRef-Package-dlstreamer-pipeline-server
