@@ -59,6 +59,7 @@ Follow the steps below to set up and run the blueprint:
 
 Infrastructure Setup <./infrastructure-setup.md>
 Deterministic Threat Detection <./deterministic-threat-detection/index.md>
+AI Agent SKILLs <agents.md>
 Release Notes <./release-notes.md>
 
 :::

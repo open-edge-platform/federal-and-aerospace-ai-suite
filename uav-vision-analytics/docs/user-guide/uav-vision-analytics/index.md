@@ -43,6 +43,7 @@ scene captions, and host utilization from a separate machine.
 :hidden:
 
 Install UAV Vision <./install-uav-app.md>
+Installation on Ubuntu <./installation-on-ubuntu.md>
 How-To Guides <./how-to-guides.md>
 Customize UAV Vision <./how-to-customize.md>
 Troubleshooting <./troubleshooting.md>
