@@ -1,8 +1,3 @@
-<!--
-SPDX-FileCopyrightText: (C) 2026 Intel Corporation
-SPDX-License-Identifier: Apache-2.0
--->
-
 # Installation on Ubuntu
 
 This guide installs the Handheld (Soldier System) Blueprint on an Ubuntu 24.04 target using
@@ -12,7 +7,7 @@ components and the Federal and Aerospace Handheld (Soldier System) Blueprint wit
 for manual OS image build.
 
 For the image-build and bootable-USB provisioning path instead, see
-[Customized Image](./customized-image.md) and [Install OEP SDKs](install-oep-sdks.md).
+[Customized Image](./customized-image.md).
 
 For more detailed information on Edge Pack, refer to
 [Edge Pack documentation](https://docs.openedgeplatform.intel.com/2026.3/platform-software/edge-pack/index.html).
@@ -20,10 +15,11 @@ For more detailed information on Edge Pack, refer to
 ## Prerequisites
 
 - Ubuntu 24.04 LTS target with Internet access (or a configured proxy).
+- Curl installed (your distribution amy come without it).
 - Sudo access on the target. The installer prompts for the sudo password unless
   `SUDO_PASSWORD` or `SUDO_ASKPASS` is set, or passwordless sudo is granted.
 
-## Step 1: Install the Edge Pack Components
+## Installing Edge Pack Components
 
 Optionally, export a Hugging Face token. The configured models are public and do not require it; a token only helps when Hugging Face rate-limits anonymous downloads. Do not store the token in configuration files or commit it to version control.
 
@@ -44,12 +40,13 @@ openedge-cli install handheld_blueprint --edgepack
 After the first invocation, the installer saves itself under `/usr/bin/openedge-cli`, so
 subsequent commands can call `openedge-cli` directly.
 
-During installation, system might reboot. After it is back online, follow instructions from installer to resume installation. If system didn't reboot or installation is done after reboot, go to [Application Installation step](../deploy-applications.md).
+During installation, system might reboot. After it is back online, follow instructions from installer to resume installation. If system didn't reboot or installation is done after reboot, go to [Application Installation](../multi-modal/install-multimodal.md).
 
-## Removing Components
+## Removing Edge Pack Components
 
-Remove a profile or a component. This does not remove dependency items such as GPU/NPU drivers
-installed by `--edgepack`; pass `--remove-all` to force removing everything:
+If no longer needed, you can remove a profile or a component. This does not remove dependency
+items such as GPU/NPU drivers installed by `--edgepack`. To force removing everything pass
+`--remove-all`. Here is an example of removing a component:
 
 ```bash
 openedge-cli remove federal_and_aerospace_ai_suite_handheld

@@ -1,7 +1,8 @@
-<!--
-SPDX-FileCopyrightText: (C) 2026 Intel Corporation
-SPDX-License-Identifier: Apache-2.0
--->
+<!--hide_directive
+```{eval-rst}
+:orphan:
+```
+hide_directive-->
 
 # Install OEP SDK and Usage
 

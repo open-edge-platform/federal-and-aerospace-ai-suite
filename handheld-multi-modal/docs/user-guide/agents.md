@@ -24,7 +24,8 @@ and thermal tuning) to application-level pipeline generation with Intel DL Strea
 :::{toctree}
 :hidden:
 
-DL Streamer Pipelines Guide <infrastructure/build-dlstreamer-pipelines.md>
-Infrastructure AI Agent Integration <infrastructure/agent-skills.md>
+DL Streamer Pipelines Guide <./infrastructure/build-dlstreamer-pipelines.md>
+DL Streamer Coding Agent Guide <./infrastructure/use-dlstreamer-coding-agent.md>
+Infrastructure AI Agent Integration <./infrastructure/agent-skills.md>
 :::
 hide_directive-->

@@ -157,7 +157,7 @@ To swap the detector model:
 - **A model card shows Starting** — the service has not answered yet; on the first start it may
   still be downloading or converting its model (up to 90 minutes).
 - **Startup fails behind a proxy** — include `localhost,127.0.0.1` in `no_proxy` and `NO_PROXY`;
-  see [Configuring the Proxy](deploy-applications.md#optional-configuring-the-proxy).
+  see [Configuring the Proxy](install-multimodal.md#optional-configuring-the-proxy).
 
 ## Tests
 

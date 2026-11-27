@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: (C) 2026 Intel Corporation
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# Handheld Multi-Modal Application Deployment
+# Install Handheld Multi-Modal Application
 
 This guide provides instructions on how to deploy the Handheld Multi-Modal application with custom settings on a
 local machine.
@@ -12,7 +12,7 @@ local machine.
 
 | Requirement | Notes |
 |-------------|-------|
-| Intel® Core™ Ultra processor with integrated GPU and NPU | Drivers must expose `/dev/dri/renderD128` (GPU) and `/dev/accel/accel0` (NPU). See [Install OEP SDKs](install-oep-sdks.md) to verify the accelerators. |
+| Intel® Core™ Ultra processor with integrated GPU and NPU | Drivers must expose `/dev/dri/renderD128` (GPU) and `/dev/accel/accel0` (NPU). |
 | Docker Engine and Docker Compose 2.24.4 or later | [Install guide](https://docs.docker.com/engine/install/). Use `docker compose` (space), not `docker-compose` (hyphen). The user must be able to run `docker` without `sudo`. |
 | GNU Make, Bash, Python 3.11 or later, curl, OpenSSL | Standard Linux utilities used by the Makefile. |
 | Disk space and Internet access for the first start | The first start downloads several GB of container images and models. Later starts run offline. |
@@ -49,7 +49,7 @@ openedge-cli start handheld_multi_modal
 
 ## Deploying the Application with different settings
 
-If you want to use application with non-default settings, that are described in [openedge-cli start](./infrastructure/installation-on-ubuntu.md#step-3-start-the-application), you can modify options as following:
+If you want to use application with non-default settings, that are described in [openedge-cli start](#installing-application), you can modify options as following:
 
 Go into application folder
 
@@ -73,7 +73,7 @@ Both targets check the host and then list the third-party container images, Pyth
 models, and (for `make demo-up`) demo videos they download, with their licenses, and ask you
 to accept them. Answer `y` to continue, or pass `CONFIRM=yes` to accept without the question,
 for example in scripts: `make demo-up CONFIRM=yes`. The list is generated from
-[`third-party-components.spdx`](../../third-party-components.spdx).
+[`third-party-components.spdx`](../../../third-party-components.spdx).
 
 They then download the YOLO26s INT8 detector through the Model Download
 microservice, generate a self-signed TLS certificate for `localhost`, build the Backend image,

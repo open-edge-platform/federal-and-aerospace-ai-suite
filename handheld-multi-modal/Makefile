@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Handheld operator application. Run `make` for the command list and
-# docs/user-guide/application-operations.md for details.
+# docs/user-guide/multi-modal/application-operations.md for details.
 SHELL := /bin/bash
 .SHELLFLAGS := -Eeuo pipefail -c
 .ONESHELL:

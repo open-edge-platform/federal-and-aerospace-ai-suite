@@ -1,8 +1,3 @@
-<!--
-SPDX-FileCopyrightText: (C) 2026 Intel Corporation
-SPDX-License-Identifier: Apache-2.0
--->
-
 # Intel DL Streamer Pipelines Guide
 
 ## Overview
@@ -279,10 +274,4 @@ See the [DL Streamer Coding Agent Guide](./use-dlstreamer-coding-agent.md) for u
 - [DL Streamer Samples Reference](https://docs.openedgeplatform.intel.com/2026.3/edge-ai-libraries/dlstreamer/samples.html)
 - [Container Device Interface Guide](./configure-cdi.md) — CDI setup for GPU/NPU access
 
-<!--hide_directive
-:::{toctree}
-:hidden:
 
-DL Streamer Coding Agent Guide <use-dlstreamer-coding-agent.md>
-:::
-hide_directive-->

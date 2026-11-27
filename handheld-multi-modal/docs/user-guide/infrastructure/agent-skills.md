@@ -8,14 +8,13 @@ Some skills are meant to run from the developer host, while others are meant to 
 
 | Skill | What it does | Execution target |
 | --- | --- | --- |
-| `create-image` | Builds a host OS image using the Image Composer Tool or ISO based curation | Developer host |
-| `validate-platform-config` | Validates a provisioned edge node — checks k3s pod health, binary paths, cloud-init state, network/proxy settings, and device readiness (GPU VFs, NPU) | Provisioned host |
-| `update-install-packages` | Updates Ubuntu package configuration and installs required packages on a provisioned system | Developer host |
-| `set-power-profile` | Sets the platform power envelope — a named profile (LowPower 10 W, BalancedLow 15 W, BalancedHigh 20 W, Performance 25 W, MaxPerformance) or a custom PkgWatt (PL1) / SysWatt (psys) envelope with burst ratio and time window | Provisioned host |
-| `set-thermal-profile` | Sets the thermald thermal escalation policy — generates, validates, applies, and verifies staged Fan/Processor/powerclamp trip points (cool, warm, hot, thermal-max, or custom) | Provisioned host |
-| `monitor-power-thermal` | Monitors package temperature and RAPL power domains and logs results (`pt_mon.txt`) | Provisioned host |
-| `generate-platform-stress` | Generates configurable CPU and integrated-GPU load with stress-ng — control worker count, per-CPU load percentage, GPU worker count, and duration | Provisioned host |
-| `generate-openvino-stress` | Generates sustained AI inference load on CPU, GPU, or NPU using OpenVINO `benchmark_app` in a K3s pod or Docker container for realistic power/thermal qualification | Provisioned host |
+| `create-image`                | Builds a host OS image using the Image Composer Tool                                                                                                   | Developer host   |
+| `validate-platform-config`    | Validates a provisioned edge node — checks k3s pod health, binary paths, cloud-init state, network/proxy settings, and device readiness (GPU VFs, NPU) | Provisioned host |
+| `set-power-profile`           | Sets the platform power envelope — a named profile (LowPower 10 W, BalancedLow 15 W, BalancedHigh 20 W, Performance 25 W, MaxPerformance) or a custom PkgWatt (PL1) / SysWatt (psys) envelope with burst ratio and time window  | Provisioned host |
+| `set-thermal-profile`         | Sets the thermald thermal escalation policy — generates, validates, applies, and verifies staged Fan/Processor/powerclamp trip points (cool, warm, hot, thermal-max, or custom) | Provisioned host |
+| `monitor-power-thermal`       | Monitors package temperature and RAPL power domains and logs results (`pt_mon.txt`) | Provisioned host |
+| `generate-platform-stress`    | Generates configurable CPU and integrated-GPU load with stress-ng — control worker count, per-CPU load percentage, GPU worker count, and duration | Provisioned host |
+| `generate-openvino-stress`    | Generates sustained AI inference load on CPU, GPU, or NPU using OpenVINO `benchmark_app` in a K3s pod or Docker container for realistic power/thermal qualification | Provisioned host |
 | `combined-power-thermal-profiling` | Orchestrates a full profiling session — chains set-power-profile → set-thermal-profile → monitor-power-thermal → generate-platform-stress and emits one consolidated enclosure report with a throttle/headroom verdict | Provisioned host |
 
 ## How to Use Skills
