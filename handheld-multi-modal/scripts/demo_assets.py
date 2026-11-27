@@ -21,6 +21,19 @@ import uuid
 import xml.etree.ElementTree as ET  # nosec B405
 
 REPO = Path(__file__).resolve().parents[1]
+# Shared timing journal: no-ops unless a timing run is active.
+sys.path.insert(0, str(REPO / "tools/startup-timing"))
+try:
+    from startup_timing.journal import begin, cached, end  # noqa: E402  pylint: disable=wrong-import-position
+except ImportError:  # inside a container that mounts only scripts/ (make check)
+    def begin(*_args, **_kwargs):
+        return None
+
+    def end(*_args, **_kwargs):
+        return None
+
+    def cached(*_args, **_kwargs):
+        return None
 REQUEST = json.loads((REPO / "config/model-download/yolo26s.json").read_text())
 MODEL = REQUEST["models"][0]["name"]
 IMAGE = "intel/model-download:2026.3.0-rc2@sha256:510c41fdad3bc6091350570ca2c6ac1d45cbfa382fbacf22853fdafb3cb566ca"
@@ -82,6 +95,7 @@ def api(path, body=None):
 def download_model(root, timeout):
     target = root / MODEL_DIR
     if verify_model(target):
+        cached("model_preparation", f"{MODEL} verified cache")
         print(f"Verified cached {MODEL} INT8: {target}")
         return
     subdir = f"{MODEL}-" + uuid.uuid4().hex
@@ -150,13 +164,19 @@ def download_video(root):
             if sha(target) != digest:
                 raise ValueError(f"Demo video checksum mismatch: {target}; refusing to overwrite")
             print(f"Verified cached demo video: {target}")
+            cached("video_download", name, "demo-cameras")
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         failures = []
         with tempfile.TemporaryDirectory(prefix=".video-", dir=target.parent) as temporary:
             staged = Path(temporary) / target.name
             for url in urls:
-                problem = fetch_verified(url, staged, digest)
+                timer = begin("video_download", name, "demo-cameras")
+                problem = "interrupted"
+                try:
+                    problem = fetch_verified(url, staged, digest)
+                finally:
+                    end(timer, 0 if problem is None else 1)
                 if problem is None:
                     staged.rename(target)
                     break
@@ -242,30 +262,6 @@ def write_mission(target=MISSION_EXAMPLE):
     print(f"Wrote synthetic demo mission packet: {target}")
 
 
-def repair_chat_cache(directory, models):
-    """Stock conversion skips existing directories, even interrupted exports."""
-    files = ("openvino_model.xml", "openvino_model.bin", "openvino_tokenizer.xml",
-             "openvino_tokenizer.bin", "config.json", "tokenizer_config.json")
-    for model in models:
-        path = directory / model
-        if path.is_dir() and not all((path / name).is_file() and (path / name).stat().st_size for name in files):
-            backup = path.with_name(path.name + ".incomplete-" + str(time.time_ns()))
-            path.rename(backup)
-            print("Preserved incomplete export:", backup)
-
-
-def chat_cache_ready(directory, models):
-    """True when every model has its OpenVINO export and a resolvable Hub snapshot."""
-    for model in models:
-        if not (directory / model / "openvino_model.xml").is_file():
-            return False
-        repo = directory / ("models--" + model.replace("/", "--"))
-        ref = repo / "refs/main"
-        if not ref.is_file() or not (repo / "snapshots" / ref.read_text().strip()).is_dir():
-            return False
-    return True
-
-
 def ir_problem(xml):
     """None when an OpenVINO IR is complete: its .bin holds every weight the .xml references."""
     xml = Path(xml)
@@ -305,6 +301,11 @@ def chat_models():
     return re.findall(r'^\s*(?:LLM|EMBEDDING|RERANKER)_MODEL_ID:\s*"([^"]+)"', text, re.MULTILINE)
 
 
+def _chat_cache_ready(directory, models):
+    from chat_cache import chat_cache_ready  # pylint: disable=import-outside-toplevel  # scripts/ is on sys.path
+    return chat_cache_ready(directory, models)
+
+
 def check(root, clips):
     """Report, without downloading anything, whether host-side assets are ready."""
     results = []
@@ -328,7 +329,7 @@ def check(root, clips):
     cache = root / "data/chatqna/model_cache"
     for model in chat_models():
         problem = (ir_problem(cache / model / "openvino_model.xml")
-                   or (None if chat_cache_ready(cache, [model]) else "Hub snapshot missing"))
+                   or (None if _chat_cache_ready(cache, [model]) else "Hub snapshot missing"))
         results.append((f"Chat Q&A model {model}", problem, "make up or make demo-up (internet)"))
     return report(results, demo)
 

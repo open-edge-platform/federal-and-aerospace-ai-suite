@@ -38,6 +38,7 @@ compose/                     Docker Compose files: application services and demo
 backend/                     Application Backend (FastAPI) and browser UI; built locally as handheld/backend:dev.
 config/                      Per-service configuration: DLSPS pipelines and detector profile, Chat Q&A, proxy, TURN, MQTT, metrics, speech.
 scripts/                     Demo asset preparation and live readiness checks.
+startup-timing.toml          Optional section titles, service descriptions and stock-log timing rules.
 examples/                    Synthetic demo mission packet and an Intel® RealSense™ RTSP publisher script.
 .agents/skills/              AI agent skills for the application and its Open Edge Platform microservices.
 third-party-components.spdx  Software bill of materials of third-party components.
@@ -96,6 +97,12 @@ make up            # or start without cameras; add them in the console
 make demo-mission  # optional: load the example mission from examples/
 make               # list all commands (status, stop, check, tests, ...)
 ```
+
+Each `make up` or `make demo-up` writes a timing report; open
+`ASSET_ROOT/startup-timings/latest/report.md`. See
+[Startup Timing Reports](docs/user-guide/application-operations.md#startup-timing-reports);
+the engine is documented in [`tools/startup-timing`](tools/startup-timing/README.md) and
+Handheld's optional titles and log rules are in [`startup-timing.toml`](startup-timing.toml).
 
 Before anything is downloaded, `make up` and `make demo-up` list the third-party software and
 models they download, with their licenses, and ask you to accept them. Add `CONFIRM=yes` to

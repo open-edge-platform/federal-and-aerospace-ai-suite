@@ -76,7 +76,7 @@ test-assets: test-image
 	@$(RUN_TEST) $(SANDBOX) \
 	  -v "$(CURDIR):/srv:ro" \
 	  -w /srv \
-	  $(OFFLINE_IMAGE) python3 scripts/test_demo_assets.py
+	  $(OFFLINE_IMAGE) sh -c 'python3 scripts/test_demo_assets.py && python3 scripts/test_startup_timing.py'
 
 # Browser checks in headless Firefox, which needs the larger /dev/shm.
 test-ui: test-image

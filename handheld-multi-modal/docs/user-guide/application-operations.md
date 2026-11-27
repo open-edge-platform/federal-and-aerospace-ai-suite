@@ -15,7 +15,7 @@ the command list.
 ```bash
 # Deploy with your own cameras
 make prereq             # check host tools and devices; accept licenses; download YOLO26s INT8
-make up                 # start everything (runs prereq), no cameras: add them in the console
+make up                 # start everything (includes prereq), no cameras: add them in the console
 # Deploy with the demo camera feeds
 make demo-prereq        # prereq + download and prepare the demo videos
 make demo-up            # start everything plus looping demo cameras
@@ -70,6 +70,11 @@ videos: the intel-iot-devkit `person-bicycle-car-detection.mp4` sample (CC BY 4.
 video 34622113 (Pexels License). Chat Q&A, Audio Analyzer, and Text To Speech download and
 convert their own models through their unmodified stock services.
 
+`make up` and `make demo-up` pull all images first, then start Chat Q&A, Audio Analyzer and
+Text To Speech before preparing YOLO26s and the demo videos, so their model downloads overlap.
+On a first start this shortens startup but raises peak RAM, CPU and network use. Run
+`make prereq` or `make demo-prereq` first to prepare the detector and videos on their own.
+
 Later starts need no Internet access: caches are verified and loaded, and Chat Q&A starts in
 offline mode once all its models are cached and exported. If `backend/` changed but the Backend
 image rebuild cannot reach the registry, Make starts the previously built image and prints a
@@ -79,6 +84,28 @@ access again.
 `config/devices.yaml`, `config/speech/tts.env`, `config/mediamtx.yml`, and `config/tls/`
 are generated per device under `ASSET_ROOT`. The Backend reads the speech device selection
 without restarting. Tracked configuration is not modified.
+
+## Startup Timing Reports
+
+Run `make up` or `make demo-up`. When it finishes (also after a failed start), a short
+summary is printed with the report path. Open
+`ASSET_ROOT/startup-timings/latest/report.md`.
+
+The report answers "what took so long?": a headline naming the kind of work that took longest (for example container
+image downloads, with size and speed), a **Time by activity** table, a **Time by service** table, a chart of when each service was busy, the biggest
+steps per service, and a collapsed list of every timed step. Paste `timing.sh summary` into a
+cycle report; other tools read `summary.json` next to `report.md`.
+Reports contain no environment values, commands or raw container logs, and live outside
+`data/`; `make clean-all` removes them.
+
+Compare two starts:
+
+```bash
+tools/startup-timing/timing.sh compare startup-timings/<older run dir> startup-timings/latest
+```
+
+Everything else (more detail with `--explain`, adding timing to other apps, how to read
+"unavailable") is in [`tools/startup-timing/README.md`](../../tools/startup-timing/README.md).
 
 ## Readiness Check
 
