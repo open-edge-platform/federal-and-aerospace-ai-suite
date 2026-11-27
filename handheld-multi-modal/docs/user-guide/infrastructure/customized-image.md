@@ -19,7 +19,7 @@ distros on x86_64.
 This article will show you how to:
 
 - [Build OS image using default template](#build-os-image-using-default-template)
-- [Package the image into artifacts](#package-the-image-into-artifacts)
+- [Build output and artifacts](#build-output)
 - [Package curation and template customization](#package-curation-and-template-customization)
 - [Troubleshoot the process](#troubleshoot)
 
@@ -174,7 +174,7 @@ sudo dd if=workspace/ubuntu-ubuntu24-x86_64/imagebuild/Default_ISO/fedaero-handh
 
 After writing is done, remove USB stick from computer, connect it to target system and go into BIOS settings of target system. Select **Boot → Boot options** and select USB stick as boot device. Save changes and reboot. After reboot, automatic installation will start.
 
-After OS is installed, follow [Deploy Application](../deploy-applications.md) using `openedge-cli` tool to install application.
+After OS is installed, follow [Deploy Application](../multi-modal/install-multimodal.md) using `openedge-cli` tool to install application.
 
 ## Package curation and template customization
 

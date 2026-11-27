@@ -14,7 +14,7 @@ The console shows the live camera and alerts on the left, the evidence and assis
 right, and resources at the bottom. Amber marks alerts that need your attention; red marks an
 alerted object that is on camera now. On a handheld, run the browser in full screen (F11).
 
-![Operator UI](_assets/operator-ui.jpg)
+![Operator UI](../_assets/operator-ui.jpg)
 
 ## Contents
 
@@ -48,7 +48,7 @@ alerted object that is on camera now. On a handheld, run the browser in full scr
 
 ## Top Bar
 
-![Top bar](_assets/guide-top-bar.jpg)
+![Top bar](../_assets/guide-top-bar.jpg)
 
 1. **Camera tabs** - select the live camera you want to watch. The console remembers the last
    camera you used. **All cameras** shows the live grid described in
@@ -74,7 +74,7 @@ alerted object that is on camera now. On a handheld, run the browser in full scr
 
 ### Architecture Page
 
-![Architecture](_assets/guide-architecture.jpg)
+![Architecture](../_assets/guide-architecture.jpg)
 
 The architecture page shows every service of the application and how data moves between them.
 Each box shows whether the service is an **Intel® Open Edge Platform** microservice, **Open
@@ -86,7 +86,7 @@ such as a voice question. Below the diagram, you can see **Where each model runs
 
 ### Model Details
 
-![Model details](_assets/guide-model-details.jpg)
+![Model details](../_assets/guide-model-details.jpg)
 
 1. The model you selected. Tap it again to close the details.
 2. The status, model, device and host. Tap **Close** to hide the details. **Starting** means
@@ -96,7 +96,7 @@ such as a voice question. Below the diagram, you can see **Where each model runs
 
 ## All Cameras
 
-![Camera grid](_assets/guide-camera-grid.jpg)
+![Camera grid](../_assets/guide-camera-grid.jpg)
 
 1. **Tile** - one camera, with up to four cameras per page. Tap a tile to open that camera. A
    tile with open alerts pulses red while the alerted object is on camera, and turns steady
@@ -106,7 +106,7 @@ such as a voice question. Below the diagram, you can see **Where each model runs
 
 ## Adding and Removing Cameras
 
-![Manage cameras](_assets/guide-cameras.jpg)
+![Manage cameras](../_assets/guide-cameras.jpg)
 
 1. **Cameras** - in the top bar, next to the camera tabs, this button shows how many cameras
    are on (for example, "2 on"). Tap it to open **Manage cameras**.
@@ -121,7 +121,7 @@ such as a voice question. Below the diagram, you can see **Where each model runs
 
 ### Adding a Camera
 
-![Add a camera](_assets/guide-camera-add.jpg)
+![Add a camera](../_assets/guide-camera-add.jpg)
 
 1. **Name** - the name shown in the camera tabs, alerts and evidence.
 2. **Publisher on this device** - choose this option if an app or encoder on this handheld
@@ -133,7 +133,7 @@ such as a voice question. Below the diagram, you can see **Where each model runs
 
 For a network camera, enter its address:
 
-![Network camera](_assets/guide-camera-network.jpg)
+![Network camera](../_assets/guide-camera-network.jpg)
 
 1. **Camera RTSP address** - the `rtsp://` address of the camera.
 2. **Note** - the networks that are allowed. The console refuses addresses outside these
@@ -144,7 +144,7 @@ For a network camera, enter its address:
 
 After you add a **publisher** camera, the panel shows where to send its video:
 
-![Camera added](_assets/guide-camera-added.jpg)
+![Camera added](../_assets/guide-camera-added.jpg)
 
 1. **Waiting for video** - no video has arrived yet.
 2. **Address** - send H.264 RTSP video to this address, for example
@@ -155,7 +155,7 @@ After you add a **publisher** camera, the panel shows where to send its video:
 
 The card updates automatically when the video arrives:
 
-![Camera live](_assets/guide-camera-live.jpg)
+![Camera live](../_assets/guide-camera-live.jpg)
 
 1. **Live** - the video, detection and alerts are running.
 2. **View camera** - switch to the camera. Tap **Done** to close the card.
@@ -164,14 +164,14 @@ You can also find the address under **Edit** at any time.
 
 ### Editing and Removing a Camera
 
-![Edit camera](_assets/guide-camera-edit.jpg)
+![Edit camera](../_assets/guide-camera-edit.jpg)
 
 1. **Name** and **Save name** - rename the camera.
 2. **Address** and **Copy** - the address to send the video to (publisher cameras only).
 3. **Turn off / Turn on** - stop or restart the video and detection for the camera.
 4. **Remove camera…** - remove the camera. The console asks you to confirm:
 
-![Remove camera](_assets/guide-camera-remove.jpg)
+![Remove camera](../_assets/guide-camera-remove.jpg)
 
 1. **Remove** - remove the camera.
 2. **Keep camera** - cancel and keep the camera.
@@ -183,7 +183,7 @@ Changes take effect without a restart.
 
 ## Live Camera and Alerts
 
-![Live camera and alerts](_assets/guide-video-alerts.jpg)
+![Live camera and alerts](../_assets/guide-video-alerts.jpg)
 
 When a new alert is raised, the camera badges and highlights update, and a banner appears at
 the top of the video (for example, "Person in Gate area · Camera 2"). The banner stays until you
@@ -220,14 +220,14 @@ Each alert also shows whether it was spoken: **spoken**, **not played (Audio off
 
 After you tap **View**, the Evidence panel shows only that alert:
 
-![Alert view](_assets/guide-alert-view.jpg)
+![Alert view](../_assets/guide-alert-view.jpg)
 
 1. **Back to live evidence** - return to the normal list.
 2. Each object that matched the alert. Tap one to see its images.
 
 ## Evidence
 
-![Evidence](_assets/guide-evidence.jpg)
+![Evidence](../_assets/guide-evidence.jpg)
 
 1. **View** - choose **Current** (objects on screen now), **History · priority** or
    **History · newest** (recorded objects).
@@ -250,7 +250,7 @@ alerts and objects. Tap **View** to see them.
 
 ### Evidence Details
 
-![Evidence details](_assets/guide-drawer.jpg)
+![Evidence details](../_assets/guide-drawer.jpg)
 
 1. **Back** - close the details.
 2. The full stored image, followed by the camera, times and confidence. Tap the image to view
@@ -258,7 +258,7 @@ alerts and objects. Tap **View** to see them.
 
 ## Ask (Assistant)
 
-![Assistant](_assets/guide-ask.jpg)
+![Assistant](../_assets/guide-ask.jpg)
 
 1. Type your question.
 2. Tap **Send**.
@@ -297,7 +297,7 @@ You can check the details on the **Architecture** page and in **Models & devices
 
 ## Mission
 
-![Mission](_assets/guide-mission.jpg)
+![Mission](../_assets/guide-mission.jpg)
 
 1. **Browse… / Upload** - add a PDF or Word (.docx) mission document, by default up to 25 MB
    and 200 PDF pages. Only text is read; images and scanned pages are ignored.
@@ -312,7 +312,7 @@ You can check the details on the **Architecture** page and in **Models & devices
 
 ### Creating an Alert
 
-![Rules](_assets/guide-rules.jpg)
+![Rules](../_assets/guide-rules.jpg)
 
 1. Open **Manage alerts** and choose **Appears** or **Stays too long**.
 2. Check the **Camera** (by default, the camera you are viewing) and **Watch for**.
@@ -335,7 +335,7 @@ change or re-enable the alert. To monitor the whole view again, tap **Remove are
 
 ### Drawing a Zone
 
-![Draw zone](_assets/guide-zone.jpg)
+![Draw zone](../_assets/guide-zone.jpg)
 
 The console shows a full-screen still image from the camera. Outline the ground where people or
 vehicles move, because an object counts by where its feet or wheels touch the ground.
@@ -355,7 +355,7 @@ vehicles move, because an object counts by where its feet or wheels touch the gr
 
 ## Resources
 
-![Resources](_assets/guide-resources.jpg)
+![Resources](../_assets/guide-resources.jpg)
 
 1. **Tiles** - CPU, Memory (free RAM), GPU engines, NPU, Power and Services. Tap a tile
    to show its chart.
@@ -371,7 +371,7 @@ vehicles move, because an object counts by where its feet or wheels touch the gr
 
 ### Listening
 
-![Listening](_assets/guide-voice-listening.jpg)
+![Listening](../_assets/guide-voice-listening.jpg)
 
 1. **Send question** - the red Talk button while the console is listening. Tap it to send your
    question.
@@ -380,7 +380,7 @@ vehicles move, because an object counts by where its feet or wheels touch the gr
 
 ### Spoken Answers
 
-![Spoken answer](_assets/guide-voice-answer.jpg)
+![Spoken answer](../_assets/guide-voice-answer.jpg)
 
 1. **Answer** - the full text of the answer, which is always shown.
 2. **Speech line** - the sentence being spoken now, in italics. A green **Speaking:** tag means
@@ -405,14 +405,14 @@ on, each plays the answer, so close extra tabs to hear it once.
 
 ### Recovering a Question
 
-![Answer running](_assets/guide-answer-running.jpg)
+![Answer running](../_assets/guide-answer-running.jpg)
 
 1. **Cancel question** - stop the running question and its speech. The next answer may be
    slower while the model finishes its previous work, so finish or cancel one question before
    you ask another with **Talk**.
 2. **Streaming answer** - the text appears as it is generated.
 
-![Answer recovery](_assets/guide-answer-recovery.jpg)
+![Answer recovery](../_assets/guide-answer-recovery.jpg)
 
 1. **Edit and resend** - put the recognized question, with its original camera scope, back in
    the text box so that you can correct it.

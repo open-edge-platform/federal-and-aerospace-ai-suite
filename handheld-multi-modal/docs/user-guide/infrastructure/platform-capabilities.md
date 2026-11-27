@@ -5,6 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 
 # Infrastructure software Capabilities
 
+The infrastructure software offers a selection of advanced options for
+collecting system information and customizing performance parameters. See how to use this
+advanced tooling below.
+
+
 ## Collecting a Platform Report with system-info.sh
 
 `system-info.sh` is a diagnostic script for Intel Panther Lake systems provisioned using Infrastructure software. After provisioning, the script is available on the target system at `/opt/edge/developer/tools/system-info/`.

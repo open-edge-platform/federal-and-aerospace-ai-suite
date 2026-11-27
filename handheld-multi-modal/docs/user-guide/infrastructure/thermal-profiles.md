@@ -270,5 +270,5 @@ and restart a system service, which must happen locally on the node. To drive
 them by natural language on a provisioned node, install an agent CLI on the
 target host and open it in the developer source tree (`/opt/edge/developer`),
 where the `skills/` directory and `tools/power-tuning/` scripts already live.
-See [Power Profiles](power-profiles.md#install-the-claude-code-cli-on-the-target-host-ubuntu)
-for the agent-CLI install steps.
+See [Power Profiles](power-profiles.md#using-the-skill-on-the-target-host)
+for how to launch the agent CLI on the target host.

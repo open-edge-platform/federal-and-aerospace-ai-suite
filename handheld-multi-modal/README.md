@@ -103,13 +103,13 @@ accept without the question.
 
 Open <https://localhost:8443/> on the device and trust `config/tls/server.crt`. For offline
 installs, see
-[Copy to Another Device](docs/user-guide/application-operations.md#copy-to-another-device-offline).
+[Copy to Another Device](docs/user-guide/multi-modal/application-operations.md#copy-to-another-device-offline).
 
 ## Endpoints
 
 Every published port binds to `127.0.0.1`. The console has no authentication. For remote
 access, use an SSH tunnel as described in
-[Access Application User Interface](docs/user-guide/access-application.md#remote-access-through-an-ssh-tunnel).
+[Access Application User Interface](docs/user-guide/multi-modal/access-application.md#remote-access-through-an-ssh-tunnel).
 
 | Service | URL | Notes |
 |---------|-----|-------|
@@ -142,10 +142,10 @@ make test-live                  Tests against the running application (after up 
 ## Documentation
 
 - [User Guide](docs/user-guide/index.md)
-- [Deploy the Application](docs/user-guide/deploy-applications.md)
-- [Access Application User Interface](docs/user-guide/access-application.md)
-- [Operator Guide](docs/user-guide/operator-guide.md)
-- [Application Operations](docs/user-guide/application-operations.md)
+- [Deploy the Application](docs/user-guide/multi-modal/install-multimodal.md)
+- [Access Application User Interface](docs/user-guide/multi-modal/access-application.md)
+- [Operator Guide](docs/user-guide/multi-modal/operator-guide.md)
+- [Application Operations](docs/user-guide/multi-modal/application-operations.md)
 - [Release Notes](docs/user-guide/release-notes.md)
 
 Demo videos: intel-iot-devkit sample (CC BY 4.0) and Pexels video 34622113 (Pexels License).
