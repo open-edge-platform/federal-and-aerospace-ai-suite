@@ -5,9 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 
 # Install OEP SDKs
 
-This page covers installing the OEP Vision AI SDK on a provisioned Handheld (Soldier System) target and validating the stack with a sample object detection pipeline.
+This page covers installing the Metro Vision AI SDK (formerly OEP Vision AI SDK) on a provisioned Handheld (Soldier System) target and validating the stack with a sample object detection pipeline.
 
-The provisioned image ships with system-level dependencies only — kernel, GPU/NPU drivers, Docker Engine, and container device plugins. The OEP Vision AI SDK, DL Streamer container images, sample models, and OpenVINO Python runtime must be installed on the target as described below.
+The provisioned image ships with system-level dependencies only — kernel, GPU/NPU drivers, Docker Engine, and container device plugins. The Metro Vision AI SDK, DL Streamer container images, sample models, and OpenVINO Python runtime must be installed on the target as described below.
 
 For image build and platform provisioning, see [Infrastructure Setup](./infrastructure-setup.md).
 
@@ -33,12 +33,12 @@ lsmod | grep intel_vpu
 
 Expected: `card0`/`renderD128` under `/dev/dri`, `accel0` under `/dev/accel`, and the `intel_vpu` module loaded.
 
-## Step 2: Install the OEP Vision AI SDK
+## Step 2: Install the Metro Vision AI SDK
 
-Run the official OEP Vision AI SDK installer on the target. It configures Docker, pulls the DL Streamer image, and installs the OpenVINO tooling and sample content:
+Run the official Metro Vision AI SDK installer on the target. It configures Docker, pulls the DL Streamer image, and installs the OpenVINO tooling and sample content:
 
 ```bash
-curl https://raw.githubusercontent.com/open-edge-platform/metro-ai-suite/refs/heads/main/metro-sdk-manager/scripts/oep-vision-ai-sdk.sh | bash
+curl -fsS https://raw.githubusercontent.com/open-edge-platform/edge-ai-libraries/refs/heads/main/tools/oep-sdk-manager/scripts/metro-vision-ai-sdk.sh | bash
 ```
 
 The installer sets up:
@@ -48,7 +48,7 @@ The installer sets up:
 - OpenVINO inference optimization toolkit
 - Pre-trained model repositories and sample implementations
 
-For full details, see the [OEP Vision AI SDK Get Started guide](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/oep-vision-ai-sdk/get-started.html).
+For full details, see the [Metro Vision AI SDK Get Started guide](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/metro-vision-ai-sdk/get-started.html).
 
 ## Step 3: Run the Sample Object Detection Pipeline
 
@@ -108,13 +108,13 @@ Exit the container with `exit`.
 
 ## Next Steps
 
-Continue with the OEP Vision AI SDK tutorials to explore benchmarking, multi-stream processing, real-time detection, and profiling:
+Continue with the Metro Vision AI SDK tutorials to explore benchmarking, multi-stream processing, real-time detection, and profiling:
 
-- [Tutorial 1: OpenVINO Model Benchmark](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/oep-vision-ai-sdk/tutorial-1.html)
-- [Tutorial 2: Multi-Stream Video Processing](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/oep-vision-ai-sdk/tutorial-2.html)
-- [Tutorial 3: Real-Time Object Detection](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/oep-vision-ai-sdk/tutorial-3.html)
-- [Tutorial 4: Advanced Video Analytics Pipelines](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/oep-vision-ai-sdk/tutorial-4.html)
-- [Tutorial 5: Profiling](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/oep-vision-ai-sdk/tutorial-5.html)
+- [Tutorial 1: OpenVINO Model Benchmark](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/metro-vision-ai-sdk/tutorial-1.html)
+- [Tutorial 2: Multi-Stream Video Processing](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/metro-vision-ai-sdk/tutorial-2.html)
+- [Tutorial 3: Real-Time Object Detection](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/metro-vision-ai-sdk/tutorial-3.html)
+- [Tutorial 4: Advanced Video Analytics Pipelines](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/metro-vision-ai-sdk/tutorial-4.html)
+- [Tutorial 5: Profiling](https://docs.openedgeplatform.intel.com/2026.3/OEP-articles/oep-sdk-manager/metro-vision-ai-sdk/tutorial-5.html)
 
 ## Related Guides
 
